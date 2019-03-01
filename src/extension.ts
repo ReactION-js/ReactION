@@ -231,6 +231,7 @@ class TreeViewPanel {
 				</head>
 
 				<body>
+				<div>test</div>
 			<!-- load the d3.js library -->
 			<script src="http://d3js.org/d3.v3.min.js"></script>
 
