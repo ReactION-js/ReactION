@@ -4,6 +4,7 @@ import * as path from 'path';
 
 const chromeLauncher = require('chrome-launcher');
 const puppeteer = require('puppeteer');
+const puppeteercore = require('puppeteer-core');
 
 // this method is called when your extension is activated
 export function activate(context: vscode.ExtensionContext) {
@@ -32,6 +33,8 @@ class TreeViewPanel {
 	public static currentPanel: TreeViewPanel | undefined;
 
 	public static readonly viewType = 'projectX';
+
+	private _html: string;
 
 	private readonly _panel: vscode.WebviewPanel;
 	private readonly _extensionPath: string;
@@ -70,6 +73,7 @@ class TreeViewPanel {
 	) {
 		this._panel = panel;
 		this._extensionPath = extensionPath;
+		this._html = '';
 
 		this._update();
 
@@ -77,7 +81,7 @@ class TreeViewPanel {
 
 		this._panel.onDidChangeViewState(e => {
 			if (this._panel.visible) {
-				this._update();
+				// this._update();
 			}
 		}, null, this._disposables);
 
@@ -119,8 +123,6 @@ class TreeViewPanel {
 	}
 
 	private _getHtmlForWebview() {
-
-		this._runPuppeteer();
 
 		// Use a nonce to whitelist which scripts can be run
 		const nonce = getNonce();
@@ -182,6 +184,8 @@ class TreeViewPanel {
 		];
 		const reactJSON = JSON.stringify(reactData);
 
+		this._runPuppeteer();
+
 		return `
 				<!DOCTYPE html>
 				<html lang="en">
@@ -231,6 +235,9 @@ class TreeViewPanel {
 				</head>
 
 				<body>
+				<div>
+
+				</div>
 			<!-- load the d3.js library -->
 			<script src="http://d3js.org/d3.v3.min.js"></script>
 
@@ -391,7 +398,7 @@ class TreeViewPanel {
 			</html>`
 	}
 
-	private _runPuppeteer() {
+	private _runPuppeteer():string {
 
 		// puppeteer.launch().then(async (browser: any) => {
 		// 	const page = await browser.newPage();
@@ -407,17 +414,15 @@ class TreeViewPanel {
 		// });
 
 		(async () => {
-			const browser = await puppeteer.launch({
-				headless: false
-			});
+			const browser = await puppeteer.launch();
 			const page = await browser.newPage();
-			await page.goto('http://localhost:3000/');
-			await console.log(page);
-			// await browser.close();
+			await page.goto('http://localhost:3000');
+			console.log(page.target().createCDPSession());
+			// this._panel.webview.html = await page.content();
+			// console.log(this._panel.webview.html, '=============')
 		})();
-
+		// return result
 	}
-
 }
 
 function getNonce() {
