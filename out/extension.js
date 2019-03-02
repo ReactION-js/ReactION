@@ -11,6 +11,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const vscode = require("vscode");
 const chromeLauncher = require('chrome-launcher');
 const puppeteer = require('puppeteer');
+const puppeteercore = require('puppeteer-core');
 // this method is called when your extension is activated
 function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand('projectX.openTree', () => {
@@ -37,11 +38,12 @@ class TreeViewPanel {
         this._disposables = [];
         this._panel = panel;
         this._extensionPath = extensionPath;
+        this._html = '';
         this._update();
         this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
         this._panel.onDidChangeViewState(e => {
             if (this._panel.visible) {
-                this._update();
+                // this._update();
             }
         }, null, this._disposables);
         // Handle messages from the webview
@@ -92,7 +94,6 @@ class TreeViewPanel {
         this._panel.webview.html = this._getHtmlForWebview();
     }
     _getHtmlForWebview() {
-        this._runPuppeteer();
         // Use a nonce to whitelist which scripts can be run
         const nonce = getNonce();
         const reactData = [
@@ -151,6 +152,7 @@ class TreeViewPanel {
             }
         ];
         const reactJSON = JSON.stringify(reactData);
+        return this._runPuppeteer();
         return `
 				<!DOCTYPE html>
 				<html lang="en">
@@ -200,7 +202,9 @@ class TreeViewPanel {
 				</head>
 
 				<body>
-				<div>test</div>
+				<div>
+
+				</div>
 			<!-- load the d3.js library -->
 			<script src="http://d3js.org/d3.v3.min.js"></script>
 
@@ -373,14 +377,14 @@ class TreeViewPanel {
         // 	return chrome.process.spawnfile
         // });
         (() => __awaiter(this, void 0, void 0, function* () {
-            const browser = yield puppeteer.launch({
-                headless: false
-            });
+            const browser = yield puppeteer.launch();
             const page = yield browser.newPage();
-            yield page.goto('http://localhost:3000/');
-            yield console.log(page);
-            // await browser.close();
+            yield page.goto('http://localhost:3000');
+            console.log(page.target().createCDPSession());
+            // this._panel.webview.html = await page.content();
+            // console.log(this._panel.webview.html, '=============')
         }))();
+        // return result
     }
 }
 TreeViewPanel.viewType = 'projectX';
