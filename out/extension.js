@@ -152,7 +152,7 @@ class TreeViewPanel {
             }
         ];
         const reactJSON = JSON.stringify(reactData);
-        return this._runPuppeteer();
+        this._runPuppeteer();
         return `
 				<!DOCTYPE html>
 				<html lang="en">
