@@ -1,10 +1,8 @@
 import * as vscode from 'vscode';
-// import * as whichChrome from 'which-chrome';
 import * as path from 'path';
 
 const chromeLauncher = require('chrome-launcher');
-const puppeteer = require('puppeteer');
-const puppeteercore = require('puppeteer-core');
+const puppeteer = require('puppeteer-core');
 
 // this method is called when your extension is activated
 export function activate(context: vscode.ExtensionContext) {
@@ -122,7 +120,37 @@ class TreeViewPanel {
 		this._panel.webview.html = this._getHtmlForWebview();
 	}
 
-	private _getHtmlForWebview() {
+	private _runPuppeteer() {
+
+		return (async () => {
+			const browser = await puppeteer.launch(
+				{
+					headless: false,
+					executablePath: '/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome',
+					pipe: true
+				}
+			).catch((err: any) => console.log(err));
+
+			const page = await browser.pages().then((pageArr: any) => { return pageArr[0]; });
+			await page.goto('http://localhost:3000', {waitUntil: 'networkidle0'});
+			await page.addScriptTag({ url: 'http://localhost:8097' });
+			// page.on('console', (msg: any) => {
+			// 	console.log(msg);
+			// })
+
+			const reactData = await page.evaluate(async () => {
+
+				return window.__REACT_DEVTOOLS_GLOBAL_HOOK__._fiberRoots;
+
+			}).catch((err: any) => { console.log(err) })
+
+			return reactData;
+
+		})().catch((err: any) => console.log(err));
+
+	}
+
+	private async _getHtmlForWebview() {
 
 		// Use a nonce to whitelist which scripts can be run
 		const nonce = getNonce();
@@ -182,9 +210,16 @@ class TreeViewPanel {
 				]
 			}
 		];
-		const reactJSON = JSON.stringify(reactData);
+		const reactJSON = await JSON.stringify(reactData);
 
-		this._runPuppeteer();
+		let data = await this._runPuppeteer().catch((err: any) => console.log(err));
+
+		Object.values(window.__REACT_DEVTOOLS_GLOBAL_HOOK__._fiberRoots)[0]
+		const instArr = new Set();
+
+		instArr.add(Object.values(data)[0]);
+
+		console.log(instArr);
 
 		return `
 				<!DOCTYPE html>
@@ -396,32 +431,6 @@ class TreeViewPanel {
 
 				</body>
 			</html>`
-	}
-
-	private _runPuppeteer():string {
-
-		// puppeteer.launch().then(async (browser: any) => {
-		// 	const page = await browser.newPage();
-		// 	await page.goto('https://www.google.com');
-		// });
-
-		// const chromePath = chromeLauncher.launch({
-		// 	startingUrl: 'https://reactjs.org/',
-		// 	chromeFlags: ['--headless', '--disable-gpu']
-		// }).then((chrome: any) => {
-		// 	console.log(chrome.process.spawnfile)
-		// 	return chrome.process.spawnfile
-		// });
-
-		(async () => {
-			const browser = await puppeteer.launch();
-			const page = await browser.newPage();
-			await page.goto('http://localhost:3000');
-			console.log(page.target().createCDPSession());
-			// this._panel.webview.html = await page.content();
-			// console.log(this._panel.webview.html, '=============')
-		})();
-		// return result
 	}
 }
 
