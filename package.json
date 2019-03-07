@@ -12,10 +12,28 @@
 	"activationEvents": [
 		"onCommand:projectX.openTree",
 		"onCommand:projectX.openWeb",
-		"onWebviewPanel:projectX"
+		"onWebviewPanel:projectX",
+		"onView:startExtension"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
+		"views": {
+      "projectX-button": [
+        {
+          "id": "startExtension",
+          "name": "Targets"
+        }
+      ]
+    },
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "projectX-button",
+					"title": "projectX-button",
+					"icon": "resources/dep.svg"
+				}
+			]
+		},
 		"commands": [
 			{
 				"command": "projectX.openTree",
@@ -24,6 +42,10 @@
 			{
 				"command": "projectX.openWeb",
 				"title": "pxtest"
+			},
+			{
+				"command": "startExtension.openTree",
+				"title": "logoOpen"
 			}
 		]
 	},

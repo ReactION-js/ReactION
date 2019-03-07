@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 // import * as whichChrome from 'which-chrome';
 import * as path from 'path';
+import StartExtensionProvider from './startExtensionProvider';
+
 const chromeLauncher = require('chrome-launcher');
 const puppeteer = require('puppeteer');
 
@@ -14,6 +16,8 @@ export function activate(context: vscode.ExtensionContext) {
 	// context.subscriptions.push(vscode.commands.registerCommand('projectX.openWeb', () => {
 	// 	TreeViewPanel.createOrShow(context.extensionPath);
 	// }));
+
+	vscode.window.registerTreeDataProvider('startExtension', new StartExtensionProvider());
 
 	if (vscode.window.registerWebviewPanelSerializer) {
 		// Make sure we register a serializer in activation event
@@ -52,14 +56,13 @@ class TreeViewPanel {
 	private _disposables: vscode.Disposable[] = [];
 
 	public static createOrShow(extensionPath: string) {
-		const column = vscode.window.activeTextEditor ? vscode.window.activeTextEditor.viewColumn : undefined;
-
+		const column = vscode.ViewColumn.Two
 		if (TreeViewPanel.currentPanel) {
 			TreeViewPanel.currentPanel._panel.reveal(column);
 			return;
 		}
 
-		const panel = vscode.window.createWebviewPanel(TreeViewPanel.viewType, "Virtual DOM Tree", column || vscode.ViewColumn.One, {
+		const panel = vscode.window.createWebviewPanel(TreeViewPanel.viewType, "Virtual DOM Tree", column, {
 			// Enable javascript in the webview
 			enableScripts: true,
 			retainContextWhenHidden: true,
@@ -208,7 +211,6 @@ class TreeViewPanel {
 			};
 	
 				d3Schema.name = reactData[0][0];
-				
 				formattedReactData.push(d3Schema);
 
 			const reactJSON = JSON.stringify(formattedReactData);
