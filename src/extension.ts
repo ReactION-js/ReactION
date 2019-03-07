@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 // import * as whichChrome from 'which-chrome';
 import * as path from 'path';
+import StartExtensionProvider from './startExtensionProvider';
+
 const chromeLauncher = require('chrome-launcher');
 const puppeteer = require('puppeteer');
 
@@ -14,6 +16,8 @@ export function activate(context: vscode.ExtensionContext) {
 	// context.subscriptions.push(vscode.commands.registerCommand('projectX.openWeb', () => {
 	// 	TreeViewPanel.createOrShow(context.extensionPath);
 	// }));
+
+	vscode.window.registerTreeDataProvider('startExtension', new StartExtensionProvider());
 
 	if (vscode.window.registerWebviewPanelSerializer) {
 		// Make sure we register a serializer in activation event
@@ -44,7 +48,7 @@ class TreeViewPanel {
 	public static currentPanel: TreeViewPanel | undefined;
 
 	public static readonly viewType = 'projectX';
-
+	private reactData: any; 
 	private _html: string;
 
 	private readonly _panel: vscode.WebviewPanel;
@@ -52,14 +56,13 @@ class TreeViewPanel {
 	private _disposables: vscode.Disposable[] = [];
 
 	public static createOrShow(extensionPath: string) {
-		const column = vscode.window.activeTextEditor ? vscode.window.activeTextEditor.viewColumn : undefined;
-
+		const column = vscode.ViewColumn.Two
 		if (TreeViewPanel.currentPanel) {
 			TreeViewPanel.currentPanel._panel.reveal(column);
 			return;
 		}
 
-		const panel = vscode.window.createWebviewPanel(TreeViewPanel.viewType, "Virtual DOM Tree", column || vscode.ViewColumn.One, {
+		const panel = vscode.window.createWebviewPanel(TreeViewPanel.viewType, "Virtual DOM Tree", column, {
 			// Enable javascript in the webview
 			enableScripts: true,
 			retainContextWhenHidden: true,
@@ -85,7 +88,8 @@ class TreeViewPanel {
 		this._panel = panel;
 		this._extensionPath = extensionPath;
 		this._html = '';
-
+		this.reactData = '';
+		
 		this._update();
 
 		this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
@@ -115,7 +119,6 @@ class TreeViewPanel {
 
 	}
 
-
 	public dispose() {
 		TreeViewPanel.currentPanel = undefined;
 
@@ -129,6 +132,7 @@ class TreeViewPanel {
 			}
 		}
 	}
+
 
 	private async _update() {
 
@@ -159,7 +163,7 @@ class TreeViewPanel {
 			// page.on('console', (msg: any) => {
 			// 	console.log(msg);
 			// })
-
+			
 			const reactData = await page.evaluate(async () => {
 
 				const _handler = Object.values(window.__REACT_DEVTOOLS_GLOBAL_HOOK__._fiberRoots)[0].entries().next().value[0].current;
@@ -199,17 +203,32 @@ class TreeViewPanel {
 
 				};
 
-				console.log(fiberWalk(_handler), 'in browser')
-
 				return fiberWalk(_handler);
 
 			}).catch((err: any) => { console.log(err); });
 
+
+			const formattedReactData = [];
+			const d3Schema = {
+				name: '',
+				children: [],
+			};
+	
+				d3Schema.name = reactData[0][0];
+				formattedReactData.push(d3Schema);
 			return reactData;
 
-		})().catch((err: any) => console.log(err));
 
+			const reactJSON = JSON.stringify(formattedReactData);
+			return reactJSON;
+
+		})().catch((err: any) => console.log(err));
+		
+		return result;
 	}
+
+
+	public _getHtmlForWebview(rawData: any) {
 
 	private _getHtmlForWebview(rawTreeData: any) {
 
@@ -217,10 +236,14 @@ class TreeViewPanel {
 		// Use a nonce to whitelist which scripts can be run
 		const nonce = getNonce();
 
+
+		const demoReactData = [
+
 		console.log(rawTreeData, '====pup result=====');
 		// treeData[0].parent = null;
 
 		const reactData = [
+
 			{
 				name: "App Component",
 				parent: null,
@@ -275,7 +298,7 @@ class TreeViewPanel {
 				]
 			}
 		];
-		const reactJSON = JSON.stringify(reactData);
+
 
 		return `
 				<!DOCTYPE html>
@@ -333,6 +356,8 @@ class TreeViewPanel {
 			<script src="http://d3js.org/d3.v3.min.js"></script>
 
 			<script>
+
+			var treeData = ${rawData};
 
 			var treeData = d3.stratify().id(function(d) { return d.id }).parentId(function(d) { return d.level })(${rawTreeData});
 
@@ -486,7 +511,7 @@ class TreeViewPanel {
 			}
 
 			</script>
-
+	
 				</body>
 			</html>`
 	}

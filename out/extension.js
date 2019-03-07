@@ -1,6 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const vscode = require("vscode");
+// import * as whichChrome from 'which-chrome';
+const path = require("path");
+const startExtensionProvider_1 = require("./startExtensionProvider");
 const chromeLauncher = require('chrome-launcher');
 const puppeteer = require('puppeteer');
 // this method is called when your extension is activated
@@ -11,6 +14,7 @@ function activate(context) {
     // context.subscriptions.push(vscode.commands.registerCommand('projectX.openWeb', () => {
     // 	TreeViewPanel.createOrShow(context.extensionPath);
     // }));
+    vscode.window.registerTreeDataProvider('startExtension', new startExtensionProvider_1.default());
     if (vscode.window.registerWebviewPanelSerializer) {
         // Make sure we register a serializer in activation event
         vscode.window.registerWebviewPanelSerializer(TreeViewPanel.viewType, {
@@ -39,6 +43,7 @@ class TreeViewPanel {
         this._panel = panel;
         this._extensionPath = extensionPath;
         this._html = '';
+        this.reactData = '';
         this._update();
         this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
         this._panel.onDidChangeViewState(e => {
@@ -63,12 +68,12 @@ class TreeViewPanel {
         }, null, this._disposables);
     }
     static createOrShow(extensionPath) {
-        const column = vscode.window.activeTextEditor ? vscode.window.activeTextEditor.viewColumn : undefined;
+        const column = vscode.ViewColumn.Two;
         if (TreeViewPanel.currentPanel) {
             TreeViewPanel.currentPanel._panel.reveal(column);
             return;
         }
-        const panel = vscode.window.createWebviewPanel(TreeViewPanel.viewType, "Virtual DOM Tree", column || vscode.ViewColumn.One, {
+        const panel = vscode.window.createWebviewPanel(TreeViewPanel.viewType, "Virtual DOM Tree", column, {
             // Enable javascript in the webview
             enableScripts: true,
             retainContextWhenHidden: true,
@@ -91,6 +96,14 @@ class TreeViewPanel {
         }
     }
     async _update() {
+
+        const rawData = await this._runPuppeteer();
+        this._panel.webview.html = this._getHtmlForWebview(rawData);
+    }
+    _runPuppeteer() {
+        console.log(__dirname, '=====');
+        const extPath = path.join(__dirname, '../', 'node_modules/react-devtools');
+
         const rawReact = await this._runPuppeteer();
         this._panel.webview.html = this._getHtmlForWebview(rawReact);
     }
@@ -98,6 +111,7 @@ class TreeViewPanel {
         // console.log(__dirname, '=====')
         // const extPath = path.join(__dirname, '../', 'node_modules/react-devtools')
         return (async () => {
+
             const browser = await puppeteer.launch({
                 headless: false,
                 executablePath: '/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome',
@@ -149,12 +163,26 @@ class TreeViewPanel {
                     return output;
                 }
                 ;
-                console.log(fiberWalk(_handler), 'in browser');
                 return fiberWalk(_handler);
             }).catch((err) => { console.log(err); });
+            const formattedReactData = [];
+            const d3Schema = {
+                name: '',
+                children: [],
+            };
+            d3Schema.name = reactData[0][0];
+            formattedReactData.push(d3Schema);
+            const reactJSON = JSON.stringify(formattedReactData);
+            return reactJSON;
             return reactData;
+
         })().catch((err) => console.log(err));
+        return result;
     }
+    _getHtmlForWebview(rawData) {
+        // Use a nonce to whitelist which scripts can be run
+        const nonce = getNonce();
+        const demoReactData = [
     _getHtmlForWebview(rawTreeData) {
         // Use a nonce to whitelist which scripts can be run
         const nonce = getNonce();
@@ -215,7 +243,6 @@ class TreeViewPanel {
                 ]
             }
         ];
-        const reactJSON = JSON.stringify(reactData);
         return `
 				<!DOCTYPE html>
 				<html lang="en">
@@ -273,6 +300,8 @@ class TreeViewPanel {
 
 			<script>
 
+			var treeData = ${rawData};
+=======
 			var treeData = d3.stratify().id(function(d) { return d.id }).parentId(function(d) { return d.level })(${rawTreeData});
 
 			// var treeData = ${reactJSON}
@@ -425,7 +454,7 @@ class TreeViewPanel {
 			}
 
 			</script>
-
+	
 				</body>
 			</html>`;
     }
