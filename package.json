@@ -42,10 +42,6 @@
 			{
 				"command": "projectX.openWeb",
 				"title": "pxtest"
-			},
-			{
-				"command": "startExtension.openTree",
-				"title": "logoOpen"
 			}
 		]
 	},
