@@ -1,7 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const vscode = require("vscode");
+// import * as whichChrome from 'which-chrome';
+const path = require("path");
 const chromeLauncher = require('chrome-launcher');
+const puppeteer = require('puppeteer');
 // this method is called when your extension is activated
 function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand('projectX.openTree', () => {
@@ -20,16 +23,16 @@ function activate(context) {
         });
     }
     // chromeLauncher.launch();
-    chromeLauncher.launch({
-        startingUrl: 'http://localhost:3000/',
-        userDataDir: false,
-        enableExtensions: true,
-        port: 9222,
-    }).then(chrome => {
-        console.log('here is the port', chrome.process);
-    }).catch(err => {
-        console.log('error: ', err);
-    });
+    // chromeLauncher.launch({
+    // 	startingUrl: 'http://localhost:3000/',
+    // 	userDataDir: false,
+    // 	enableExtensions: true,
+    // 	port: 9222,
+    // }).then(chrome => {
+    // 	console.log('here is the port', chrome.process)
+    // }).catch(err => {
+    // 	console.log('error: ', err);
+    // })
 }
 exports.activate = activate;
 class TreeViewPanel {
@@ -92,9 +95,69 @@ class TreeViewPanel {
     _update() {
         this._panel.webview.html = this._getHtmlForWebview();
     }
+    _runPuppeteer() {
+        console.log(__dirname, '=====');
+        const extPath = path.join(__dirname, '../', 'node_modules/react-devtools');
+        return (async () => {
+            const browser = await puppeteer.launch({
+                headless: false,
+                executablePath: '/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome',
+                pipe: true,
+            }).catch((err) => console.log(err));
+            const page = await browser.pages().then((pageArr) => { return pageArr[0]; });
+            await page.goto('http://localhost:3000', { waitUntil: 'networkidle0' });
+            // await page.addScriptTag({ url: 'http://localhost:8097' });
+            // page.on('console', (msg: any) => {
+            // 	console.log(msg);
+            // })
+            const reactData = await page.evaluate(async () => {
+                const _handler = Object.values(window.__REACT_DEVTOOLS_GLOBAL_HOOK__._fiberRoots)[0].entries().next().value[0].current;
+                function fiberWalk(entry) {
+                    let output = [];
+                    function recurse(root, level) {
+                        if (root.sibling !== null) {
+                            output.push([root.sibling, level]);
+                            recurse(root.sibling, level);
+                        }
+                        else if (root.child !== null) {
+                            output.push([root.child, level + 1]);
+                            recurse(root.child, level + 1);
+                        }
+                        else {
+                            return;
+                        }
+                    }
+                    recurse(entry, 0);
+                    output.sort((a, b) => a[1] - b[1]);
+                    output.forEach(el => {
+                        if (typeof el[0].type === null) {
+                            el[0] = '';
+                        }
+                        if (typeof el[0].type === 'function' && el[0].type.name)
+                            el[0] = el[0].type.name;
+                        if (typeof el[0].type === 'function')
+                            el[0] = 'function';
+                        if (typeof el[0].type === 'object')
+                            el[0] = 'function';
+                        if (typeof el[0].type === 'string')
+                            el[0] = el[0].type;
+                    });
+                    return output;
+                }
+                ;
+                console.log(fiberWalk(_handler), 'in browser');
+                return fiberWalk(_handler);
+                // console.log(window.__REACT_DEVTOOLS_GLOBAL_HOOK__)
+                // return window.__REACT_DEVTOOLS_GLOBAL_HOOK__
+            }).catch((err) => { console.log(err); });
+            console.log(reactData, 'in vscode');
+            return reactData;
+        })().catch((err) => console.log(err));
+    }
     _getHtmlForWebview() {
         // Use a nonce to whitelist which scripts can be run
         const nonce = getNonce();
+        this._runPuppeteer();
         const reactData = [
             {
                 name: "App Component",
