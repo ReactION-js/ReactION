@@ -135,9 +135,7 @@ class TreeViewPanel {
 
 
 	private async _update() {
-
 		const rawReact = await this._runPuppeteer();
-
 		this._panel.webview.html = this._getHtmlForWebview(rawReact);
 	}
 
@@ -219,7 +217,7 @@ class TreeViewPanel {
 			return reactData;
 
 
-			const reactJSON = JSON.stringify(formattedReactData);
+			
 			return reactJSON;
 
 		})().catch((err: any) => console.log(err));
@@ -235,9 +233,6 @@ class TreeViewPanel {
 
 		// Use a nonce to whitelist which scripts can be run
 		const nonce = getNonce();
-
-
-		const demoReactData = [
 
 		console.log(rawTreeData, '====pup result=====');
 		// treeData[0].parent = null;
@@ -299,6 +294,7 @@ class TreeViewPanel {
 			}
 		];
 
+		const reactJSON = JSON.stringify(reactData);
 
 		return `
 				<!DOCTYPE html>
@@ -357,11 +353,9 @@ class TreeViewPanel {
 
 			<script>
 
-			var treeData = ${rawData};
+			// var treeData = d3.stratify().id(function(d) { return d.id }).parentId(function(d) { return d.level })(${rawTreeData});
 
-			var treeData = d3.stratify().id(function(d) { return d.id }).parentId(function(d) { return d.level })(${rawTreeData});
-
-			// var treeData = ${reactJSON}
+			var treeData = ${reactJSON}
 
 			// ************** Generate the tree diagram	 *****************
 			var margin = {top: 20, right: 120, bottom: 20, left: 120},
