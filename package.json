@@ -32,7 +32,8 @@
 		"compile": "tsc -p ./",
 		"watch": "tsc -watch -p ./",
 		"postinstall": "node ./node_modules/vscode/bin/install",
-		"test": "npm run compile && node ./node_modules/vscode/bin/test"
+		"test": "npm run compile && node ./node_modules/vscode/bin/test",
+		"react-dev": "react-devtools"
 	},
 	"devDependencies": {
 		"typescript": "^3.3.1",
@@ -43,7 +44,8 @@
 	},
 	"dependencies": {
 		"chrome-launcher": "^0.10.5",
+		"electron-devtools-installer": "^2.2.4",
 		"puppeteer": "^1.12.2",
-		"puppeteer-core": "^1.12.2"
+		"react-devtools": "^3.6.1"
 	}
 }
