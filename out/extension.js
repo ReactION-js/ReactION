@@ -41,6 +41,7 @@ class TreeViewPanel {
         this._panel = panel;
         this._extensionPath = extensionPath;
         this._html = '';
+        this.reactData = '';
         this._update();
         this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
         this._panel.onDidChangeViewState(e => {
@@ -92,13 +93,14 @@ class TreeViewPanel {
             }
         }
     }
-    _update() {
-        this._panel.webview.html = this._getHtmlForWebview();
+    async _update() {
+        const rawData = await this._runPuppeteer();
+        this._panel.webview.html = this._getHtmlForWebview(rawData);
     }
     _runPuppeteer() {
         console.log(__dirname, '=====');
         const extPath = path.join(__dirname, '../', 'node_modules/react-devtools');
-        return (async () => {
+        const result = (async () => {
             const browser = await puppeteer.launch({
                 headless: false,
                 executablePath: '/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome',
@@ -145,20 +147,26 @@ class TreeViewPanel {
                     return output;
                 }
                 ;
-                console.log(fiberWalk(_handler), 'in browser');
                 return fiberWalk(_handler);
                 // console.log(window.__REACT_DEVTOOLS_GLOBAL_HOOK__)
                 // return window.__REACT_DEVTOOLS_GLOBAL_HOOK__
             }).catch((err) => { console.log(err); });
-            console.log(reactData, 'in vscode');
-            return reactData;
+            const formattedReactData = [];
+            const d3Schema = {
+                name: '',
+                children: [],
+            };
+            d3Schema.name = reactData[0][0];
+            formattedReactData.push(d3Schema);
+            const reactJSON = JSON.stringify(formattedReactData);
+            return reactJSON;
         })().catch((err) => console.log(err));
+        return result;
     }
-    _getHtmlForWebview() {
+    _getHtmlForWebview(rawData) {
         // Use a nonce to whitelist which scripts can be run
         const nonce = getNonce();
-        this._runPuppeteer();
-        const reactData = [
+        const demoReactData = [
             {
                 name: "App Component",
                 parent: null,
@@ -213,7 +221,6 @@ class TreeViewPanel {
                 ]
             }
         ];
-        const reactJSON = JSON.stringify(reactData);
         return `
 				<!DOCTYPE html>
 				<html lang="en">
@@ -271,7 +278,7 @@ class TreeViewPanel {
 
 			<script>
 
-			var treeData = ${reactJSON};
+			var treeData = ${rawData};
 
 			// ************** Generate the tree diagram	 *****************
 			var margin = {top: 20, right: 120, bottom: 20, left: 120},
@@ -421,7 +428,7 @@ class TreeViewPanel {
 			}
 
 			</script>
-
+	
 				</body>
 			</html>`;
     }
