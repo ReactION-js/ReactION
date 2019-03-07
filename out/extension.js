@@ -1,8 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const vscode = require("vscode");
-// import * as whichChrome from 'which-chrome';
-const path = require("path");
 const startExtensionProvider_1 = require("./startExtensionProvider");
 const chromeLauncher = require('chrome-launcher');
 const puppeteer = require('puppeteer');
@@ -96,14 +94,6 @@ class TreeViewPanel {
         }
     }
     async _update() {
-
-        const rawData = await this._runPuppeteer();
-        this._panel.webview.html = this._getHtmlForWebview(rawData);
-    }
-    _runPuppeteer() {
-        console.log(__dirname, '=====');
-        const extPath = path.join(__dirname, '../', 'node_modules/react-devtools');
-
         const rawReact = await this._runPuppeteer();
         this._panel.webview.html = this._getHtmlForWebview(rawReact);
     }
@@ -111,7 +101,6 @@ class TreeViewPanel {
         // console.log(__dirname, '=====')
         // const extPath = path.join(__dirname, '../', 'node_modules/react-devtools')
         return (async () => {
-
             const browser = await puppeteer.launch({
                 headless: false,
                 executablePath: '/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome',
@@ -172,17 +161,13 @@ class TreeViewPanel {
             };
             d3Schema.name = reactData[0][0];
             formattedReactData.push(d3Schema);
-            const reactJSON = JSON.stringify(formattedReactData);
-            return reactJSON;
             return reactData;
-
+            return reactJSON;
         })().catch((err) => console.log(err));
         return result;
     }
     _getHtmlForWebview(rawData) {
-        // Use a nonce to whitelist which scripts can be run
-        const nonce = getNonce();
-        const demoReactData = [
+    }
     _getHtmlForWebview(rawTreeData) {
         // Use a nonce to whitelist which scripts can be run
         const nonce = getNonce();
@@ -243,6 +228,7 @@ class TreeViewPanel {
                 ]
             }
         ];
+        const reactJSON = JSON.stringify(reactData);
         return `
 				<!DOCTYPE html>
 				<html lang="en">
@@ -300,11 +286,9 @@ class TreeViewPanel {
 
 			<script>
 
-			var treeData = ${rawData};
-=======
-			var treeData = d3.stratify().id(function(d) { return d.id }).parentId(function(d) { return d.level })(${rawTreeData});
+			// var treeData = d3.stratify().id(function(d) { return d.id }).parentId(function(d) { return d.level })(${rawTreeData});
 
-			// var treeData = ${reactJSON}
+			var treeData = ${reactJSON}
 
 			// ************** Generate the tree diagram	 *****************
 			var margin = {top: 20, right: 120, bottom: 20, left: 120},
