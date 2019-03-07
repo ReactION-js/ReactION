@@ -1,17 +1,9 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const vscode = require("vscode");
+const startExtensionProvider_1 = require("./startExtensionProvider");
 const chromeLauncher = require('chrome-launcher');
 const puppeteer = require('puppeteer');
-const puppeteercore = require('puppeteer-core');
 // this method is called when your extension is activated
 function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand('projectX.openTree', () => {
@@ -20,17 +12,27 @@ function activate(context) {
     // context.subscriptions.push(vscode.commands.registerCommand('projectX.openWeb', () => {
     // 	TreeViewPanel.createOrShow(context.extensionPath);
     // }));
+    vscode.window.registerTreeDataProvider('startExtension', new startExtensionProvider_1.default());
     if (vscode.window.registerWebviewPanelSerializer) {
         // Make sure we register a serializer in activation event
         vscode.window.registerWebviewPanelSerializer(TreeViewPanel.viewType, {
-            deserializeWebviewPanel(webviewPanel, state) {
-                return __awaiter(this, void 0, void 0, function* () {
-                    console.log(`Got state: ${state}`);
-                    TreeViewPanel.revive(webviewPanel, context.extensionPath);
-                });
+            async deserializeWebviewPanel(webviewPanel, state) {
+                console.log(`Got state: ${state}`);
+                TreeViewPanel.revive(webviewPanel, context.extensionPath);
             }
         });
     }
+    // chromeLauncher.launch();
+    // chromeLauncher.launch({
+    // 	startingUrl: 'http://localhost:3000/',
+    // 	userDataDir: false,
+    // 	enableExtensions: true,
+    // 	port: 9222,
+    // }).then(chrome => {
+    // 	console.log('here is the port', chrome.process)
+    // }).catch(err => {
+    // 	console.log('error: ', err);
+    // })
 }
 exports.activate = activate;
 class TreeViewPanel {
@@ -39,6 +41,7 @@ class TreeViewPanel {
         this._panel = panel;
         this._extensionPath = extensionPath;
         this._html = '';
+        this.reactData = '';
         this._update();
         this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
         this._panel.onDidChangeViewState(e => {
@@ -63,12 +66,12 @@ class TreeViewPanel {
         }, null, this._disposables);
     }
     static createOrShow(extensionPath) {
-        const column = vscode.window.activeTextEditor ? vscode.window.activeTextEditor.viewColumn : undefined;
+        const column = vscode.ViewColumn.Two;
         if (TreeViewPanel.currentPanel) {
             TreeViewPanel.currentPanel._panel.reveal(column);
             return;
         }
-        const panel = vscode.window.createWebviewPanel(TreeViewPanel.viewType, "Virtual DOM Tree", column || vscode.ViewColumn.One, {
+        const panel = vscode.window.createWebviewPanel(TreeViewPanel.viewType, "Virtual DOM Tree", column, {
             // Enable javascript in the webview
             enableScripts: true,
             retainContextWhenHidden: true,
@@ -90,12 +93,86 @@ class TreeViewPanel {
             }
         }
     }
-    _update() {
-        this._panel.webview.html = this._getHtmlForWebview();
+    async _update() {
+        const rawReact = await this._runPuppeteer();
+        this._panel.webview.html = this._getHtmlForWebview(rawReact);
     }
-    _getHtmlForWebview() {
+    _runPuppeteer() {
+        // console.log(__dirname, '=====')
+        // const extPath = path.join(__dirname, '../', 'node_modules/react-devtools')
+        return (async () => {
+            const browser = await puppeteer.launch({
+                headless: false,
+                executablePath: '/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome',
+                pipe: true,
+            }).catch((err) => console.log(err));
+            const page = await browser.pages().then((pageArr) => { return pageArr[0]; });
+            await page.goto('http://localhost:3000', { waitUntil: 'networkidle0' });
+            // await page.addScriptTag({ url: 'http://localhost:8097' });
+            // page.on('console', (msg: any) => {
+            // 	console.log(msg);
+            // })
+            const reactData = await page.evaluate(async () => {
+                const _handler = Object.values(window.__REACT_DEVTOOLS_GLOBAL_HOOK__._fiberRoots)[0].entries().next().value[0].current;
+                function fiberWalk(entry) {
+                    let output = [];
+                    function recurse(root, level) {
+                        console.log(root, 'root');
+                        if (root.sibling !== null) {
+                            output.push({ "name": root.sibling, "level": level });
+                            recurse(root.sibling, level);
+                        }
+                        if (root.child !== null) {
+                            output.push({ "name": root.child, "level": level + 1 });
+                            recurse(root.child, level + 1);
+                        }
+                        else {
+                            return;
+                        }
+                    }
+                    recurse(entry, 0);
+                    console.log(output, 'output');
+                    output.sort((a, b) => a[1] - b[1]);
+                    output.forEach((el, idx) => {
+                        // console.log(el);
+                        if (typeof el.name.type === null) {
+                            el.name = '';
+                        }
+                        if (typeof el.name.type === 'function' && el.name.type.name)
+                            el.name = el.name.type.name;
+                        if (typeof el.name.type === 'function')
+                            el.name = 'function';
+                        if (typeof el.name.type === 'object')
+                            el.name = 'function';
+                        if (typeof el.name.type === 'string')
+                            el.name = el.name.type;
+                        el['id'] = idx;
+                        el['parent'] = idx === 0 ? null : el.level - 1;
+                    });
+                    return output;
+                }
+                ;
+                return fiberWalk(_handler);
+            }).catch((err) => { console.log(err); });
+            const formattedReactData = [];
+            const d3Schema = {
+                name: '',
+                children: [],
+            };
+            d3Schema.name = reactData[0][0];
+            formattedReactData.push(d3Schema);
+            return reactData;
+            return reactJSON;
+        })().catch((err) => console.log(err));
+        return result;
+    }
+    _getHtmlForWebview(rawData) {
+    }
+    _getHtmlForWebview(rawTreeData) {
         // Use a nonce to whitelist which scripts can be run
         const nonce = getNonce();
+        console.log(rawTreeData, '====pup result=====');
+        // treeData[0].parent = null;
         const reactData = [
             {
                 name: "App Component",
@@ -152,7 +229,6 @@ class TreeViewPanel {
             }
         ];
         const reactJSON = JSON.stringify(reactData);
-        this._runPuppeteer();
         return `
 				<!DOCTYPE html>
 				<html lang="en">
@@ -210,7 +286,9 @@ class TreeViewPanel {
 
 			<script>
 
-			var treeData = ${reactJSON};
+			// var treeData = d3.stratify().id(function(d) { return d.id }).parentId(function(d) { return d.level })(${rawTreeData});
+
+			var treeData = ${reactJSON}
 
 			// ************** Generate the tree diagram	 *****************
 			var margin = {top: 20, right: 120, bottom: 20, left: 120},
@@ -360,31 +438,9 @@ class TreeViewPanel {
 			}
 
 			</script>
-
+	
 				</body>
 			</html>`;
-    }
-    _runPuppeteer() {
-        // puppeteer.launch().then(async (browser: any) => {
-        // 	const page = await browser.newPage();
-        // 	await page.goto('https://www.google.com');
-        // });
-        // const chromePath = chromeLauncher.launch({
-        // 	startingUrl: 'https://reactjs.org/',
-        // 	chromeFlags: ['--headless', '--disable-gpu']
-        // }).then((chrome: any) => {
-        // 	console.log(chrome.process.spawnfile)
-        // 	return chrome.process.spawnfile
-        // });
-        (() => __awaiter(this, void 0, void 0, function* () {
-            const browser = yield puppeteer.launch();
-            const page = yield browser.newPage();
-            yield page.goto('http://localhost:3000');
-            console.log(page.target().createCDPSession());
-            // this._panel.webview.html = await page.content();
-            // console.log(this._panel.webview.html, '=============')
-        }))();
-        // return result
     }
 }
 TreeViewPanel.viewType = 'projectX';
