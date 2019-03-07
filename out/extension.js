@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const vscode = require("vscode");
 const chromeLauncher = require('chrome-launcher');
-const puppeteer = require('puppeteer-core');
 // this method is called when your extension is activated
 function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand('projectX.openTree', () => {
@@ -20,6 +19,17 @@ function activate(context) {
             }
         });
     }
+    // chromeLauncher.launch();
+    chromeLauncher.launch({
+        startingUrl: 'http://localhost:3000/',
+        userDataDir: false,
+        enableExtensions: true,
+        port: 9222,
+    }).then(chrome => {
+        console.log('here is the port', chrome.process);
+    }).catch(err => {
+        console.log('error: ', err);
+    });
 }
 exports.activate = activate;
 class TreeViewPanel {
@@ -82,26 +92,7 @@ class TreeViewPanel {
     _update() {
         this._panel.webview.html = this._getHtmlForWebview();
     }
-    _runPuppeteer() {
-        return (async () => {
-            const browser = await puppeteer.launch({
-                headless: false,
-                executablePath: '/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome',
-                pipe: true
-            }).catch((err) => console.log(err));
-            const page = await browser.pages().then((pageArr) => { return pageArr[0]; });
-            await page.goto('http://localhost:3000', { waitUntil: 'networkidle0' });
-            await page.addScriptTag({ url: 'http://localhost:8097' });
-            // page.on('console', (msg: any) => {
-            // 	console.log(msg);
-            // })
-            const reactData = await page.evaluate(async () => {
-                return window.__REACT_DEVTOOLS_GLOBAL_HOOK__._fiberRoots;
-            }).catch((err) => { console.log(err); });
-            return reactData;
-        })().catch((err) => console.log(err));
-    }
-    async _getHtmlForWebview() {
+    _getHtmlForWebview() {
         // Use a nonce to whitelist which scripts can be run
         const nonce = getNonce();
         const reactData = [
@@ -159,12 +150,7 @@ class TreeViewPanel {
                 ]
             }
         ];
-        const reactJSON = await JSON.stringify(reactData);
-        let data = await this._runPuppeteer().catch((err) => console.log(err));
-        Object.values(window.__REACT_DEVTOOLS_GLOBAL_HOOK__._fiberRoots)[0];
-        const instArr = new Set();
-        instArr.add(Object.values(data)[0]);
-        console.log(instArr);
+        const reactJSON = JSON.stringify(reactData);
         return `
 				<!DOCTYPE html>
 				<html lang="en">
