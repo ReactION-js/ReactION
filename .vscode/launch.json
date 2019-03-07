@@ -13,6 +13,17 @@
 			"args": ["--extensionDevelopmentPath=${workspaceRoot}"],
 			"outFiles": ["${workspaceFolder}/out/**/*.js"],
 			"preLaunchTask": "npm: watch"
-		}
+		},
+		// {
+		// 	"name": "Launch via NPM",
+		// 	"type": "node",
+		// 	"request": "launch",
+		// 	"cwd": "${workspaceRoot}",
+		// 	"runtimeExecutable": "npm",
+		// 	"runtimeArgs": [
+		// 		"run-script", "react-devtools"
+		// 	],
+		// 	"port": 8097
+		// }
 	]
 }
