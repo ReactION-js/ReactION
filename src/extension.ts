@@ -44,7 +44,7 @@ class TreeViewPanel {
 	public static currentPanel: TreeViewPanel | undefined;
 
 	public static readonly viewType = 'projectX';
-
+	private reactData: any; 
 	private _html: string;
 
 	private readonly _panel: vscode.WebviewPanel;
@@ -85,7 +85,8 @@ class TreeViewPanel {
 		this._panel = panel;
 		this._extensionPath = extensionPath;
 		this._html = '';
-
+		this.reactData = '';
+		
 		this._update();
 
 		this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
@@ -115,7 +116,6 @@ class TreeViewPanel {
 
 	}
 
-
 	public dispose() {
 		TreeViewPanel.currentPanel = undefined;
 
@@ -130,14 +130,16 @@ class TreeViewPanel {
 		}
 	}
 
-	private _update() {
-		this._panel.webview.html = this._getHtmlForWebview();
+
+	private async _update() {
+		const rawData = await this._runPuppeteer();
+		this._panel.webview.html = this._getHtmlForWebview(rawData);
 	}
 
 	private _runPuppeteer() {
 		console.log(__dirname, '=====')
 		const extPath = path.join(__dirname, '../', 'node_modules/react-devtools')
-		return (async () => {
+		const result = (async () => {
 			const browser = await puppeteer.launch(
 				{
 					headless: false,
@@ -156,7 +158,7 @@ class TreeViewPanel {
 			// page.on('console', (msg: any) => {
 			// 	console.log(msg);
 			// })
-
+			
 			const reactData = await page.evaluate(async () => {
 
 				const _handler = Object.values(window.__REACT_DEVTOOLS_GLOBAL_HOOK__._fiberRoots)[0].entries().next().value[0].current;
@@ -193,29 +195,36 @@ class TreeViewPanel {
 
 				};
 
-				console.log(fiberWalk(_handler), 'in browser')
-
 				return fiberWalk(_handler);
 				// console.log(window.__REACT_DEVTOOLS_GLOBAL_HOOK__)
 				// return window.__REACT_DEVTOOLS_GLOBAL_HOOK__
 
 			}).catch((err: any) => { console.log(err); });
 
-			console.log(reactData, 'in vscode');
-			return reactData;
+			const formattedReactData = [];
+			const d3Schema = {
+				name: '',
+				children: [],
+			};
+	
+				d3Schema.name = reactData[0][0];
+				
+				formattedReactData.push(d3Schema);
+
+			const reactJSON = JSON.stringify(formattedReactData);
+			return reactJSON;
 
 		})().catch((err: any) => console.log(err));
-
+		
+		return result;
 	}
 
-	private _getHtmlForWebview() {
+	public _getHtmlForWebview(rawData: any) {
 
 		// Use a nonce to whitelist which scripts can be run
 		const nonce = getNonce();
 
-		this._runPuppeteer();
-
-		const reactData = [
+		const demoReactData = [
 			{
 				name: "App Component",
 				parent: null,
@@ -270,7 +279,7 @@ class TreeViewPanel {
 				]
 			}
 		];
-		const reactJSON = JSON.stringify(reactData);
+
 
 		return `
 				<!DOCTYPE html>
@@ -329,7 +338,7 @@ class TreeViewPanel {
 
 			<script>
 
-			var treeData = ${reactJSON};
+			var treeData = ${rawData};
 
 			// ************** Generate the tree diagram	 *****************
 			var margin = {top: 20, right: 120, bottom: 20, left: 120},
@@ -479,7 +488,7 @@ class TreeViewPanel {
 			}
 
 			</script>
-
+	
 				</body>
 			</html>`
 	}
