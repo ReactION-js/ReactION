@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const vscode = require("vscode");
 // import * as whichChrome from 'which-chrome';
 const path = require("path");
+const startExtensionProvider_1 = require("./startExtensionProvider");
 const chromeLauncher = require('chrome-launcher');
 const puppeteer = require('puppeteer');
 // this method is called when your extension is activated
@@ -13,6 +14,7 @@ function activate(context) {
     // context.subscriptions.push(vscode.commands.registerCommand('projectX.openWeb', () => {
     // 	TreeViewPanel.createOrShow(context.extensionPath);
     // }));
+    vscode.window.registerTreeDataProvider('startExtension', new startExtensionProvider_1.default());
     if (vscode.window.registerWebviewPanelSerializer) {
         // Make sure we register a serializer in activation event
         vscode.window.registerWebviewPanelSerializer(TreeViewPanel.viewType, {
@@ -66,12 +68,12 @@ class TreeViewPanel {
         }, null, this._disposables);
     }
     static createOrShow(extensionPath) {
-        const column = vscode.window.activeTextEditor ? vscode.window.activeTextEditor.viewColumn : undefined;
+        const column = vscode.ViewColumn.Two;
         if (TreeViewPanel.currentPanel) {
             TreeViewPanel.currentPanel._panel.reveal(column);
             return;
         }
-        const panel = vscode.window.createWebviewPanel(TreeViewPanel.viewType, "Virtual DOM Tree", column || vscode.ViewColumn.One, {
+        const panel = vscode.window.createWebviewPanel(TreeViewPanel.viewType, "Virtual DOM Tree", column, {
             // Enable javascript in the webview
             enableScripts: true,
             retainContextWhenHidden: true,
