@@ -12,7 +12,7 @@
 			"runtimeExecutable": "${execPath}",
 			"args": ["--extensionDevelopmentPath=${workspaceRoot}"],
 			"outFiles": ["${workspaceFolder}/out/**/*.js"],
-			"preLaunchTask": "npm: react-devtools"
+			"preLaunchTask": "npm: watch"
 		},
 		// {
 		// 	"name": "Launch via NPM",
