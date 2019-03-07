@@ -135,14 +135,16 @@ class TreeViewPanel {
 
 
 	private async _update() {
-		const rawData = await this._runPuppeteer();
-		this._panel.webview.html = this._getHtmlForWebview(rawData);
+
+		const rawReact = await this._runPuppeteer();
+
+		this._panel.webview.html = this._getHtmlForWebview(rawReact);
 	}
 
 	private _runPuppeteer() {
-		console.log(__dirname, '=====')
-		const extPath = path.join(__dirname, '../', 'node_modules/react-devtools')
-		const result = (async () => {
+		// console.log(__dirname, '=====')
+		// const extPath = path.join(__dirname, '../', 'node_modules/react-devtools')
+		return (async () => {
 			const browser = await puppeteer.launch(
 				{
 					headless: false,
@@ -169,13 +171,14 @@ class TreeViewPanel {
 				function fiberWalk(entry) {
 					let output = [];
 					function recurse(root, level) {
+						console.log(root, 'root')
 
 						if (root.sibling !== null) {
-							output.push([root.sibling, level]);
+							output.push({ "name": root.sibling, "level": level });
 							recurse(root.sibling, level);
 						}
-						else if (root.child !== null) {
-							output.push([root.child, level + 1]);
+						if (root.child !== null) {
+							output.push({ "name": root.child, "level": level + 1 });
 							recurse(root.child, level + 1);
 						}
 						else {
@@ -183,26 +186,27 @@ class TreeViewPanel {
 						}
 					}
 					recurse(entry, 0);
+
+					console.log(output, 'output')
 					output.sort((a, b) => a[1] - b[1]);
-					output.forEach(el => {
-
-						if (typeof el[0].type === null) { el[0] = ''; }
-
-						if (typeof el[0].type === 'function' && el[0].type.name) el[0] = el[0].type.name;
-						if (typeof el[0].type === 'function') el[0] = 'function';
-						if (typeof el[0].type === 'object') el[0] = 'function';
-						if (typeof el[0].type === 'string') el[0] = el[0].type;
-
-					})
+					output.forEach((el, idx) => {
+						// console.log(el);
+						if (typeof el.name.type === null) { el.name = ''; }
+						if (typeof el.name.type === 'function' && el.name.type.name) el.name = el.name.type.name;
+						if (typeof el.name.type === 'function') el.name = 'function';
+						if (typeof el.name.type === 'object') el.name = 'function';
+						if (typeof el.name.type === 'string') el.name = el.name.type;
+						el['id'] = idx;
+						el['parent'] = idx === 0 ? null : el.level - 1;
+					});
 					return output;
 
 				};
 
 				return fiberWalk(_handler);
-				// console.log(window.__REACT_DEVTOOLS_GLOBAL_HOOK__)
-				// return window.__REACT_DEVTOOLS_GLOBAL_HOOK__
 
 			}).catch((err: any) => { console.log(err); });
+
 
 			const formattedReactData = [];
 			const d3Schema = {
@@ -212,6 +216,8 @@ class TreeViewPanel {
 	
 				d3Schema.name = reactData[0][0];
 				formattedReactData.push(d3Schema);
+			return reactData;
+
 
 			const reactJSON = JSON.stringify(formattedReactData);
 			return reactJSON;
@@ -221,12 +227,23 @@ class TreeViewPanel {
 		return result;
 	}
 
+
 	public _getHtmlForWebview(rawData: any) {
+
+	private _getHtmlForWebview(rawTreeData: any) {
+
 
 		// Use a nonce to whitelist which scripts can be run
 		const nonce = getNonce();
 
+
 		const demoReactData = [
+
+		console.log(rawTreeData, '====pup result=====');
+		// treeData[0].parent = null;
+
+		const reactData = [
+
 			{
 				name: "App Component",
 				parent: null,
@@ -341,6 +358,10 @@ class TreeViewPanel {
 			<script>
 
 			var treeData = ${rawData};
+
+			var treeData = d3.stratify().id(function(d) { return d.id }).parentId(function(d) { return d.level })(${rawTreeData});
+
+			// var treeData = ${reactJSON}
 
 			// ************** Generate the tree diagram	 *****************
 			var margin = {top: 20, right: 120, bottom: 20, left: 120},
