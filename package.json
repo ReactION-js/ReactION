@@ -18,13 +18,13 @@
 	"main": "./out/extension.js",
 	"contributes": {
 		"views": {
-      "projectX-button": [
-        {
-          "id": "startExtension",
-          "name": "Targets"
-        }
-      ]
-    },
+			"projectX-button": [
+				{
+					"id": "startExtension",
+					"name": "Targets"
+				}
+			]
+		},
 		"viewsContainers": {
 			"activitybar": [
 				{
