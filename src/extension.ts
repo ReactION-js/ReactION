@@ -3,17 +3,18 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import StartExtensionProvider from './startExtensionProvider';
 
+// const { fiberNodeParse } = require('./helper.js');
 const chromeLauncher = require('chrome-launcher');
 const puppeteer = require('puppeteer');
 
 // this method is called when your extension is activated
 export function activate(context: vscode.ExtensionContext) {
 
-	context.subscriptions.push(vscode.commands.registerCommand('projectX.openTree', () => {
+	context.subscriptions.push(vscode.commands.registerCommand('ReactION.openTree', () => {
 		TreeViewPanel.createOrShow(context.extensionPath);
 	}));
 
-	// context.subscriptions.push(vscode.commands.registerCommand('projectX.openWeb', () => {
+	// context.subscriptions.push(vscode.commands.registerCommand('ReactION.openWeb', () => {
 	// 	TreeViewPanel.createOrShow(context.extensionPath);
 	// }));
 
@@ -47,8 +48,8 @@ class TreeViewPanel {
 
 	public static currentPanel: TreeViewPanel | undefined;
 
-	public static readonly viewType = 'projectX';
-	private reactData: any; 
+	public static readonly viewType = 'ReactION';
+	private reactData: any;
 	private _html: string;
 
 	private readonly _panel: vscode.WebviewPanel;
@@ -89,7 +90,7 @@ class TreeViewPanel {
 		this._extensionPath = extensionPath;
 		this._html = '';
 		this.reactData = '';
-		
+
 		this._update();
 
 		this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
@@ -161,49 +162,53 @@ class TreeViewPanel {
 			// page.on('console', (msg: any) => {
 			// 	console.log(msg);
 			// })
-			
-			const reactData = await page.evaluate(async () => {
 
-				const _handler = Object.values(window.__REACT_DEVTOOLS_GLOBAL_HOOK__._fiberRoots)[0].entries().next().value[0].current;
+			const reactData = await page.evaluate(
+				async () => {
 
-				function fiberWalk(entry) {
-					let output = [];
-					function recurse(root, level) {
-						console.log(root, 'root')
+					// const _handler = Object.values(window.__REACT_DEVTOOLS_GLOBAL_HOOK__._fiberRoots)[0].entries().next().value[0].current;
 
-						if (root.sibling !== null) {
-							output.push({ "name": root.sibling, "level": level });
-							recurse(root.sibling, level);
-						}
-						if (root.child !== null) {
-							output.push({ "name": root.child, "level": level + 1 });
-							recurse(root.child, level + 1);
-						}
-						else {
-							return
-						}
-					}
-					recurse(entry, 0);
+					// function fiberWalk(entry) {
+					// 	let output = [];
+					// 	function recurse(root, level) {
+					// 		// console.log(root, 'root')
 
-					console.log(output, 'output')
-					output.sort((a, b) => a[1] - b[1]);
-					output.forEach((el, idx) => {
-						// console.log(el);
-						if (typeof el.name.type === null) { el.name = ''; }
-						if (typeof el.name.type === 'function' && el.name.type.name) el.name = el.name.type.name;
-						if (typeof el.name.type === 'function') el.name = 'function';
-						if (typeof el.name.type === 'object') el.name = 'function';
-						if (typeof el.name.type === 'string') el.name = el.name.type;
-						el['id'] = idx;
-						el['parent'] = idx === 0 ? null : el.level - 1;
-					});
-					return output;
+					// 		if (root.sibling !== null) {
+					// 			output.push({ "name": root.sibling, "level": level });
+					// 			recurse(root.sibling, level);
+					// 		}
+					// 		if (root.child !== null) {
+					// 			output.push({ "name": root.child, "level": level + 1 });
+					// 			recurse(root.child, level + 1);
+					// 		}
+					// 		else {
+					// 			return
+					// 		}
+					// 	}
+					// 	recurse(entry, 0);
 
-				};
+					// 	// console.log(output, 'output')
+					// 	output.sort((a, b) => a[1] - b[1]);
+					// 	output.forEach((el, idx) => {
+					// 		// console.log(el);
+					// 		if (typeof el.name.type === null) { el.name = ''; }
+					// 		if (typeof el.name.type === 'function' && el.name.type.name) el.name = el.name.type.name;
+					// 		if (typeof el.name.type === 'function') el.name = 'function';
+					// 		if (typeof el.name.type === 'object') el.name = 'function';
+					// 		if (typeof el.name.type === 'string') el.name = el.name.type;
+					// 		el['id'] = idx;
+					// 		el['parent'] = idx === 0 ? null : el.level - 1;
+					// 	});
+					// 	return output;
 
-				return fiberWalk(_handler);
+					// };
 
-			}).catch((err: any) => { console.log(err); });
+					const domElements = document.querySelector('body').children;
+
+					for (let ele of domElements) { if (ele._reactRootContainer) { console.log(ele._reactRootContainer._internalRoot) } }
+
+					// return fiberWalk(_handler);
+				}).catch((err: any) => { console.log(err); });
 
 
 			const formattedReactData = [];
@@ -211,22 +216,19 @@ class TreeViewPanel {
 				name: '',
 				children: [],
 			};
-	
+
 				d3Schema.name = reactData[0][0];
 				formattedReactData.push(d3Schema);
 			return reactData;
 
 
-			
+
 			return reactJSON;
 
 		})().catch((err: any) => console.log(err));
-		
+
 		return result;
 	}
-
-
-	public _getHtmlForWebview(rawData: any) {
 
 	private _getHtmlForWebview(rawTreeData: any) {
 
@@ -505,7 +507,7 @@ class TreeViewPanel {
 			}
 
 			</script>
-	
+
 				</body>
 			</html>`
 	}
