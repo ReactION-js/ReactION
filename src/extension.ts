@@ -166,68 +166,60 @@ class TreeViewPanel {
 			const reactData = await page.evaluate(
 				async () => {
 
-					// const _handler = Object.values(window.__REACT_DEVTOOLS_GLOBAL_HOOK__._fiberRoots)[0].entries().next().value[0].current;
+					const _handler = (() => {
+						const domElements = document.querySelector('body').children;
 
-					// function fiberWalk(entry) {
-					// 	let output = [];
-					// 	function recurse(root, level) {
-					// 		// console.log(root, 'root')
+						for (let ele of domElements) { if (ele._reactRootContainer) { return ele._reactRootContainer._internalRoot.current; } }
+					})()
 
-					// 		if (root.sibling !== null) {
-					// 			output.push({ "name": root.sibling, "level": level });
-					// 			recurse(root.sibling, level);
-					// 		}
-					// 		if (root.child !== null) {
-					// 			output.push({ "name": root.child, "level": level + 1 });
-					// 			recurse(root.child, level + 1);
-					// 		}
-					// 		else {
-					// 			return
-					// 		}
-					// 	}
-					// 	recurse(entry, 0);
+					function fiberWalk(entry) {
+						let output = [];
+						function recurse(root, level, id, parentId) {
 
-					// 	// console.log(output, 'output')
-					// 	output.sort((a, b) => a[1] - b[1]);
-					// 	output.forEach((el, idx) => {
-					// 		// console.log(el);
-					// 		if (typeof el.name.type === null) { el.name = ''; }
-					// 		if (typeof el.name.type === 'function' && el.name.type.name) el.name = el.name.type.name;
-					// 		if (typeof el.name.type === 'function') el.name = 'function';
-					// 		if (typeof el.name.type === 'object') el.name = 'function';
-					// 		if (typeof el.name.type === 'string') el.name = el.name.type;
-					// 		el['id'] = idx;
-					// 		el['parent'] = idx === 0 ? null : el.level - 1;
-					// 	});
-					// 	return output;
+							if (root.sibling !== null && root.child !== null) {
+								// console.log('both');
+								output.push({ "name": root.sibling, "level": level, "id": `${id + 1}`, "parentId": `${parentId - 1}` },
+									{ "name": root.child, "level": `${level + 1}`, "id": `${id + 1}`, "parentId": `${parentId}` }
+								);
+								recurse(root.sibling, level, id + 1, parentId);
+								recurse(root.child, level + 1, id + 2, parentId + 1);
+							}
 
-					// };
+							else if (root.sibling !== null && root.child === null) {
+								output.push({ "name": root.sibling, "level": `${level}`, "id": `${id + 1}`, "parentId": `${parentId - 1}` });
+								recurse(root.sibling, level, id + 1, parentId);
+							}
+							else if (root.child !== null && root.sibling === null) {
+								output.push({ "name": root.child, "level": `${level + 1}`, "id": `${id + 1}`, "parentId": `${parentId}` });
+								recurse(root.child, level + 1, id + 1, parentId + 1);
+							}
+							else if (root.child === null && root.sibling === null) {
+								return;
+							}
+						}
+						recurse(entry, 0, 0, 0);
+						output.sort((a, b) => a[1] - b[1]);
+						output.forEach((el, idx) => {
+							// console.log(el);
+							if (typeof el.name.type === null) { el.name = ''; }
+							if (typeof el.name.type === 'function' && el.name.type.name) el.name = el.name.type.name;
+							if (typeof el.name.type === 'function') el.name = 'function';
+							if (typeof el.name.type === 'object') el.name = 'function';
+							if (typeof el.name.type === 'string') el.name = el.name.type;
+							// increment index by 1 since forEach is zero-indexed
+							// el['id'] = idx+1;
+							// el['parent'] = idx === 0 ? null : el.level-1;
+						});
 
-					const domElements = document.querySelector('body').children;
+						output[0].parentId = '';
 
-					for (let ele of domElements) { if (ele._reactRootContainer) { console.log(ele._reactRootContainer._internalRoot) } }
-
-					// return fiberWalk(_handler);
+						return output;
+					};
+					return fiberWalk(_handler);
 				}).catch((err: any) => { console.log(err); });
 
-
-			const formattedReactData = [];
-			const d3Schema = {
-				name: '',
-				children: [],
-			};
-
-				d3Schema.name = reactData[0][0];
-				formattedReactData.push(d3Schema);
-			return reactData;
-
-
-
-			return reactJSON;
-
+				return reactData;
 		})().catch((err: any) => console.log(err));
-
-		return result;
 	}
 
 	private _getHtmlForWebview(rawTreeData: any) {
@@ -236,280 +228,272 @@ class TreeViewPanel {
 		// Use a nonce to whitelist which scripts can be run
 		const nonce = getNonce();
 
+
+
+		const sampleData = [
+			{ "name": "Eve", "parent": "" },
+			{ "name": "Cain", "parent": "Eve" },
+			{ "name": "Seth", "parent": "Eve" },
+			{ "name": "Enos", "parent": "Seth" },
+			{ "name": "Noam", "parent": "Seth" },
+			{ "name": "Abel", "parent": "Eve" },
+			{ "name": "Awan", "parent": "Eve" },
+			{ "name": "Enoch", "parent": "Awan" },
+			{ "name": "Azura", "parent": "Eve" }
+		]
+
+		const flatData = JSON.stringify(rawTreeData.slice(0, 5));
+
 		console.log(rawTreeData, '====pup result=====');
-		// treeData[0].parent = null;
+		console.log(flatData, '====pup result=====');
 
-		const reactData = [
+		return `<!DOCTYPE html>
+<html lang="en">
 
-			{
-				name: "App Component",
-				parent: null,
-				props: "this.props: 1 \nparent: null",
-				children: [
-					{
-						name: "Navbar",
-						parent: "App Component",
-						props: "this.props: 2\nparent: app",
-						children: [
-							{
-								name: "Home",
-								parent: "Navbar",
-								props: "this.props: 3",
-								children: [
-									{
-										name: "About Us",
-										parent: "Home",
-										props: "this.props: 4",
-									},
-									{
-										name: "Contact",
-										parent: "Home",
-										props: "this.props: 5",
-									}
-								]
-							},
-							{
-								name: "Logo",
-								parent: "Navbar",
-								props: "this.props: 6",
-							}
-						]
-					},
-					{
-						name: "Login",
-						parent: "App Component",
-						props: "this.props: 7\nparent: app",
-						children: [
-							{
-								name: "Button",
-								parent: "Login",
-								props: "this.props: 8",
-							}
-						]
-					},
-					{
-						name: "Footer",
-						parent: "App Component",
-						props: "this.props: 9\nparent: app",
-					}
-				]
-			}
-		];
+<head>
+  <meta charset="utf-8">
+  <title>Tree Example</title>
 
-		const reactJSON = JSON.stringify(reactData);
+  <style>
+    body {
+      background-color: white;
+    }
 
-		return `
-				<!DOCTYPE html>
-				<html lang="en">
-				<head>
-					<meta charset="utf-8">
-					<title>Tree Example</title>
+    .node {
+      cursor: pointer;
+    }
 
-					<style>
-						body {
-							background-color: white;
-						}
+    .node circle {
+      fill: #fff;
+      stroke: steelblue;
+      stroke-width: 3px;
+    }
 
-						.node {
-							cursor: pointer;
-						}
+    .node text {
+      font: 12px sans-serif;
+    }
 
-						.node circle {
-							fill: #fff;
-							stroke: steelblue;
-							stroke-width: 3px;
-						}
+    div.tooltip {
+      position: absolute;
+      text-align: center;
+      width: 100px;
+      height: 50x;
+      padding: 2px;
+      font: 15px sans-serif;
+      color: black;
+      background: lightsteelblue;
+      border: 0px;
+      border-radius: 8px;
+      pointer-events: none;
+    }
 
-						.node text {
-							font: 12px sans-serif;
-						}
+    .link {
+      fill: none;
+      stroke: #ccc;
+      stroke-width: 2px;
+    }
+  </style>
+</head>
 
-						div.tooltip {
-							position: absolute;
-							text-align: center;
-							width: 100px;
-							height: 50x;
-							padding: 2px;
-							font: 15px sans-serif;
-							color: black;
-							background: lightsteelblue;
-							border: 0px;
-							border-radius: 8px;
-							pointer-events: none;
-					}
+<body>
+  <div>
 
-						.link {
-							fill: none;
-							stroke: #ccc;
-							stroke-width: 2px;
-						}
-					</style>
-				</head>
+  </div>
+  <!-- load the d3.js library -->
+  <script src="https://d3js.org/d3.v5.min.js"></script>
 
-				<body>
-				<div>
+	<script>
 
-				</div>
-			<!-- load the d3.js library -->
-			<script src="http://d3js.org/d3.v3.min.js"></script>
+    var treeData = d3.stratify().id(function(d) { return d.id }).parentId(function(d) { return d.parentId; })(${flatData});
 
-			<script>
+    // Set the dimensions and margins of the diagram
+      var margin = { top: 20, right: 90, bottom: 30, left: 90 },
+        width = 960 - margin.left - margin.right,
+        height = 500 - margin.top - margin.bottom;
 
-			// var treeData = d3.stratify().id(function(d) { return d.id }).parentId(function(d) { return d.level })(${rawTreeData});
+      // append the svg object to the body of the page
+      // appends a 'group' element to 'svg'
+      // moves the 'group' element to the top left margin
+      var svg = d3.select("body").append("svg")
+        .attr("width", width + margin.right + margin.left)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", "translate("
+          + margin.left + "," + margin.top + ")");
 
-			var treeData = ${reactJSON}
+      var i = 0,
+        duration = 750,
+        root;
 
-			// ************** Generate the tree diagram	 *****************
-			var margin = {top: 20, right: 120, bottom: 20, left: 120},
-				width = 960 - margin.right - margin.left,
-				height = 500 - margin.top - margin.bottom;
+      // declares a tree layout and assigns the size
+      var treemap = d3.tree().size([height, width]);
 
-			var i = 0,
-				duration = 750,
-				root;
+      // Assigns parent, children, height, depth
+      root = d3.hierarchy(treeData, function (d) { return d.children; });
+      root.x0 = height / 2;
+      root.y0 = 0;
 
-			var tree = d3.layout.tree()
-				.size([height, width]);
+      // Collapse after the second level
+      //root.children.forEach(collapse);
 
-			var diagonal = d3.svg.diagonal()
-				.projection(function(d) { return [d.y, d.x]; });
+      update(root);
 
-			var svg = d3.select("body").append("svg")
-				.attr("width", width + margin.right + margin.left)
-				.attr("height", height + margin.top + margin.bottom)
-				.append("g")
-				.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+      // Collapse the node and all it's children
+      // function collapse(d) {
+      //   if(d.children) {
+      //     d._children = d.children
+      //     d._children.forEach(collapse)
+      //     d.children = null
+      //   }
+      // }
 
-			root = treeData[0];
-			root.x0 = height / 2;
-			root.y0 = 0;
+      function update(source) {
 
-			update(root);
+        // Assigns the x and y position for the nodes
+        var treeData = treemap(root);
 
-			d3.select(self.frameElement).style("height", "500px");
+        // Compute the new tree layout.
+        var nodes = treeData.descendants(),
+          links = treeData.descendants().slice(1);
 
-			function update(source) {
+        // Normalize for fixed-depth.
+        nodes.forEach(function (d) { d.y = d.depth * 180 });
 
-				// Compute the new tree layout.
-				var nodes = tree.nodes(root).reverse(),
-					links = tree.links(nodes);
+        // ****************** Nodes section ***************************
 
-				// Normalize for fixed-depth.
-				nodes.forEach(function(d) { d.y = d.depth * 180; });
+        // Update the nodes...
+        var node = svg.selectAll('g.node')
+          .data(nodes, function (d) { return d.id || (d.id = ++i); });
 
-				// Update the nodes…
-				var node = svg.selectAll("g.node")
-					.data(nodes, function(d) { return d.id || (d.id = ++i); });
+        // Enter any new modes at the parent's previous position.
+        var nodeEnter = node.enter().append('g')
+          .attr('class', 'node')
+          .attr("transform", function (d) {
+            return "translate(" + source.y0 + "," + source.x0 + ")";
+          })
+          .on('click', click);
 
-				// Enter any new nodes at the parent's previous position.
-				var nodeEnter = node.enter().append("g")
-					.attr("class", "node")
-					.attr("transform", function(d) { return "translate(" + source.y0 + "," + source.x0 + ")"; })
-					.on("click", click)
-					.on("mouseover", function(d) {
-            div.transition()
-                .duration(200)
-                .style("opacity", .99);
-            div.html(d.props + "<br/>")
-                .style("left", (d3.event.pageX) + "px")
-                .style("top", (d3.event.pageY - 28) + "px");
-            })
-        .on("mouseout", function(d) {
-            div.transition()
-                .duration(500)
-                .style("opacity", 0);
-        })
-;
+        // Add Circle for the nodes
+        nodeEnter.append('circle')
+          .attr('class', 'node')
+          .attr('r', 1e-6)
+          .style("fill", function (d) {
+            return d._children ? "lightsteelblue" : "#fff";
+          });
 
-				nodeEnter.append("circle")
-					.attr("r", 1e-6)
-					.style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
+        // Add labels for the nodes
+        nodeEnter.append('text')
+          .attr("dy", ".35em")
+          .attr("x", function (d) {
+            return d.children || d._children ? -13 : 13;
+          })
+          .attr("text-anchor", function (d) {
+            return d.children || d._children ? "end" : "start";
+          })
+          .text(function (d) { return d.data.name; });
 
-				nodeEnter.append("text")
-					.attr("x", function(d) { return d.children || d._children ? -13 : 13; })
-					.attr("dy", ".35em")
-					.attr("text-anchor", function(d) { return d.children || d._children ? "end" : "start"; })
-					.text(function(d) { return d.name; })
-					.style("fill-opacity", 1e-6);
+        // UPDATE
+        var nodeUpdate = nodeEnter.merge(node);
 
-				// Transition nodes to their new position.
-				var nodeUpdate = node.transition()
-					.duration(duration)
-					.attr("transform", function(d) { return "translate(" + d.y + "," + d.x + ")"; });
+        // Transition to the proper position for the node
+        nodeUpdate.transition()
+          .duration(duration)
+          .attr("transform", function (d) {
+            return "translate(" + d.y + "," + d.x + ")";
+          });
 
-				nodeUpdate.select("circle")
-					.attr("r", 10)
-					.style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
-
-				nodeUpdate.select("text")
-					.style("fill-opacity", 1);
-
-				// Transition exiting nodes to the parent's new position.
-				var nodeExit = node.exit().transition()
-					.duration(duration)
-					.attr("transform", function(d) { return "translate(" + source.y + "," + source.x + ")"; })
-					.remove();
-
-				nodeExit.select("circle")
-					.attr("r", 1e-6);
-
-				nodeExit.select("text")
-					.style("fill-opacity", 1e-6);
-
-				// Update the links…
-				var link = svg.selectAll("path.link")
-					.data(links, function(d) { return d.target.id; });
-
-				// Enter any new links at the parent's previous position.
-				link.enter().insert("path", "g")
-					.attr("class", "link")
-					.attr("d", function(d) {
-					var o = {x: source.x0, y: source.y0};
-					return diagonal({source: o, target: o});
-					});
-
-				// Transition links to their new position.
-				link.transition()
-					.duration(duration)
-					.attr("d", diagonal);
-
-				// Transition exiting nodes to the parent's new position.
-				link.exit().transition()
-					.duration(duration)
-					.attr("d", function(d) {
-					var o = {x: source.x, y: source.y};
-					return diagonal({source: o, target: o});
-					})
-					.remove();
-
-				// Stash the old positions for transition.
-				nodes.forEach(function(d) {
-				d.x0 = d.x;
-				d.y0 = d.y;
-				});
-			}
-
-			var div = d3.select("body").append("div")
-				.attr("class", "tooltip")
-				.style("opacity", 0);
+        // Update the node attributes and style
+        nodeUpdate.select('circle.node')
+          .attr('r', 10)
+          .style("fill", function (d) {
+            return d._children ? "lightsteelblue" : "#fff";
+          })
+          .attr('cursor', 'pointer');
 
 
-			// Toggle children on click.
-			function click(d) {
-				if (d.children) {
-				d._children = d.children;
-				d.children = null;
-				} else {
-				d.children = d._children;
-				d._children = null;
-				}
-				update(d);
-			}
+        // Remove any exiting nodes
+        var nodeExit = node.exit().transition()
+          .duration(duration)
+          .attr("transform", function (d) {
+            return "translate(" + source.y + "," + source.x + ")";
+          })
+          .remove();
 
-			</script>
+        // On exit reduce the node circles size to 0
+        nodeExit.select('circle')
+          .attr('r', 1e-6);
 
-				</body>
-			</html>`
+        // On exit reduce the opacity of text labels
+        nodeExit.select('text')
+          .style('fill-opacity', 1e-6);
+
+        // ****************** links section ***************************
+
+        // Update the links...
+        var link = svg.selectAll('path.link')
+          .data(links, function (d) { return d.id; });
+
+        // Enter any new links at the parent's previous position.
+        var linkEnter = link.enter().insert('path', "g")
+          .attr("class", "link")
+          .attr('d', function (d) {
+            var o = { x: source.x0, y: source.y0 }
+            return diagonal(o, o)
+          });
+
+        // UPDATE
+        var linkUpdate = linkEnter.merge(link);
+
+        // Transition back to the parent element position
+        linkUpdate.transition()
+          .duration(duration)
+          .attr('d', function (d) { return diagonal(d, d.parent) });
+
+        // Remove any exiting links
+        var linkExit = link.exit().transition()
+          .duration(duration)
+          .attr('d', function (d) {
+            var o = { x: source.x, y: source.y }
+            return diagonal(o, o)
+          })
+          .remove();
+
+        // Store the old positions for transition.
+        nodes.forEach(function (d) {
+          d.x0 = d.x;
+          d.y0 = d.y;
+        });
+
+        // Creates a curved (diagonal) path from parent to the child nodes
+        function diagonal(s, d) {
+
+          path = 'M ' + s.y + ' ' + s.x +
+            'C ' + (s.y + d.y) / 2 + ' ' + s.x + ', '
+            + (s.y + d.y) / 2 + ' ' + d.x + ', '
+            + d.y + ' ' + d.x
+
+          return path.toString();
+        }
+
+        // Toggle children on click.
+        function click(d) {
+          if (d.children) {
+            d._children = d.children;
+            d.children = null;
+          } else {
+            d.children = d._children;
+            d._children = null;
+          }
+          update(d);
+        }
+      }
+
+  </script>
+
+</body>
+
+</html>
+`
 	}
 }
 
