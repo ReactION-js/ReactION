@@ -166,6 +166,7 @@ class TreeViewPanel {
                     return output;
                 }
                 ;
+                console.log(fiberWalk(_handler));
                 return fiberWalk(_handler);
             }).catch((err) => { console.log(err); });
             return reactData;
