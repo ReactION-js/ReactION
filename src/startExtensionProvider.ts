@@ -15,7 +15,7 @@ export default class StartExtensionProvider implements vscode.TreeDataProvider<o
   }
 
   getChildren(element?: object): Thenable<object[]> {
-    vscode.commands.executeCommand('projectX.openTree');
+    vscode.commands.executeCommand('ReactION.openTree');
     // vscode.commands.executeCommand('workbench.view.explorer');
 
     this._onDidChangeTreeData.fire(); // Make sure collection is not cached.
