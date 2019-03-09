@@ -48,7 +48,7 @@ class TreeViewPanel {
 	public static currentPanel: TreeViewPanel | undefined;
 
 	public static readonly viewType = 'projectX';
-	private reactData: any; 
+	private reactData: any;
 	private _html: string;
 
 	private readonly _panel: vscode.WebviewPanel;
@@ -89,7 +89,7 @@ class TreeViewPanel {
 		this._extensionPath = extensionPath;
 		this._html = '';
 		this.reactData = '';
-		
+
 		this._update();
 
 		this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
@@ -161,7 +161,7 @@ class TreeViewPanel {
 			// page.on('console', (msg: any) => {
 			// 	console.log(msg);
 			// })
-			
+
 			const reactData = await page.evaluate(async () => {
 
 				const _handler = Object.values(window.__REACT_DEVTOOLS_GLOBAL_HOOK__._fiberRoots)[0].entries().next().value[0].current;
@@ -211,17 +211,17 @@ class TreeViewPanel {
 				name: '',
 				children: [],
 			};
-	
-				d3Schema.name = reactData[0][0];
-				formattedReactData.push(d3Schema);
+
+			d3Schema.name = reactData[0][0];
+			formattedReactData.push(d3Schema);
 			return reactData;
 
 
-			
+
 			return reactJSON;
 
 		})().catch((err: any) => console.log(err));
-		
+
 		return result;
 	}
 
@@ -372,11 +372,14 @@ class TreeViewPanel {
 			var diagonal = d3.svg.diagonal()
 				.projection(function(d) { return [d.y, d.x]; });
 
-			var svg = d3.select("body").append("svg")
-				.attr("width", width + margin.right + margin.left)
-				.attr("height", height + margin.top + margin.bottom)
-				.append("g")
-				.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+			var svg = d3.select("body")
+			.append("svg")
+			.attr("width", width + margin.right + margin.left)
+			.attr("height", height + margin.top + margin.bottom)
+			.call(d3.behavior.zoom().on("zoom", function () {
+				svg.attr("transform", "translate(" + d3.event.translate + ")" + " scale(" + d3.event.scale + ")")
+			}))
+			.append("g")
 
 			root = treeData[0];
 			root.x0 = height / 2;
