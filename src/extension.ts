@@ -134,7 +134,6 @@ class TreeViewPanel {
 		}
 	}
 
-
 	private async _update() {
 		const rawReact = await this._runPuppeteer();
 		this._panel.webview.html = this._getHtmlForWebview(rawReact);
@@ -215,6 +214,7 @@ class TreeViewPanel {
 
 						return output;
 					};
+					console.log(fiberWalk(_handler))
 					return fiberWalk(_handler);
 				}).catch((err: any) => { console.log(err); });
 
