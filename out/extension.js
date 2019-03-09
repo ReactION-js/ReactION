@@ -2,14 +2,15 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const vscode = require("vscode");
 const startExtensionProvider_1 = require("./startExtensionProvider");
+// const { fiberNodeParse } = require('./helper.js');
 const chromeLauncher = require('chrome-launcher');
 const puppeteer = require('puppeteer');
 // this method is called when your extension is activated
 function activate(context) {
-    context.subscriptions.push(vscode.commands.registerCommand('projectX.openTree', () => {
+    context.subscriptions.push(vscode.commands.registerCommand('ReactION.openTree', () => {
         TreeViewPanel.createOrShow(context.extensionPath);
     }));
-    // context.subscriptions.push(vscode.commands.registerCommand('projectX.openWeb', () => {
+    // context.subscriptions.push(vscode.commands.registerCommand('ReactION.openWeb', () => {
     // 	TreeViewPanel.createOrShow(context.extensionPath);
     // }));
     vscode.window.registerTreeDataProvider('startExtension', new startExtensionProvider_1.default());
@@ -113,46 +114,45 @@ class TreeViewPanel {
             // 	console.log(msg);
             // })
             const reactData = await page.evaluate(async () => {
-                const _handler = Object.values(window.__REACT_DEVTOOLS_GLOBAL_HOOK__._fiberRoots)[0].entries().next().value[0].current;
-                function fiberWalk(entry) {
-                    let output = [];
-                    function recurse(root, level) {
-                        console.log(root, 'root');
-                        if (root.sibling !== null) {
-                            output.push({ "name": root.sibling, "level": level });
-                            recurse(root.sibling, level);
-                        }
-                        if (root.child !== null) {
-                            output.push({ "name": root.child, "level": level + 1 });
-                            recurse(root.child, level + 1);
-                        }
-                        else {
-                            return;
-                        }
+                // const _handler = Object.values(window.__REACT_DEVTOOLS_GLOBAL_HOOK__._fiberRoots)[0].entries().next().value[0].current;
+                // function fiberWalk(entry) {
+                // 	let output = [];
+                // 	function recurse(root, level) {
+                // 		// console.log(root, 'root')
+                // 		if (root.sibling !== null) {
+                // 			output.push({ "name": root.sibling, "level": level });
+                // 			recurse(root.sibling, level);
+                // 		}
+                // 		if (root.child !== null) {
+                // 			output.push({ "name": root.child, "level": level + 1 });
+                // 			recurse(root.child, level + 1);
+                // 		}
+                // 		else {
+                // 			return
+                // 		}
+                // 	}
+                // 	recurse(entry, 0);
+                // 	// console.log(output, 'output')
+                // 	output.sort((a, b) => a[1] - b[1]);
+                // 	output.forEach((el, idx) => {
+                // 		// console.log(el);
+                // 		if (typeof el.name.type === null) { el.name = ''; }
+                // 		if (typeof el.name.type === 'function' && el.name.type.name) el.name = el.name.type.name;
+                // 		if (typeof el.name.type === 'function') el.name = 'function';
+                // 		if (typeof el.name.type === 'object') el.name = 'function';
+                // 		if (typeof el.name.type === 'string') el.name = el.name.type;
+                // 		el['id'] = idx;
+                // 		el['parent'] = idx === 0 ? null : el.level - 1;
+                // 	});
+                // 	return output;
+                // };
+                const domElements = document.querySelector('body').children;
+                for (let ele of domElements) {
+                    if (ele._reactRootContainer) {
+                        console.log(ele._reactRootContainer._internalRoot);
                     }
-                    recurse(entry, 0);
-                    console.log(output, 'output');
-                    output.sort((a, b) => a[1] - b[1]);
-                    output.forEach((el, idx) => {
-                        // console.log(el);
-                        if (typeof el.name.type === null) {
-                            el.name = '';
-                        }
-                        if (typeof el.name.type === 'function' && el.name.type.name)
-                            el.name = el.name.type.name;
-                        if (typeof el.name.type === 'function')
-                            el.name = 'function';
-                        if (typeof el.name.type === 'object')
-                            el.name = 'function';
-                        if (typeof el.name.type === 'string')
-                            el.name = el.name.type;
-                        el['id'] = idx;
-                        el['parent'] = idx === 0 ? null : el.level - 1;
-                    });
-                    return output;
                 }
-                ;
-                return fiberWalk(_handler);
+                // return fiberWalk(_handler);
             }).catch((err) => { console.log(err); });
             const formattedReactData = [];
             const d3Schema = {
@@ -165,8 +165,6 @@ class TreeViewPanel {
             return reactJSON;
         })().catch((err) => console.log(err));
         return result;
-    }
-    _getHtmlForWebview(rawData) {
     }
     _getHtmlForWebview(rawTreeData) {
         // Use a nonce to whitelist which scripts can be run
@@ -438,12 +436,12 @@ class TreeViewPanel {
 			}
 
 			</script>
-	
+
 				</body>
 			</html>`;
     }
 }
-TreeViewPanel.viewType = 'projectX';
+TreeViewPanel.viewType = 'ReactION';
 function getNonce() {
     let text = "";
     const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
