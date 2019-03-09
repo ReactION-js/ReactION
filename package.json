@@ -1,6 +1,6 @@
 {
-	"name": "projectX",
-	"displayName": "projectX",
+	"name": "ReactION",
+	"displayName": "ReactION",
 	"description": "",
 	"version": "0.0.1",
 	"engines": {
@@ -10,15 +10,15 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:projectX.openTree",
-		"onCommand:projectX.openWeb",
-		"onWebviewPanel:projectX",
+		"onCommand:ReactION.openTree",
+		"onCommand:ReactION.openWeb",
+		"onWebviewPanel:ReactION",
 		"onView:startExtension"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
 		"views": {
-			"projectX-button": [
+			"ReactION-button": [
 				{
 					"id": "startExtension",
 					"name": "Targets"
@@ -28,20 +28,20 @@
 		"viewsContainers": {
 			"activitybar": [
 				{
-					"id": "projectX-button",
-					"title": "projectX-button",
+					"id": "ReactION-button",
+					"title": "ReactION-button",
 					"icon": "resources/dep.svg"
 				}
 			]
 		},
 		"commands": [
 			{
-				"command": "projectX.openTree",
-				"title": "px"
+				"command": "ReactION.openTree",
+				"title": "ReactION Tree"
 			},
 			{
-				"command": "projectX.openWeb",
-				"title": "pxtest"
+				"command": "ReactION.openWeb",
+				"title": "ReactION Web"
 			}
 		]
 	},
@@ -50,8 +50,7 @@
 		"compile": "tsc -p ./",
 		"watch": "tsc -watch -p ./",
 		"postinstall": "node ./node_modules/vscode/bin/install",
-		"test": "npm run compile && node ./node_modules/vscode/bin/test",
-		"react-dev": "react-devtools"
+		"test": "npm run compile && node ./node_modules/vscode/bin/test"
 	},
 	"devDependencies": {
 		"typescript": "^3.3.1",
@@ -63,7 +62,6 @@
 	"dependencies": {
 		"chrome-launcher": "^0.10.5",
 		"electron-devtools-installer": "^2.2.4",
-		"puppeteer": "^1.12.2",
-		"react-devtools": "^3.6.1"
+		"puppeteer": "^1.12.2"
 	}
 }
