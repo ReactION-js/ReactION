@@ -305,11 +305,14 @@ class TreeViewPanel {
 			var diagonal = d3.svg.diagonal()
 				.projection(function(d) { return [d.y, d.x]; });
 
-			var svg = d3.select("body").append("svg")
-				.attr("width", width + margin.right + margin.left)
-				.attr("height", height + margin.top + margin.bottom)
-				.append("g")
-				.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+			var svg = d3.select("body")
+			.append("svg")
+			.attr("width", width + margin.right + margin.left)
+			.attr("height", height + margin.top + margin.bottom)
+			.call(d3.behavior.zoom().on("zoom", function () {
+				svg.attr("transform", "translate(" + d3.event.translate + ")" + " scale(" + d3.event.scale + ")")
+			}))
+			.append("g")
 
 			root = treeData[0];
 			root.x0 = height / 2;
