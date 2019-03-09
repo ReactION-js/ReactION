@@ -162,7 +162,6 @@ class TreeViewPanel {
 			// page.on('console', (msg: any) => {
 			// 	console.log(msg);
 			// })
-
 			const reactData = await page.evaluate(
 				async () => {
 
@@ -227,8 +226,6 @@ class TreeViewPanel {
 
 		// Use a nonce to whitelist which scripts can be run
 		const nonce = getNonce();
-
-
 
 		const sampleData = [
 			{ "name": "Eve", "parent": "" },

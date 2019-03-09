@@ -435,6 +435,7 @@ class TreeViewPanel {
 
 </html>
 `;
+
     }
 }
 TreeViewPanel.viewType = 'ReactION';
