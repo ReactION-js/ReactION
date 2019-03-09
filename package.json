@@ -1,6 +1,6 @@
 {
-	"name": "projectX",
-	"displayName": "projectX",
+	"name": "ReactION",
+	"displayName": "ReactION",
 	"description": "",
 	"version": "0.0.1",
 	"engines": {
@@ -10,38 +10,38 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:projectX.openTree",
-		"onCommand:projectX.openWeb",
-		"onWebviewPanel:projectX",
+		"onCommand:ReactION.openTree",
+		"onCommand:ReactION.openWeb",
+		"onWebviewPanel:ReactION",
 		"onView:startExtension"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
 		"views": {
-      "projectX-button": [
-        {
-          "id": "startExtension",
-          "name": "Targets"
-        }
-      ]
-    },
+			"ReactION-button": [
+				{
+					"id": "startExtension",
+					"name": "Targets"
+				}
+			]
+		},
 		"viewsContainers": {
 			"activitybar": [
 				{
-					"id": "projectX-button",
-					"title": "projectX-button",
+					"id": "ReactION-button",
+					"title": "ReactION-button",
 					"icon": "resources/dep.svg"
 				}
 			]
 		},
 		"commands": [
 			{
-				"command": "projectX.openTree",
-				"title": "px"
+				"command": "ReactION.openTree",
+				"title": "ReactION Tree"
 			},
 			{
-				"command": "projectX.openWeb",
-				"title": "pxtest"
+				"command": "ReactION.openWeb",
+				"title": "ReactION Web"
 			}
 		]
 	},
