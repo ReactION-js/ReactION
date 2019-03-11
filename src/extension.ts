@@ -220,12 +220,14 @@ class TreeViewPanel {
 						output[0].parentId = '';
 
 						return output;
-					};
+					}
+
 					return fiberWalk(_handler);
 				}).catch((err: any) => { console.log(err); });
 
-				return reactData;
+			return reactData;
 		})().catch((err: any) => console.log(err));
+
 	}
 
 	private _getHtmlForWebview(rawTreeData: any) {
@@ -311,6 +313,24 @@ class TreeViewPanel {
       border-radius: 8px;
       pointer-events: none;
     }
+
+		div.tooltip.props {
+			visibility: hidden;
+        width: 120px;
+        background-color: black;
+        color: #fff;
+        text-align: center;
+        padding: 5px 0;
+        border-radius: 6px;
+
+        /* Position the tooltip text - see examples below! */
+        position: absolute;
+        z-index: 1;
+		}
+
+		.tooltip:hover .props {
+			visibility: visible;
+	}
 
     .link {
       fill: none;
@@ -440,7 +460,9 @@ class TreeViewPanel {
           .attr("transform", function (d) {
             return "translate(" + source.y0 + "," + source.x0 + ")";
           })
-          .on('click', click);
+					.on('click', click)
+					.on("mouseover", mouseover)
+					.on("mouseout", mouseout)
 
         // Add Circle for the nodes
         nodeEnter.append('circle')
@@ -554,7 +576,20 @@ class TreeViewPanel {
             d._children = null;
           }
           update(d);
-        }
+				}
+				
+				// Show props on mouseover
+				function mouseover(d){
+					var g = d3.select(this); // The node
+					var info = g.append('text')
+							 .classed('info', true)
+							 .text('props!');
+				}
+
+				// Remove props on mouseout
+				function mouseout(){
+					d3.select(this).select('text.info').remove()
+				}
 			}
 
 
