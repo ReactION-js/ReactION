@@ -51,7 +51,6 @@ class TreeViewPanel {
 	public static readonly viewType = 'ReactION';
 	private reactData: any;
 	private _html: string;
-
 	private readonly _panel: vscode.WebviewPanel;
 	private readonly _extensionPath: string;
 	private _disposables: vscode.Disposable[] = [];
@@ -166,13 +165,17 @@ class TreeViewPanel {
 				async () => {
 
 					const _handler = (() => {
-						const domElements = document.querySelector('body').children;
-
+						// fix this typescript issue
+						// @ts-ignore 
+						const domElements = document.querySelector<HTMLElement>('body').children;
+						// @ts-ignore 
 						for (let ele of domElements) { if (ele._reactRootContainer) { return ele._reactRootContainer._internalRoot.current; } }
 					})()
 
-					function fiberWalk(entry) {
-						let output = [];
+					function fiberWalk(entry: any) {
+						let output: any = [];
+						// fix this typescript issue
+						// @ts-ignore 
 						function recurse(root, level, id, parentId) {
 
 							if (root.sibling !== null && root.child !== null) {
@@ -197,7 +200,11 @@ class TreeViewPanel {
 							}
 						}
 						recurse(entry, 0, 0, 0);
+						// fix this typescript issue
+						// @ts-ignore 
 						output.sort((a, b) => a[1] - b[1]);
+						// fix this typescript issue
+						// @ts-ignore 
 						output.forEach((el, idx) => {
 							// console.log(el);
 							if (typeof el.name.type === null) { el.name = ''; }
@@ -253,8 +260,29 @@ class TreeViewPanel {
 
   <style>
     body {
-      background-color: white;
+			background-color: white;
     }
+
+		.axis path {
+			display: none;
+		}
+		
+		.axis line {
+			stroke-opacity: 0.3;
+			shape-rendering: crispEdges;
+		}
+		
+		.view {
+			fill: white;
+			stroke: #000;
+		}
+		
+		button {
+			position: fixed;
+			z-index: 1;
+			top: 20px;
+			left: 20px;
+		}
 
     .node {
       cursor: pointer;
@@ -288,7 +316,8 @@ class TreeViewPanel {
       fill: none;
       stroke: #ccc;
       stroke-width: 2px;
-    }
+		}
+
   </style>
 </head>
 
@@ -298,37 +327,80 @@ class TreeViewPanel {
   </div>
   <!-- load the d3.js library -->
   <script src="https://d3js.org/d3.v5.min.js"></script>
-
+	<button>Reset</button>
+	<svg width="960" height="500">
 	<script>
 
     var treeData = d3.stratify().id(function(d) { return d.id }).parentId(function(d) { return d.parentId; })(${flatData});
 
-    // Set the dimensions and margins of the diagram
-      var margin = { top: 20, right: 90, bottom: 30, left: 90 },
-        width = 960 - margin.left - margin.right,
-        height = 500 - margin.top - margin.bottom;
-
       // append the svg object to the body of the page
       // appends a 'group' element to 'svg'
-      // moves the 'group' element to the top left margin
-      var svg = d3.select("body").append("svg")
-        .attr("width", width + margin.right + margin.left)
-        .attr("height", height + margin.top + margin.bottom)
-        .append("g")
-        .attr("transform", "translate("
-          + margin.left + "," + margin.top + ")");
+			// moves the 'group' element to the top left margin
+      var svg = d3.select("svg"),
+			width = +svg.attr("width"),
+			height = +svg.attr("height");
+					
+			// Logic for zoom functionality
+			var zoom = d3.zoom()
+			.scaleExtent([1, 40])
+			.translateExtent([[-100, -100], [width + 90, height + 100]])
+			.on("zoom", zoomed);
 
+			var x = d3.scaleLinear()
+    .domain([-1, width + 1])
+    .range([-1, width + 1]);
+
+		var y = d3.scaleLinear()
+				.domain([-1, height + 1])
+				.range([-1, height + 1]);
+
+				var xAxis = d3.axisBottom(x)
+				.ticks((width + 2) / (height + 2) * 10)
+				.tickSize(height)
+				.tickPadding(8 - height);
+		
+		var yAxis = d3.axisRight(y)
+				.ticks(10)
+				.tickSize(width)
+				.tickPadding(8 - width);
+
+					var gX = svg.append("g")
+			.attr("class", "axis axis--x")
+			.call(xAxis);
+
+	var gY = svg.append("g")
+			.attr("class", "axis axis--y")
+			.call(yAxis);
+
+		d3.select("button")
+		.on("click", resetted);
+
+		svg.call(zoom);
+
+		function zoomed() {
+			svg.attr("transform", d3.event.transform);
+
+		}
+
+		function resetted() {
+		svg.transition()
+			.duration(750)
+			.call(zoom.transform, d3.zoomIdentity);
+		}
+			
+		// Tree logic starts here
       var i = 0,
         duration = 750,
         root;
 
       // declares a tree layout and assigns the size
-      var treemap = d3.tree().size([height, width]);
+			var treemap = d3.tree().size([height, width]);
 
       // Assigns parent, children, height, depth
-      root = d3.hierarchy(treeData, function (d) { return d.children; });
+			root = d3.hierarchy(treeData, function (d) { return d.children; });
       root.x0 = height / 2;
-      root.y0 = 0;
+			root.y0 = 0;
+
 
       // Collapse after the second level
       //root.children.forEach(collapse);
@@ -347,19 +419,19 @@ class TreeViewPanel {
       function update(source) {
 
         // Assigns the x and y position for the nodes
-        var treeData = treemap(root);
+				var treeData = treemap(root);
 
         // Compute the new tree layout.
         var nodes = treeData.descendants(),
           links = treeData.descendants().slice(1);
 
         // Normalize for fixed-depth.
-        nodes.forEach(function (d) { d.y = d.depth * 180 });
+				nodes.forEach(function (d) { d.y = (d.depth * 180) + 30 });
 
         // ****************** Nodes section ***************************
 
         // Update the nodes...
-        var node = svg.selectAll('g.node')
+				var node = svg.selectAll('g.node')
           .data(nodes, function (d) { return d.id || (d.id = ++i); });
 
         // Enter any new modes at the parent's previous position.
@@ -483,7 +555,8 @@ class TreeViewPanel {
           }
           update(d);
         }
-      }
+			}
+
 
   </script>
 
