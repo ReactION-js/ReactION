@@ -19,8 +19,8 @@ function activate(context) {
         vscode.window.registerWebviewPanelSerializer(TreeViewPanel.viewType, {
             async deserializeWebviewPanel(webviewPanel, state) {
                 console.log(`Got state: ${state}`);
-                TreeViewPanel.revive(webviewPanel, context.extensionPath);
-            }
+                TreeViewPanel.revive(webviewPanel, webviewPanel, context.extensionPath);
+            },
         });
     }
     // chromeLauncher.launch();
@@ -37,8 +37,9 @@ function activate(context) {
 }
 exports.activate = activate;
 class TreeViewPanel {
-    constructor(panel, extensionPath) {
+    constructor(htmlPanel, panel, extensionPath) {
         this._disposables = [];
+        this._htmlPanel = htmlPanel;
         this._panel = panel;
         this._extensionPath = extensionPath;
         this._html = '';
@@ -67,25 +68,34 @@ class TreeViewPanel {
         }, null, this._disposables);
     }
     static createOrShow(extensionPath) {
-        const column = vscode.ViewColumn.Two;
+        const treeColumn = vscode.ViewColumn.Three;
+        const htmlColumn = vscode.ViewColumn.Two;
         if (TreeViewPanel.currentPanel) {
-            TreeViewPanel.currentPanel._panel.reveal(column);
+            TreeViewPanel.currentPanel._htmlPanel.reveal(htmlColumn);
+            TreeViewPanel.currentPanel._panel.reveal(treeColumn);
             return;
         }
-        const panel = vscode.window.createWebviewPanel(TreeViewPanel.viewType, "Virtual DOM Tree", column, {
+        const htmlPanel = vscode.window.createWebviewPanel(TreeViewPanel.viewType, "HTML Preview", htmlColumn, {
             // Enable javascript in the webview
             enableScripts: true,
             retainContextWhenHidden: true,
             enableCommandUris: true,
         });
-        TreeViewPanel.currentPanel = new TreeViewPanel(panel, extensionPath);
+        const panel = vscode.window.createWebviewPanel(TreeViewPanel.viewType, "Virtual DOM Tree", treeColumn, {
+            // Enable javascript in the webview
+            enableScripts: true,
+            retainContextWhenHidden: true,
+            enableCommandUris: true,
+        });
+        TreeViewPanel.currentPanel = new TreeViewPanel(htmlPanel, panel, extensionPath);
     }
-    static revive(panel, extensionPath) {
-        TreeViewPanel.currentPanel = new TreeViewPanel(panel, extensionPath);
+    static revive(htmlPanel, panel, extensionPath) {
+        TreeViewPanel.currentPanel = new TreeViewPanel(htmlPanel, panel, extensionPath);
     }
     dispose() {
         TreeViewPanel.currentPanel = undefined;
         // Clean up our resources
+        this._htmlPanel.dispose();
         this._panel.dispose();
         while (this._disposables.length) {
             const x = this._disposables.pop();
@@ -95,6 +105,7 @@ class TreeViewPanel {
         }
     }
     async _update() {
+        this._htmlPanel.webview.html = this._getPreviewHtmlForWebview();
         const rawReact = await this._runPuppeteer();
         this._panel.webview.html = this._getHtmlForWebview(rawReact);
     }
@@ -103,16 +114,13 @@ class TreeViewPanel {
         // const extPath = path.join(__dirname, '../', 'node_modules/react-devtools')
         return (async () => {
             const browser = await puppeteer.launch({
-                headless: false,
+                headless: true,
                 executablePath: '/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome',
                 pipe: true,
             }).catch((err) => console.log(err));
             const page = await browser.pages().then((pageArr) => { return pageArr[0]; });
             await page.goto('http://localhost:3000', { waitUntil: 'networkidle0' });
             // await page.addScriptTag({ url: 'http://localhost:8097' });
-            // page.on('console', (msg: any) => {
-            // 	console.log(msg);
-            // })
             const reactData = await page.evaluate(async () => {
                 const _handler = (() => {
                     // fix this typescript issue
@@ -206,7 +214,7 @@ class TreeViewPanel {
 
   <style>
     body {
-			background-color: white;
+			background-color: #1d1d1d;
     }
 
 		.axis path {
@@ -288,7 +296,7 @@ class TreeViewPanel {
 					
 			// Logic for zoom functionality
 			var zoom = d3.zoom()
-			.scaleExtent([1, 40])
+			.scaleExtent([0.90, 40])
 			.translateExtent([[-100, -100], [width + 90, height + 100]])
 			.on("zoom", zoomed);
 
@@ -325,7 +333,6 @@ class TreeViewPanel {
 
 		function zoomed() {
 			svg.attr("transform", d3.event.transform);
-
 		}
 
 		function resetted() {
@@ -502,14 +509,27 @@ class TreeViewPanel {
           update(d);
         }
 			}
-
-
-  </script>
-
+	</script>
 </body>
 
 </html>
 `;
+    }
+    _getPreviewHtmlForWebview() {
+        return `
+			<style>
+		body {
+				margin: 0;
+				background-color: white;
+		}
+		iframe{
+				position: fixed;
+				top: 0;
+				left: 0;
+		}
+		</style>
+		<iframe width="100%"" height="100%" src="http://localhost:3000" frameborder="0" scrolling="yes"></iframe>
+		`;
     }
 }
 TreeViewPanel.viewType = 'ReactION';
