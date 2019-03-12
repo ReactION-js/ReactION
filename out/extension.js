@@ -103,9 +103,6 @@ class TreeViewPanel {
             }
         }
     }
-    /*****************************
-     **********COMMENT************
-     *****************************/
     async _update() {
         this._htmlPanel.webview.html = this._getPreviewHtmlForWebview();
         const rawReact = await this._runPuppeteer();
@@ -124,9 +121,6 @@ class TreeViewPanel {
             // Recursive React component scraping algorithm
             const reactData = await page.evaluate(async () => {
                 const _handler = (() => {
-                    /*****************************
-                     ****FIX TYPESCRIPT ISSUES****
-                     *****************************/
                     // @ts-ignore 
                     const domElements = document.querySelector('body').children;
                     // @ts-ignore 
@@ -137,59 +131,50 @@ class TreeViewPanel {
                     }
                 })();
                 function fiberWalk(entry) {
-                    let output = [];
-                    /*****************************
-                     ****FIX TYPESCRIPT ISSUES****
-                     *****************************/
-                    // @ts-ignore 
-                    function recurse(root, level, id, parentId) {
+                    let output = [], globalID = 0;
+                    function recurse(root, level, id) {
                         if (root.sibling !== null && root.child !== null) {
-                            output.push({ "name": root.sibling, "level": level, "id": `${id + 1}`, "parentId": `${parentId - 1}` }, { "name": root.child, "level": `${level + 1}`, "id": `${id + 1}`, "parentId": `${parentId}` });
-                            recurse(root.sibling, level, id + 1, parentId);
-                            recurse(root.child, level + 1, id + 2, parentId + 1);
+                            // console.log('both');
+                            output.push({ "name": root.sibling, "level": `${level}`, "id": `${globalID += 1}`, "parentId": `${id}` }, { "name": root.child, "level": `${level}`, "id": `${globalID += 1}`, "parentId": `${id}` });
+                            recurse(root.sibling, level, id);
+                            recurse(root.child, level + 1, id + 1);
                         }
                         else if (root.sibling !== null && root.child === null) {
-                            output.push({ "name": root.sibling, "level": `${level}`, "id": `${id + 1}`, "parentId": `${parentId - 1}` });
-                            recurse(root.sibling, level, id + 1, parentId);
+                            output.push({ "name": root.sibling, "level": `${level}`, "id": `${globalID += 1}`, "parentId": `${id}` });
+                            recurse(root.sibling, level, id);
                         }
                         else if (root.child !== null && root.sibling === null) {
-                            output.push({ "name": root.child, "level": `${level + 1}`, "id": `${id + 1}`, "parentId": `${parentId}` });
-                            recurse(root.child, level + 1, id + 1, parentId + 1);
+                            output.push({ "name": root.child, "level": `${level}`, "id": `${globalID += 1}`, "parentId": `${id}` });
+                            recurse(root.child, level + 1, id + 1);
                         }
                         else if (root.child === null && root.sibling === null) {
                             return;
                         }
                     }
-                    recurse(entry, 0, 0, 0);
-                    /*****************************
-                     ****FIX TYPESCRIPT ISSUES****
-                     *****************************/
-                    // @ts-ignore 
-                    output.sort((a, b) => a[1] - b[1]);
-                    /*****************************
-                     ****FIX TYPESCRIPT ISSUES****
-                     *****************************/
-                    // @ts-ignore 
+                    recurse(entry, 0, 0);
+                    // output.sort((a, b) => a[1] - b[1]);
                     output.forEach((el, idx) => {
+                        // console.log(el);
                         if (typeof el.name.type === null) {
                             el.name = '';
                         }
-                        if (typeof el.name.type === 'function' && el.name.type.name) {
+                        if (typeof el.name.type === 'function' && el.name.type.name)
                             el.name = el.name.type.name;
-                        }
-                        if (typeof el.name.type === 'function') {
+                        if (typeof el.name.type === 'function')
                             el.name = 'function';
-                        }
-                        if (typeof el.name.type === 'object') {
+                        if (typeof el.name.type === 'object')
                             el.name = 'function';
-                        }
-                        if (typeof el.name.type === 'string') {
+                        if (typeof el.name.type === 'string')
                             el.name = el.name.type;
-                        }
+                        // increment index by 1 since forEach is zero-indexed
+                        // el['id'] = idx+1;
+                        // el['parent'] = idx === 0 ? null : el.level-1;
                     });
                     output[0].parentId = '';
-                    return output;
+                    return output.slice(0, 25);
                 }
+                ;
+                console.log(fiberWalk(_handler));
                 return fiberWalk(_handler);
             }).catch((err) => { console.log(err); });
             return reactData;
@@ -199,6 +184,32 @@ class TreeViewPanel {
     _getHtmlForWebview(rawTreeData) {
         // Use a nonce to whitelist which scripts can be run
         const nonce = getNonce();
+        const flatData = JSON.stringify(rawTreeData);
+        return `<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>Tree Example</title>
+
+  <style>
+    body {
+      background-color: white;
+    }
+
+    .node {
+      cursor: pointer;
+    }
+
+    .node circle {
+      fill: #fff;
+      stroke: steelblue;
+      stroke-width: 3px;
+    }
+
+    .node text {
+      font: 12px sans-serif;
+
         const flatData = JSON.stringify(rawTreeData.slice(0, 5));
         /*
          **********************************************************
@@ -545,9 +556,7 @@ class TreeViewPanel {
 		</html>
 		`;
     }
-    /*****************************
-     **********COMMENT************
-     *****************************/
+
     _getPreviewHtmlForWebview() {
         return `
 					<style>
