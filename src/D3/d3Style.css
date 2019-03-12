@@ -1,38 +1,76 @@
+body {
+	background-color: #1d1d1d;
+}
+
+.axis path {
+	display: none;
+}
+
+.axis line {
+	stroke-opacity: 0.3;
+	shape-rendering: crispEdges;
+}
+
+.view {
+	fill: white;
+	stroke: #000;
+}
+
+button {
+	position: fixed;
+	z-index: 1;
+	top: 20px;
+	left: 20px;
+}
+
 .node {
 	cursor: pointer;
 }
 
-.overlay{
-		background-color:#EEE;
-}
- 
 .node circle {
 	fill: #fff;
 	stroke: steelblue;
-	stroke-width: 1.5px;
-}
- 
-.node text {
-	font-size:10px; 
-	font-family:sans-serif;
-}
- 
-.link {
-	fill: none;
-	stroke: #ccc;
-	stroke-width: 1.5px;
-}
-
-.templink {
-	fill: none;
-	stroke: red;
 	stroke-width: 3px;
 }
 
-.ghostCircle.show{
-		display:block;
+.node text {
+	font: 12px sans-serif;
 }
 
-.ghostCircle, .activeDrag .ghostCircle{
-		 display: none;
+div.tooltip {
+	position: absolute;
+	text-align: center;
+	width: 100px;
+	height: 50x;
+	padding: 2px;
+	font: 15px sans-serif;
+	color: black;
+	background: lightsteelblue;
+	border: 0px;
+	border-radius: 8px;
+	pointer-events: none;
+}
+
+div.tooltip.props {
+	visibility: hidden;
+	width: 120px;
+	background-color: black;
+	color: white;
+	text-align: center;
+	padding: 5px 0;
+	border-radius: 6px;
+
+	/* Position the tooltip text - see examples below! */
+	position: absolute;
+	z-index: 1;
+}
+
+.tooltip:hover .props {
+	visibility: visible;
+}
+
+.link {
+	fill: none;
+	stroke: #ccc;
+	stroke-width: 2px;
 }
