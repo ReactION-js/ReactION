@@ -154,9 +154,6 @@ class TreeViewPanel {
 				async () => {
 
 					const _handler = (() => {
-						/*****************************
-	 					 ****FIX TYPESCRIPT ISSUES****
-	 					 *****************************/
 						// @ts-ignore 
 						const domElements = document.querySelector<HTMLElement>('body').children;
 						// @ts-ignore 
@@ -188,21 +185,25 @@ class TreeViewPanel {
 								return;
 							}
 						}
-
 						recurse(entry, 0, 0);
 						// output.sort((a, b) => a[1] - b[1]);
 						output.forEach((el, idx) => {
+							// console.log(el);
 							if (typeof el.name.type === null) { el.name = ''; }
-							if (typeof el.name.type === 'function' && el.name.type.name) { el.name = el.name.type.name; }
-							if (typeof el.name.type === 'function') { el.name = 'function'; }
-							if (typeof el.name.type === 'object') { el.name = 'function'; }
-							if (typeof el.name.type === 'string') { el.name = el.name.type; }
+							if (typeof el.name.type === 'function' && el.name.type.name) el.name = el.name.type.name;
+							if (typeof el.name.type === 'function') el.name = 'function';
+							if (typeof el.name.type === 'object') el.name = 'function';
+							if (typeof el.name.type === 'string') el.name = el.name.type;
+							// increment index by 1 since forEach is zero-indexed
+							// el['id'] = idx+1;
+							// el['parent'] = idx === 0 ? null : el.level-1;
 						});
 
 						output[0].parentId = '';
+
 						return output.slice(0, 25);
 					};
-				return fiberWalk(_handler);
+					return fiberWalk(_handler);
 				}).catch((err: any) => { console.log(err); });
 
 			return reactData;
@@ -213,17 +214,6 @@ class TreeViewPanel {
 	private _getHtmlForWebview(rawTreeData: any) {
 		// Use a nonce to whitelist which scripts can be run
 		const nonce = getNonce();
-		const sampleData = [
-			{ "name": "Eve", "parent": "" },
-			{ "name": "Cain", "parent": "Eve" },
-			{ "name": "Seth", "parent": "Eve" },
-			{ "name": "Enos", "parent": "Seth" },
-			{ "name": "Noam", "parent": "Seth" },
-			{ "name": "Abel", "parent": "Eve" },
-			{ "name": "Awan", "parent": "Eve" },
-			{ "name": "Enoch", "parent": "Awan" },
-			{ "name": "Azura", "parent": "Eve" }
-		]
 
 		const flatData = JSON.stringify(rawTreeData);
 
@@ -244,7 +234,6 @@ class TreeViewPanel {
 		);
 		const styleSrc = d3Style.with({ scheme: 'vscode-resource' });
 		*/
-
 		return `
 		<!DOCTYPE html>
 		<html lang="en">
@@ -343,7 +332,7 @@ class TreeViewPanel {
 			<svg width="960" height="500">
 				<script>
 
-					var treeData = d3.stratify().id(function (d) { return d.id }).parentId(function (d) { return d.parentId; })(${ flatData});
+					var treeData = d3.stratify().id(function (d) { return d.id }).parentId(function (d) { return d.parentId; })(${flatData});
 
 					// Append the svg object to the body of the page
 					// Appends a 'group' element to 'svg'
