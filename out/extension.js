@@ -176,6 +176,22 @@ class TreeViewPanel {
         const nonce = getNonce();
         const flatData = JSON.stringify(rawTreeData);
         console.log('flatData =======>', flatData);
+        /*
+         **********************************************************
+         ***Currently not using since modularizing does not work***
+         **********************************************************
+        // Importing D3 Logic file
+        const d3Logic = vscode.Uri.file(
+            path.join(context.extensionPath, 'D3', 'd3Logic.js')
+        );
+        const logicSrc = d3Logic.with({ scheme: 'vscode-resource' });
+
+        // Importing D3 Style file
+        const d3Style = vscode.Uri.file(
+            path.join(context.extensionPath, 'D3', 'd3Style.css')
+        );
+        const styleSrc = d3Style.with({ scheme: 'vscode-resource' });
+        */
         return `
 		<!DOCTYPE html>
 		<html lang="en">
