@@ -161,7 +161,6 @@ class TreeViewPanel {
 			// page.on('console', (msg: any) => {
 			// 	console.log(msg);
 			// })
-
 			const reactData = await page.evaluate(
 				async () => {
 
@@ -172,32 +171,32 @@ class TreeViewPanel {
 					})()
 
 					function fiberWalk(entry) {
-						let output = [];
-						function recurse(root, level, id, parentId) {
+						let output = [], globalID = 0;
+						function recurse(root, level, id) {
 
 							if (root.sibling !== null && root.child !== null) {
 								// console.log('both');
-								output.push({ "name": root.sibling, "level": level, "id": `${id + 1}`, "parentId": `${parentId - 1}` },
-									{ "name": root.child, "level": `${level + 1}`, "id": `${id + 1}`, "parentId": `${parentId}` }
+								output.push({ "name": root.sibling, "level": `${level}`, "id": `${globalID+= 1}`, "parentId": `${id}` },
+									{ "name": root.child, "level": `${level}`, "id": `${globalID += 1}`, "parentId": `${id}` }
 								);
-								recurse(root.sibling, level, id + 1, parentId);
-								recurse(root.child, level + 1, id + 2, parentId + 1);
+								recurse(root.sibling, level, id );
+								recurse(root.child, level + 1, id + 1);
 							}
 
 							else if (root.sibling !== null && root.child === null) {
-								output.push({ "name": root.sibling, "level": `${level}`, "id": `${id + 1}`, "parentId": `${parentId - 1}` });
-								recurse(root.sibling, level, id + 1, parentId);
+								output.push({ "name": root.sibling, "level": `${level}`, "id": `${globalID += 1}`, "parentId": `${id}` });
+								recurse(root.sibling, level, id);
 							}
 							else if (root.child !== null && root.sibling === null) {
-								output.push({ "name": root.child, "level": `${level + 1}`, "id": `${id + 1}`, "parentId": `${parentId}` });
-								recurse(root.child, level + 1, id + 1, parentId + 1);
+								output.push({ "name": root.child, "level": `${level}`, "id": `${globalID += 1}`, "parentId": `${id}` });
+								recurse(root.child, level + 1, id + 1);
 							}
 							else if (root.child === null && root.sibling === null) {
 								return;
 							}
 						}
-						recurse(entry, 0, 0, 0);
-						output.sort((a, b) => a[1] - b[1]);
+						recurse(entry, 0, 0);
+						// output.sort((a, b) => a[1] - b[1]);
 						output.forEach((el, idx) => {
 							// console.log(el);
 							if (typeof el.name.type === null) { el.name = ''; }
@@ -212,7 +211,7 @@ class TreeViewPanel {
 
 						output[0].parentId = '';
 
-						return output;
+						return output.slice(0, 25);
 					};
 					console.log(fiberWalk(_handler))
 					return fiberWalk(_handler);
@@ -228,8 +227,6 @@ class TreeViewPanel {
 		// Use a nonce to whitelist which scripts can be run
 		const nonce = getNonce();
 
-
-
 		const sampleData = [
 			{ "name": "Eve", "parent": "" },
 			{ "name": "Cain", "parent": "Eve" },
@@ -242,7 +239,7 @@ class TreeViewPanel {
 			{ "name": "Azura", "parent": "Eve" }
 		]
 
-		const flatData = JSON.stringify(rawTreeData.slice(0, 5));
+		const flatData = JSON.stringify(rawTreeData);
 
 		console.log(rawTreeData, '====pup result=====');
 		console.log(flatData, '====pup result=====');
