@@ -23,9 +23,6 @@ function activate(context) {
 exports.activate = activate;
 // Putting Tree Diagram in the Webview
 class TreeViewPanel {
-    /*****************************
-     **********COMMENT************
-     *****************************/
     constructor(htmlPanel, panel, extensionPath) {
         this._disposables = [];
         this._htmlPanel = htmlPanel;
@@ -50,9 +47,6 @@ class TreeViewPanel {
                     return;
             }
         }, null, this._disposables);
-        /*****************************
-         **********COMMENT************
-         *****************************/
         this._panel.webview.onDidReceiveMessage(message => {
             switch (message.command) {
                 case 'notice':
@@ -85,9 +79,6 @@ class TreeViewPanel {
         });
         TreeViewPanel.currentPanel = new TreeViewPanel(htmlPanel, panel, extensionPath);
     }
-    /*****************************
-     **********COMMENT************
-     *****************************/
     static revive(htmlPanel, panel, extensionPath) {
         TreeViewPanel.currentPanel = new TreeViewPanel(htmlPanel, panel, extensionPath);
     }
@@ -135,16 +126,16 @@ class TreeViewPanel {
                     function recurse(root, level, id) {
                         if (root.sibling !== null && root.child !== null) {
                             // console.log('both');
-                            output.push({ "name": root.sibling, "level": `${level}`, "id": `${globalID += 1}`, "parentId": `${id}` }, { "name": root.child, "level": `${level}`, "id": `${globalID += 1}`, "parentId": `${id}` });
+                            output.push({ "name": root.sibling, "level": `${level}`, "id": `${globalID += 1}`, "parentId": `${id}`, "props": JSON.stringify(Object.keys(root.sibling.memoizedProps)) }, { "name": root.child, "level": `${level}`, "id": `${globalID += 1}`, "parentId": `${id}`, "props": JSON.stringify(Object.keys(root.child.memoizedProps)) });
                             recurse(root.sibling, level, id);
                             recurse(root.child, level + 1, id + 1);
                         }
                         else if (root.sibling !== null && root.child === null) {
-                            output.push({ "name": root.sibling, "level": `${level}`, "id": `${globalID += 1}`, "parentId": `${id}` });
+                            output.push({ "name": root.sibling, "level": `${level}`, "id": `${globalID += 1}`, "parentId": `${id}`, "props": JSON.stringify(Object.keys(root.sibling.memoizedProps)) });
                             recurse(root.sibling, level, id);
                         }
                         else if (root.child !== null && root.sibling === null) {
-                            output.push({ "name": root.child, "level": `${level}`, "id": `${globalID += 1}`, "parentId": `${id}` });
+                            output.push({ "name": root.child, "level": `${level}`, "id": `${globalID += 1}`, "parentId": `${id}`, "props": JSON.stringify(Object.keys(root.child.memoizedProps)) });
                             recurse(root.child, level + 1, id + 1);
                         }
                         else if (root.child === null && root.sibling === null) {
@@ -174,7 +165,6 @@ class TreeViewPanel {
                     return output.slice(0, 25);
                 }
                 ;
-                console.log(fiberWalk(_handler));
                 return fiberWalk(_handler);
             }).catch((err) => { console.log(err); });
             return reactData;
@@ -185,32 +175,7 @@ class TreeViewPanel {
         // Use a nonce to whitelist which scripts can be run
         const nonce = getNonce();
         const flatData = JSON.stringify(rawTreeData);
-        return `<!DOCTYPE html>
-<html lang="en">
-
-<head>
-  <meta charset="utf-8">
-  <title>Tree Example</title>
-
-  <style>
-    body {
-      background-color: white;
-    }
-
-    .node {
-      cursor: pointer;
-    }
-
-    .node circle {
-      fill: #fff;
-      stroke: steelblue;
-      stroke-width: 3px;
-    }
-
-    .node text {
-      font: 12px sans-serif;
-
-        const flatData = JSON.stringify(rawTreeData.slice(0, 5));
+        console.log('flatData =======>', flatData);
         /*
          **********************************************************
          ***Currently not using since modularizing does not work***
@@ -237,7 +202,7 @@ class TreeViewPanel {
 
 			<style>
 				body {
-					background-color: #1d1d1d;
+					background-color: white;
 				}
 
 				.axis path {
@@ -393,20 +358,21 @@ class TreeViewPanel {
 					root = d3.hierarchy(treeData, function (d) { return d.children; });
 					root.x0 = height / 2;
 					root.y0 = 0;
-
 					update(root);
 
 					function update(source) {
-
 						// Assigns the x and y position for the nodes
 						var treeData = treemap(root);
 
 						// Compute the new tree layout.
 						var nodes = treeData.descendants(),
-							links = treeData.descendants().slice(1);
+						links = treeData.descendants().slice(1);
+							
 
 						// Normalize for fixed-depth.
-						nodes.forEach(function (d) { d.y = (d.depth * 180) + 30 });
+						nodes.forEach(function (d) {
+							d.y = (d.depth * 180) + 30 
+						});
 
 						// ****************** Nodes section ***************************
 
@@ -441,7 +407,7 @@ class TreeViewPanel {
 							.attr("text-anchor", function (d) {
 								return d.children || d._children ? "end" : "start";
 							})
-							.text(function (d) { return d.data.name; });
+							.text(d => d.data.data.name)
 
 						// UPDATE
 						var nodeUpdate = nodeEnter.merge(node);
@@ -543,7 +509,7 @@ class TreeViewPanel {
 							var g = d3.select(this); // The node
 							var info = g.append('text')
 								.classed('info', true)
-								.text('props!');
+								.text(d => d.data.data.props);
 						}
 
 						// Remove props on mouseout
@@ -556,7 +522,6 @@ class TreeViewPanel {
 		</html>
 		`;
     }
-
     _getPreviewHtmlForWebview() {
         return `
 					<style>
