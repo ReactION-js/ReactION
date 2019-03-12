@@ -158,7 +158,7 @@ class TreeViewPanel {
 						const domElements = document.querySelector<HTMLElement>('body').children;
 						// @ts-ignore 
 						for (let ele of domElements) { if (ele._reactRootContainer) { return ele._reactRootContainer._internalRoot.current; } }
-					})();
+					})()
 
 					function fiberWalk(entry) {
 						let output = [], globalID = 0;
@@ -203,7 +203,6 @@ class TreeViewPanel {
 
 						return output.slice(0, 25);
 					};
-					console.log(fiberWalk(_handler))
 					return fiberWalk(_handler);
 				}).catch((err: any) => { console.log(err); });
 
@@ -218,6 +217,23 @@ class TreeViewPanel {
 
 		const flatData = JSON.stringify(rawTreeData);
 
+
+		/*
+		 **********************************************************
+		 ***Currently not using since modularizing does not work***
+		 **********************************************************
+		// Importing D3 Logic file
+		const d3Logic = vscode.Uri.file(
+			path.join(context.extensionPath, 'D3', 'd3Logic.js')
+		);
+		const logicSrc = d3Logic.with({ scheme: 'vscode-resource' });
+
+		// Importing D3 Style file
+		const d3Style = vscode.Uri.file(
+			path.join(context.extensionPath, 'D3', 'd3Style.css')
+		);
+		const styleSrc = d3Style.with({ scheme: 'vscode-resource' });
+		*/
 		return `
 		<!DOCTYPE html>
 		<html lang="en">

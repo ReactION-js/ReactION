@@ -185,6 +185,48 @@ class TreeViewPanel {
         // Use a nonce to whitelist which scripts can be run
         const nonce = getNonce();
         const flatData = JSON.stringify(rawTreeData);
+        return `<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>Tree Example</title>
+
+  <style>
+    body {
+      background-color: white;
+    }
+
+    .node {
+      cursor: pointer;
+    }
+
+    .node circle {
+      fill: #fff;
+      stroke: steelblue;
+      stroke-width: 3px;
+    }
+
+    .node text {
+      font: 12px sans-serif;
+
+        const flatData = JSON.stringify(rawTreeData.slice(0, 5));
+        /*
+         **********************************************************
+         ***Currently not using since modularizing does not work***
+         **********************************************************
+        // Importing D3 Logic file
+        const d3Logic = vscode.Uri.file(
+            path.join(context.extensionPath, 'D3', 'd3Logic.js')
+        );
+        const logicSrc = d3Logic.with({ scheme: 'vscode-resource' });
+
+        // Importing D3 Style file
+        const d3Style = vscode.Uri.file(
+            path.join(context.extensionPath, 'D3', 'd3Style.css')
+        );
+        const styleSrc = d3Style.with({ scheme: 'vscode-resource' });
+        */
         return `
 		<!DOCTYPE html>
 		<html lang="en">
@@ -514,9 +556,7 @@ class TreeViewPanel {
 		</html>
 		`;
     }
-    /*****************************
-     **********COMMENT************
-     *****************************/
+
     _getPreviewHtmlForWebview() {
         return `
 					<style>
