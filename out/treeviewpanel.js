@@ -1,7 +1,8 @@
-export default {
-	generateD3:
-		function (stringifiedFlatData: string) {
-			return `
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = {
+    generateD3: function (stringifiedFlatData) {
+        return `
 		<!DOCTYPE html>
 		<html lang="en">
 		<head>
@@ -284,5 +285,6 @@ export default {
 			</body>
 		</html>
 		`;
-		}
-}
+    }
+};
+//# sourceMappingURL=TreeViewPanel.js.map
