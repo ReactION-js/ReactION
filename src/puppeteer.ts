@@ -1,4 +1,5 @@
 const puppeteer = require('puppeteer');
+const chromeLauncher = require('chrome-launcher');
 
 export default class Puppeteer {
 	private _headless: boolean;
@@ -25,11 +26,15 @@ export default class Puppeteer {
 			{
 				headless: this._headless,
 				executablePath: this._executablePath,
-				pipe: this._pipe
+				pipe: this._pipe,
+				// args:['--no-sandbox']
 			}
 		).catch((err: any) => console.log(err));
 
-		this._page = await this._browser.pages().then((pageArr: any) => { return pageArr[0]; });
+		this._page = await this._browser.pages()
+			.then((pageArr: any) => {
+			return pageArr[0]; 
+			});
 		// this._page.goto(this._url, { waitUntil: 'networkidle0' });
 		await this._page.goto(this._url);
 
