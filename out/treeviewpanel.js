@@ -273,4 +273,4 @@ exports.default = {
 		`;
     }
 };
-//# sourceMappingURL=TreeViewPanel.js.map
+//# sourceMappingURL=treeViewPanel.js.map
