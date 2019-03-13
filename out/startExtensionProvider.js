@@ -22,4 +22,4 @@ class StartExtensionProvider {
     }
 }
 exports.default = StartExtensionProvider;
-//# sourceMappingURL=startExtensionProvider.js.map
+//# sourceMappingURL=StartExtensionProvider.js.map
