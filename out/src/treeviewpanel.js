@@ -105,7 +105,7 @@ exports.default = {
 					// Append the svg object to the body of the page
 					// Appends a 'group' element to 'svg'
 					// Moves the 'group' element to the top left margin
-					var svg = d3.select("svg"),
+					let svg = d3.select("body").append("svg")
 						width = +svg.attr("width"),
 						height = +svg.attr("height");
 
@@ -334,4 +334,4 @@ exports.default = {
 		`;
     }
 };
-//# sourceMappingURL=treeviewpanel.js.map
+//# sourceMappingURL=TreeViewPanel.js.map

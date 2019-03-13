@@ -1,7 +1,7 @@
 export default {
 	generateD3:
-	function (flatData: string) {
-		return `
+		function (flatData: string) {
+			return `
 		<!DOCTYPE html>
 		<html lang="en">
 
@@ -104,7 +104,7 @@ export default {
 					// Append the svg object to the body of the page
 					// Appends a 'group' element to 'svg'
 					// Moves the 'group' element to the top left margin
-					var svg = d3.select("svg"),
+					let svg = d3.select("body").append("svg")
 						width = +svg.attr("width"),
 						height = +svg.attr("height");
 
@@ -331,5 +331,5 @@ export default {
 			</body>
 		</html>
 		`
-	}
+		}
 }
