@@ -1,1 +1,10 @@
-{"version":3,"file":"TreeViewPanel.js","sourceRoot":"","sources":["../src/TreeViewPanel.ts"],"names":[],"mappings":";;AAAA,kBAAe;IACd,UAAU,EACT,UAAU,mBAA2B;QACpC,OAAO;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;mHAkFyG,mBAAmB;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;GAwMnI,CAAC;IACF,CAAC;CACF,CAAA"}
+{
+	"version": 3,
+	"file": "treeViewPanel.js",
+	"sourceRoot": "",
+	"sources": [
+		"../src/treeViewPanel.ts"
+	],
+	"names": [],
+	"mappings": ";;AAAA,kBAAe;IACd,UAAU,EACV,UAAU,mBAA2B;QACpC,OAAO;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;mHAiF0G,mBAAmB;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;GA2LnI,CAAC;IACH,CAAC;CACD,CAAA"
+}
