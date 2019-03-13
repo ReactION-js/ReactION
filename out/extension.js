@@ -112,9 +112,9 @@ class TreeViewPanel {
             // Recursive React component scraping algorithm
             const reactData = await page.evaluate(async () => {
                 const _handler = (() => {
-                    // @ts-ignore 
+                    // @ts-ignore
                     const domElements = document.querySelector('body').children;
-                    // @ts-ignore 
+                    // @ts-ignore
                     for (let ele of domElements) {
                         if (ele._reactRootContainer) {
                             return ele._reactRootContainer._internalRoot.current;
@@ -240,7 +240,7 @@ class TreeViewPanel {
 					font: 12px sans-serif;
 				}
 
-				div.tooltip {
+				.tooltip {
 					position: absolute;
 					text-align: center;
 					width: 100px;
@@ -248,13 +248,13 @@ class TreeViewPanel {
 					padding: 2px;
 					font: 15px sans-serif;
 					color: black;
-					background: lightsteelblue;
+					background: pink;
 					border: 0px;
 					border-radius: 8px;
 					pointer-events: none;
 				}
 
-				div.tooltip.props {
+				.tooltip.props {
 					visibility: hidden;
 					width: 120px;
 					background-color: black;
@@ -367,11 +367,11 @@ class TreeViewPanel {
 						// Compute the new tree layout.
 						var nodes = treeData.descendants(),
 						links = treeData.descendants().slice(1);
-							
+
 
 						// Normalize for fixed-depth.
 						nodes.forEach(function (d) {
-							d.y = (d.depth * 180) + 30 
+							d.y = (d.depth * 180) + 30
 						});
 
 						// ****************** Nodes section ***************************
@@ -509,7 +509,8 @@ class TreeViewPanel {
 							var g = d3.select(this); // The node
 							var info = g.append('text')
 								.classed('info', true)
-								.text(d => d.data.data.props);
+								.text(d => d.data.data.props)
+								// .attr('class', 'tooltip');
 						}
 
 						// Remove props on mouseout
