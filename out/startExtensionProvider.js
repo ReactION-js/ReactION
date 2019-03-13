@@ -16,10 +16,10 @@ class StartExtensionProvider {
     getChildren(element) {
         vscode.commands.executeCommand('ReactION.openTree');
         vscode.commands.executeCommand('workbench.view.explorer');
-        this._onDidChangeTreeData.fire(); // Make sure collection is not cached.
+        this._onDidChangeTreeData.fire();
         this._onDidChangeTreeData.dispose();
         return Promise.reject([]);
     }
 }
 exports.default = StartExtensionProvider;
-//# sourceMappingURL=startExtensionProvider.js.map
+//# sourceMappingURL=StartExtensionProvider.js.map

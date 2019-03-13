@@ -13,15 +13,15 @@ class Puppeteer {
     }
     // Creates an instance of puppeteer browser and page,
     // opens to _url, defaults to localhost:3000.
-    start() {
-        this._browser = puppeteer.launch({
+    async start() {
+        this._browser = await puppeteer.launch({
             headless: this._headless,
             executablePath: this._executablePath,
             pipe: this._pipe
         }).catch((err) => console.log(err));
-        this._page = this._browser.pages().then((pageArr) => { return pageArr[0]; });
-        // page.goto(this._url, { waitUntil: 'networkidle0' });
-        this._page.goto(this._url);
+        this._page = await this._browser.pages().then((pageArr) => { return pageArr[0]; });
+        // this._page.goto(this._url, { waitUntil: 'networkidle0' });
+        await this._page.goto(this._url);
         return this._page;
     }
     // Recursive React component scraping algorithm
@@ -116,4 +116,4 @@ class Puppeteer {
     }
 }
 exports.default = Puppeteer;
-//# sourceMappingURL=puppeteer.js.map
+//# sourceMappingURL=Puppeteer.js.map
