@@ -1,47 +1,21 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const vscode = require("vscode");
-const startExtensionProvider_1 = require("./startExtensionProvider");
-const puppeteer_1 = require("./puppeteer");
 const htmlViewPanel_1 = require("./htmlViewPanel");
 const treeViewPanel_1 = require("./treeViewPanel");
-const chromeLauncher = require('chrome-launcher');
-// Method called when extension is activated
-function activate(context) {
-    context.subscriptions.push(vscode.commands.registerCommand('ReactION.openTree', () => {
-        ViewPanel.createOrShow(context.extensionPath);
-    }));
-    vscode.window.registerTreeDataProvider('startExtension', new startExtensionProvider_1.default());
-    if (vscode.window.registerWebviewPanelSerializer) {
-        // Make sure we register a serializer in activation event
-        vscode.window.registerWebviewPanelSerializer(ViewPanel.viewType, {
-            async deserializeWebviewPanel(webviewPanel, state) {
-                console.log(`Got state: ${state}`);
-                ViewPanel.revive(webviewPanel, webviewPanel, context.extensionPath);
-            },
-        });
-    }
-}
-exports.activate = activate;
-// Running Puppeteer to access React page context
-let page = new puppeteer_1.default();
-// Putting Tree Diagram in the Webview
 class ViewPanel {
     // Constructor for tree view and html panel
-    constructor(htmlPanel, treePanel, extensionPath) {
+    constructor(htmlPanel, treePanel) {
         this._disposables = [];
         this._htmlPanel = htmlPanel;
         this._treePanel = treePanel;
-        this._extensionPath = extensionPath;
-        this._html = '';
-        this.reactData = '';
-        this._update();
+        // Set the webview's initial html content
+        this._update('test');
         this._treePanel.onDidDispose(() => this.dispose(), null, this._disposables);
+        // Update the content based on view changes
         this._treePanel.onDidChangeViewState(e => {
             if (this._treePanel.visible) {
-                /************************************
-                    ***Are we using this if statement?***
-                    *************************************/
+                this._update('test');
             }
         }, null, this._disposables);
         // Handle messages from the webview
@@ -60,7 +34,7 @@ class ViewPanel {
             }
         }, null, this._disposables);
     }
-    static createOrShow(extensionPath) {
+    static createOrShow() {
         const treeColumn = vscode.ViewColumn.Three;
         const htmlColumn = vscode.ViewColumn.Two;
         if (ViewPanel.currentPanel) {
@@ -82,11 +56,11 @@ class ViewPanel {
             retainContextWhenHidden: true,
             enableCommandUris: true
         });
-        ViewPanel.currentPanel = new ViewPanel(htmlPanel, panel, extensionPath);
+        ViewPanel.currentPanel = new ViewPanel(htmlPanel, treePanel);
     }
     // Reload previous webview panel state
-    static revive(htmlPanel, panel, extensionPath) {
-        ViewPanel.currentPanel = new ViewPanel(htmlPanel, panel, extensionPath);
+    static revive(htmlPanel, treePanel) {
+        ViewPanel.currentPanel = new ViewPanel(htmlPanel, treePanel);
     }
     dispose() {
         ViewPanel.currentPanel = undefined;
@@ -100,15 +74,13 @@ class ViewPanel {
             }
         }
     }
-    async _update() {
+    async _update(scrape) {
         this._htmlPanel.webview.html = this._getPreviewHtmlForWebview();
-        const rawReact = await this._runPuppeteer();
+        const rawReact = await scrape();
         this._treePanel.webview.html = this._getHtmlForWebview(rawReact);
     }
     // Putting scraped meta-data to D3 tree diagram
     _getHtmlForWebview(rawTreeData) {
-        // Use a nonce to whitelist which scripts can be run
-        const nonce = getNonce();
         const flatData = JSON.stringify(rawTreeData);
         return treeViewPanel_1.default.generateD3(flatData);
     }
@@ -117,16 +89,5 @@ class ViewPanel {
     }
 }
 ViewPanel.viewType = 'ReactION';
-// For security purposes, we added getNonce function
-function getNonce() {
-    let text = "";
-    const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    for (let i = 0; i < 32; i++) {
-        text += possible.charAt(Math.floor(Math.random() * possible.length));
-    }
-    return text;
-}
-// This method is called when your extension is deactivated
-function deactivate() { }
-exports.deactivate = deactivate;
-//# sourceMappingURL=extension.js.map
+exports.default = ViewPanel;
+//# sourceMappingURL=ViewPanel.js.map
