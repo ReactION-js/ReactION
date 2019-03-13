@@ -221,3 +221,23 @@ var treeData = d3.stratify().id(function(d) { return d.id }).parentId(function(d
           update(d);
         }
 			}
+
+			nodeEnter.append('text')
+			.attr("dy", ".35em")
+			.attr("x", function (d) {
+				return d.children || d._children ? -13 : 13;
+			})
+			.attr("text-anchor", function (d) {
+				return d.children || d._children ? "end" : "start";
+			})
+			.text(d => d.data.data.name)
+			.on('mouseover', d => {
+				div
+					.transition()
+					.duration(200)
+					.style('opacity', 0.9);
+				div
+					.html('hello' + '<br/>' + 'test')
+					.style('left', d3.event.pageX + 'px')
+					.style('top', d3.event.pageY - 28 + 'px');
+			})
