@@ -21,7 +21,7 @@
 			"ReactION-button": [
 				{
 					"id": "startExtension",
-					"name": "Targets"
+					"name": "Launch"
 				}
 			]
 		},
@@ -29,7 +29,7 @@
 			"activitybar": [
 				{
 					"id": "ReactION-button",
-					"title": "ReactION-button",
+					"title": "ReactION",
 					"icon": "resources/dep.svg"
 				}
 			]

@@ -54,13 +54,13 @@ export default class ViewPanel {
 		this._treePanel = treePanel;
 
 		// Set the webview's initial html content
-		this._update();
+		this._update('test');
 		this._treePanel.onDidDispose(() => this.dispose(), null, this._disposables);
 
 		// Update the content based on view changes
 		this._treePanel.onDidChangeViewState(e => {
 			if (this._treePanel.visible) {
-				this._update();
+				this._update('test');
 			}
 		}, null, this._disposables);
 
@@ -106,9 +106,6 @@ export default class ViewPanel {
 
 	// Putting scraped meta-data to D3 tree diagram
 	private _getHtmlForWebview(rawTreeData: any) {
-
-		// Use a nonce to whitelist which scripts can be run
-		// const nonce = getNonce();
 		const flatData = JSON.stringify(rawTreeData);
 
 		return treeView.generateD3(flatData);
