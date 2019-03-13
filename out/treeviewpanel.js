@@ -11,13 +11,15 @@ exports.default = {
 			<style>
 				body {
 					background-color: white;
+					height: 1000;
+					width: 1000;
 				}
 				.axis path {
 					display: none;
 				}
 				.axis line {
-					stroke-opacity: 0.3;
-					shape-rendering: crispEdges;
+					stroke: none;
+					fill: none;
 				}
 				.view {
 					fill: white;
@@ -81,21 +83,33 @@ exports.default = {
 			<!-- load the d3.js library -->
 			<script src="https://d3js.org/d3.v5.min.js"></script>
 			<button>Reset</button>
-			<svg width="960" height="500">
 				<script>
 					var treeData = d3.stratify().id(function (d) { return d.id }).parentId(function (d) { return d.parentId; })(${stringifiedFlatData});
 					// Append the svg object to the body of the page
 					// Appends a 'group' element to 'svg'
 					// Moves the 'group' element to the top left margin
-					var svg = d3.select("svg"),
-						width = +svg.attr("width"),
-						height = +svg.attr("height");
+					var margin = {top: 20, right: 90, bottom: 30, left: 90},
+							width = 960 - margin.left - margin.right,
+							height = 500 - margin.top - margin.bottom;
+										
+					let div = d3.select("div")
+					let svg = div.append("svg")
+					.attr("width", width + margin.right + margin.left)
+					.attr("height", height + margin.top + margin.bottom)
+					.append("g")
+    			.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 					// Logic for zoom functionality
 					var zoom = d3.zoom()
 						.scaleExtent([0.90, 40])
 						.translateExtent([[-100, -100], [width + 90, height + 100]])
 						.on("zoom", zoomed);
 					var x = d3.scaleLinear()
+						.domain([-1, width])
+						.range([-1, width * 5]);
+					var y = d3.scaleLinear()
+						.domain([-1, height])
+						.range([-1, height * 5]);
+						var x = d3.scaleLinear()
 						.domain([-1, width + 1])
 						.range([-1, width + 1]);
 					var y = d3.scaleLinear()
