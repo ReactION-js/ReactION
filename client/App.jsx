@@ -1,10 +1,11 @@
 import React, { Component } from 'react';
+import MyComponent from './components/TreeView.jsx'
 
 class App extends Component {
 	render() {
 		return (
 			<div>
-				If you can see me, that means REACT works!
+				<MyComponent />
 			</div>
 		)
 	}
