@@ -20,8 +20,8 @@ export default class Puppeteer {
 
 	// Creates an instance of puppeteer browser and page,
 	// opens to _url, defaults to localhost:3000.
-	public start() {
-		this._browser = puppeteer.launch(
+	public async start() {
+		this._browser = await puppeteer.launch(
 			{
 				headless: this._headless,
 				executablePath: this._executablePath,
@@ -29,9 +29,9 @@ export default class Puppeteer {
 			}
 		).catch((err: any) => console.log(err));
 
-		this._page = this._browser.pages().then((pageArr: any) => { return pageArr[0]; });
-		// page.goto(this._url, { waitUntil: 'networkidle0' });
-		this._page.goto(this._url);
+		this._page = await this._browser.pages().then((pageArr: any) => { return pageArr[0]; });
+		// this._page.goto(this._url, { waitUntil: 'networkidle0' });
+		await this._page.goto(this._url);
 
 		return this._page;
 	}
@@ -48,7 +48,7 @@ export default class Puppeteer {
 				const _entry = (() => {
 
 					// @ts-ignore
-					const domElements = document.querySelector<HTMLElement>('body').children;
+					const domElements = document.querySelector('body').children;
 					for (let el of domElements) {
 
 						// @ts-ignore
