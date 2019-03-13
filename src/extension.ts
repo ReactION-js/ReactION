@@ -4,8 +4,6 @@ import Puppeteer from './Puppeteer';
 import htmlView from './htmlViewPanel';
 import treeView from './treeViewPanel';
 
-const chromeLauncher = require('chrome-launcher');
-
 // Method called when extension is activated
 export function activate(context: vscode.ExtensionContext) {
 
@@ -18,6 +16,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 // Running Puppeteer to access React page context
 let page: any = new Puppeteer();
+page.start();
 
 // Putting Tree Diagram in the Webview
 class ViewPanel {
@@ -67,11 +66,13 @@ class ViewPanel {
 	private constructor(
 		htmlPanel: vscode.WebviewPanel,
 		treePanel: vscode.WebviewPanel,
-		extensionPath: string
+		extensionPath: string,
 	) {
 		this._htmlPanel = htmlPanel;
 		this._treePanel = treePanel;
-		this._update();
+		setInterval(() => {
+			this._update();
+		}, 3000);
 		this._treePanel.onDidDispose(() => this.dispose(), null, this._disposables);
 		this._treePanel.onDidChangeViewState(e => {
 			if (this._treePanel.visible) {
@@ -116,8 +117,7 @@ class ViewPanel {
 	}
 
 	private async _update() {
-		let rawReactData = await page.start();
-		rawReactData = await page.scrape();
+		let rawReactData = await page.scrape();
 		this._treePanel.webview.html = this._getHtmlForWebview(rawReactData);
 	}
 
