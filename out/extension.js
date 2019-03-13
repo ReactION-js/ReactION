@@ -5,7 +5,6 @@ const StartExtensionProvider_1 = require("./StartExtensionProvider");
 const Puppeteer_1 = require("./Puppeteer");
 const htmlViewPanel_1 = require("./htmlViewPanel");
 const treeViewPanel_1 = require("./treeViewPanel");
-const chromeLauncher = require('chrome-launcher');
 // Method called when extension is activated
 function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand('ReactION.openTree', () => {
@@ -16,6 +15,7 @@ function activate(context) {
 exports.activate = activate;
 // Running Puppeteer to access React page context
 let page = new Puppeteer_1.default();
+page.start();
 // Putting Tree Diagram in the Webview
 class ViewPanel {
     // Constructor for tree view and html panel
@@ -23,7 +23,9 @@ class ViewPanel {
         this._disposables = [];
         this._htmlPanel = htmlPanel;
         this._treePanel = treePanel;
-        this._update();
+        setInterval(() => {
+            this._update();
+        }, 3000);
         this._treePanel.onDidDispose(() => this.dispose(), null, this._disposables);
         this._treePanel.onDidChangeViewState(e => {
             if (this._treePanel.visible) {
@@ -89,8 +91,7 @@ class ViewPanel {
         }
     }
     async _update() {
-        let rawReactData = await page.start();
-        rawReactData = await page.scrape();
+        let rawReactData = await page.scrape();
         this._treePanel.webview.html = this._getHtmlForWebview(rawReactData);
     }
     // Putting scraped meta-data to D3 tree diagram
