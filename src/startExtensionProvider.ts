@@ -7,7 +7,8 @@ export default class StartExtensionProvider implements vscode.TreeDataProvider<o
   constructor() {}
 
   refresh(): void {
-    this._onDidChangeTreeData.fire();
+    this._onDidChangeTreeData.fire()
+    this._onDidChangeTreeData.dispose();
   }
 
   getTreeItem(element: object): vscode.TreeItem {
@@ -16,9 +17,10 @@ export default class StartExtensionProvider implements vscode.TreeDataProvider<o
 
   getChildren(element?: object): Thenable<object[]> {
     vscode.commands.executeCommand('ReactION.openTree');
-    // vscode.commands.executeCommand('workbench.view.explorer');
+    vscode.commands.executeCommand('workbench.view.explorer');
 
     this._onDidChangeTreeData.fire(); // Make sure collection is not cached.
+    this._onDidChangeTreeData.dispose();
     return Promise.reject([]);
   }
 }
