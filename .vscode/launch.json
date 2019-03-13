@@ -1,29 +1,19 @@
-// A launch configuration that compiles the extension and then opens it inside a new window
-// Use IntelliSense to learn about possible attributes.
-// Hover to view descriptions of existing attributes.
-// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
 {
+	// Use IntelliSense to learn about possible attributes.
+	// Hover to view descriptions of existing attributes.
+	// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"name": "Run Extension",
+			"name": "Run Extension - ReactION",
 			"type": "extensionHost",
 			"request": "launch",
 			"runtimeExecutable": "${execPath}",
 			"args": ["--extensionDevelopmentPath=${workspaceRoot}"],
-			"outFiles": ["${workspaceFolder}/out/**/*.js"],
-			"preLaunchTask": "npm: watch"
-		},
-		// {
-		// 	"name": "Launch via NPM",
-		// 	"type": "node",
-		// 	"request": "launch",
-		// 	"cwd": "${workspaceRoot}",
-		// 	"runtimeExecutable": "npm",
-		// 	"runtimeArgs": [
-		// 		"run-script", "react-devtools"
-		// 	],
-		// 	"port": 8097
-		// }
+			"outFiles": ["${workspaceFolder}/src"],
+			"preLaunchTask": "npm: watch",
+			"stopOnEntry": false,
+      "sourceMaps": true,
+	},
 	]
 }
