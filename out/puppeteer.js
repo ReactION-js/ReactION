@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const puppeteer = require('puppeteer');
+const chromeLauncher = require('chrome-launcher');
 class Puppeteer {
     // Default properties for the Puppeteer class.
     constructor() {
@@ -17,9 +18,12 @@ class Puppeteer {
         this._browser = await puppeteer.launch({
             headless: this._headless,
             executablePath: this._executablePath,
-            pipe: this._pipe
+            pipe: this._pipe,
         }).catch((err) => console.log(err));
-        this._page = await this._browser.pages().then((pageArr) => { return pageArr[0]; });
+        this._page = await this._browser.pages()
+            .then((pageArr) => {
+            return pageArr[0];
+        });
         // this._page.goto(this._url, { waitUntil: 'networkidle0' });
         await this._page.goto(this._url);
         return this._page;
