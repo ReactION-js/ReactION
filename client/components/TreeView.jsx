@@ -1,10 +1,15 @@
 import React, { Component } from 'react';
 import Tree from 'react-d3-tree';
-// import styled from 'styled-components'
+import styled from 'styled-components'
 
-// const TreeStyled = styled.div`
-// // styling for the tree 
-// `;
+const TreeStyled = styled.path`
+	.linkBase {
+		fill: none;
+		stroke: #D3D3D3;
+    stroke-width: 3px;
+	}
+`;
+
 
 const myTreeData = [
 	{
@@ -37,10 +42,22 @@ class D3TreeChart extends Component {
 		this.state = {
 			orientation: 'vertical',
 			x: 250,
-			y: 100
-			// theme: 'dark'
+			y: 100,
+			nodeSvgShape: {
+				shape: 'circle',
+				shapeProps: {
+					r: 15,
+					fill: '#FFAA00',
+					stroke: '#D3D3D3',
+					strokeWidth: '3px'
+				},
+			},
+			theme: 'dark',
+			background: '#181818',
 		}
+
 		this.changeOrientation = this.changeOrientation.bind(this);
+		this.changeTheme = this.changeTheme.bind(this);
 	}
 
 	// mouseOver(e) {
@@ -62,29 +79,46 @@ class D3TreeChart extends Component {
 		}
 	}
 
-	// changeTheme() {
-	// 	// Write codes that changes the theme
-	// };
+	changeTheme() {
+		const { theme } = this.state;
+		if (theme === 'dark') {
+			this.setState({
+				theme: 'light', background: '#F8F8F8'
+			});
+			console.log('light: ', this.state.background)
+		} else {
+			this.setState({
+				theme: 'dark', background: '#181818'
+			})
+		}
+	};
+
 
 	render() {
-		const { orientation } = this.state;
+		const { orientation, nodeSvgShape, background } = this.state;
+		console.log('links: ', document.querySelectorAll("p.linkBase"))
 		return (
 			<div
-				style={{ width: '100%', height: '100em', display: 'flex', flexDirection: 'column' }}
+				style={{ width: '100%', height: '100em', display: 'flex', flexDirection: 'column', backgroundColor: background }}
 			>
 				<button
 					onClick={this.changeOrientation}
 					counter='Orientation'
 				>click to change orientation</button>
+				<button
+					onClick={this.changeTheme}
+					counter='Background'
+				>click to change Theme</button>
 				<br></br>
-				<div style={{ width: '100%', height: '98em', }}>
-					<Tree
-						translate={{ x: this.state.x, y: this.state.y }}
-						data={myTreeData}
-						orientation={orientation}
-					// onMouseOver={this.mouseOver}
-					// zoomable="true"
-					/>
+				<div style={{ width: '100%', height: '98em' }}>
+					<TreeStyled>
+						<Tree
+							translate={{ x: this.state.x, y: this.state.y }}
+							data={myTreeData}
+							orientation={orientation}
+							nodeSvgShape={nodeSvgShape}
+						/>
+					</TreeStyled>
 				</div>
 			</div>
 		);
