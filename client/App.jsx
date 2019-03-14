@@ -1,11 +1,11 @@
 import React, { Component } from 'react';
-import MyComponent from './components/TreeView.jsx'
+import D3TreeChart from './components/TreeView.jsx';
 
 class App extends Component {
 	render() {
 		return (
 			<div>
-				<MyComponent />
+				<D3TreeChart />
 			</div>
 		)
 	}
