@@ -74,6 +74,7 @@
 		"puppeteer": "^1.12.2",
 		"react": "^16.5.2",
 		"react-d3-tree": "^1.12.2",
-		"react-dom": "^16.5.2"
+		"react-dom": "^16.5.2",
+		"styled-components": "^4.1.3"
 	}
 }
