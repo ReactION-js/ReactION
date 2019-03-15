@@ -10,6 +10,12 @@ const TreeStyled = styled.path`
 	}
 `;
 
+const Name = styled.g`
+	.nodeNameBase {
+		stroke: #D3D3D3;
+	}
+`
+
 
 const myTreeData = [
 	{
@@ -38,10 +44,11 @@ const myTreeData = [
 class D3TreeChart extends Component {
 	constructor(props) {
 		super(props);
-		// this.mouseOver = this.mouseOver.bind(this);
+		this.mouseOver = this.mouseOver.bind(this);
+		this.mouseOut = this.mouseOut.bind(this);
 		this.state = {
 			orientation: 'vertical',
-			x: 250,
+			x: 200,
 			y: 100,
 			nodeSvgShape: {
 				shape: 'circle',
@@ -52,6 +59,7 @@ class D3TreeChart extends Component {
 					strokeWidth: '3px'
 				},
 			},
+			nodeNameBase: '#F8F8F8',
 			theme: 'dark',
 			background: '#181818',
 		}
@@ -60,22 +68,32 @@ class D3TreeChart extends Component {
 		this.changeTheme = this.changeTheme.bind(this);
 	}
 
-	// mouseOver(e) {
-	// 	cosnt VARNAME = {
-	// 		// put what we want to show in mouseOver
-	// 	}
-	// }
+	mouseOver(nodeData, e) {
+		nodeData
+	}
 
-	// mouseOut(e){
+	mouseOut(nodeData, e) {
+		console.log(nodeData)
+		this.nodeData.setState({
+			nodeSvgShape: {
+				shape: 'circle',
+				shapeProps: {
+					r: 15,
+					fill: '#FFAA00',
+					stroke: '#D3D3D3',
+					strokeWidth: '3px'
+				},
+			}
+		})
+	}
 
-	// }
 
 	changeOrientation() {
 		const { orientation } = this.state;
 		if (orientation === 'vertical') {
 			this.setState({ orientation: 'horizontal', x: 100, y: 100 });
 		} else {
-			this.setState({ orientation: 'vertical', x: 250, y: 100 })
+			this.setState({ orientation: 'vertical', x: 200, y: 100 })
 		}
 	}
 
@@ -83,12 +101,25 @@ class D3TreeChart extends Component {
 		const { theme } = this.state;
 		if (theme === 'dark') {
 			this.setState({
-				theme: 'light', background: '#F8F8F8'
+				theme: 'light',
+				background: '#F8F8F8',
+				nodeNameBase: {
+					stroke: '#181818',
+				},
+				nodeAttributesBase: {
+					stroke: '#181818'
+				}
 			});
-			console.log('light: ', this.state.background)
 		} else {
 			this.setState({
-				theme: 'dark', background: '#181818'
+				theme: 'dark',
+				background: '#181818',
+				nodeNameBase: {
+					stroke: '#F8F8F8',
+				},
+				nodeAttributesBase: {
+					stroke: '#F8F8F8'
+				}
 			})
 		}
 	};
@@ -96,7 +127,6 @@ class D3TreeChart extends Component {
 
 	render() {
 		const { orientation, nodeSvgShape, background } = this.state;
-		console.log('links: ', document.querySelectorAll("p.linkBase"))
 		return (
 			<div
 				style={{ width: '100%', height: '100em', display: 'flex', flexDirection: 'column', backgroundColor: background }}
@@ -112,12 +142,17 @@ class D3TreeChart extends Component {
 				<br></br>
 				<div style={{ width: '100%', height: '98em' }}>
 					<TreeStyled>
-						<Tree
-							translate={{ x: this.state.x, y: this.state.y }}
-							data={myTreeData}
-							orientation={orientation}
-							nodeSvgShape={nodeSvgShape}
-						/>
+						<Name>
+							<Tree
+								translate={{ x: this.state.x, y: this.state.y }}
+								data={myTreeData}
+								onMouseOver={this.mouseOver}
+								onMouseOut={this.mouseOut}
+								orientation={orientation}
+								nodeSvgShape={nodeSvgShape}
+								textLayout={{ textAnchor: "start", x: 20, y: -20, transform: undefined }}
+							/>
+						</Name>
 					</TreeStyled>
 				</div>
 			</div>
