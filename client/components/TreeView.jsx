@@ -12,7 +12,12 @@ const TreeStyled = styled.path`
 
 const Name = styled.g`
 	.nodeNameBase {
-		stroke: #D3D3D3;
+		stroke: ${props => (props.children.props.nodeSvgShape.theme === 'light' ? '#181818' : '#F8F8F8')}
+		font-size: large;
+		fill: ${props => (props.children.props.nodeSvgShape.theme === 'light' ? '#181818' : '#F8F8F8')}
+	}
+	.nodeAttributesBase{
+		stroke: ${props => (props.children.props.nodeSvgShape.theme === 'light' ? '#181818' : '#F8F8F8')}
 	}
 `
 
@@ -20,7 +25,7 @@ const Name = styled.g`
 const myTreeData = [
 	{
 		name: 'Top Level',
-		attributes: {
+		props: {
 			keyA: 'val A',
 			keyB: 'val B',
 			keyC: 'val C',
@@ -28,7 +33,7 @@ const myTreeData = [
 		children: [
 			{
 				name: 'Level 2: A',
-				attributes: {
+				props: {
 					keyA: 'val A',
 					keyB: 'val B',
 					keyC: 'val C',
@@ -53,15 +58,16 @@ class D3TreeChart extends Component {
 			nodeSvgShape: {
 				shape: 'circle',
 				shapeProps: {
+
 					r: 15,
 					fill: '#FFAA00',
 					stroke: '#D3D3D3',
-					strokeWidth: '3px'
+					strokeWidth: '3px',
+					nodeNameBase: '#F8F8F8',
 				},
+				theme: 'dark',
+				background: '#181818',
 			},
-			nodeNameBase: '#F8F8F8',
-			theme: 'dark',
-			background: '#181818',
 		}
 
 		this.changeOrientation = this.changeOrientation.bind(this);
@@ -73,7 +79,6 @@ class D3TreeChart extends Component {
 	}
 
 	mouseOut(nodeData, e) {
-		console.log(nodeData)
 		this.nodeData.setState({
 			nodeSvgShape: {
 				shape: 'circle',
@@ -98,35 +103,46 @@ class D3TreeChart extends Component {
 	}
 
 	changeTheme() {
-		const { theme } = this.state;
+		const { theme } = this.state.nodeSvgShape;
 		if (theme === 'dark') {
 			this.setState({
-				theme: 'light',
-				background: '#F8F8F8',
-				nodeNameBase: {
-					stroke: '#181818',
+				nodeSvgShape: {
+					shape: 'circle',
+					shapeProps: {
+						r: 15,
+						fill: '#FFAA00',
+						stroke: '#181818',
+						strokeWidth: '3px',
+						nodeNameBase: '#181818',
+					},
+					theme: 'light',
+					background: '#F8F8F8'
 				},
-				nodeAttributesBase: {
-					stroke: '#181818'
-				}
 			});
 		} else {
 			this.setState({
-				theme: 'dark',
-				background: '#181818',
-				nodeNameBase: {
-					stroke: '#F8F8F8',
+				nodeSvgShape: {
+					shape: 'circle',
+					shapeProps: {
+						r: 15,
+						fill: '#FFAA00',
+						stroke: '#F8F8F8',
+						strokeWidth: '3px',
+						nodeNameBase: '#F8F8F8',
+					},
+					theme: 'dark',
+					background: '#181818',
 				},
-				nodeAttributesBase: {
-					stroke: '#F8F8F8'
-				}
 			})
 		}
 	};
 
 
 	render() {
-		const { orientation, nodeSvgShape, background } = this.state;
+		const { orientation, nodeSvgShape } = this.state;
+		const { background } = this.state.nodeSvgShape;
+		// const { nodeNameBase } = this.state.nodeSvgShape.shapeProps;
+
 		return (
 			<div
 				style={{ width: '100%', height: '100em', display: 'flex', flexDirection: 'column', backgroundColor: background }}
