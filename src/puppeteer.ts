@@ -5,7 +5,7 @@ const request = require('request');
 const util = require('util');
 
 export default class Puppeteer {
-	private _headless: boolean;
+	public _headless: boolean;
 	private _executablePath: string;
 	private _pipe: boolean;
 	private _url: string;
@@ -29,7 +29,7 @@ export default class Puppeteer {
 		// const chrome = await chromeLauncher.launch({
 		// 	startingUrl: this._url,
 		// 	chromeFlags: ['--disable-gpu', '--no-sandbox'],
-		// 	enableExtensions: true
+		// 	headless: true
 		// });
 
 		// console.log('after chrome launch', chrome.port);
@@ -47,9 +47,6 @@ export default class Puppeteer {
 			// const resp = util.promisify(request)
 			
 	
-
-
-		// const pathToExtension = require('path').join(__dirname, 'chrome-extensions');
 		this._browser = await pptr.launch(
 			{
 				headless: this._headless,
@@ -67,27 +64,26 @@ export default class Puppeteer {
 			return pageArr[0];
 			});
 		this._page.goto(this._url, { waitUntil: 'networkidle0' });
-		// await this._page.goto(webSocketDebuggerUrl);
-		this._page.on('console', (log: any) => console.log('mutation'));
+		// this._page.on('console', (log: any) => console.log('mutation'));
 
-		await this._page.evaluate(() => {
-			const target = document.documentElement;
-			var mutationObserver = new MutationObserver(function(mutations) {
-				mutations.forEach(function(mutation) {
-					console.log(mutation);
-				});
-			});
+		// await this._page.evaluate(() => {
+		// 	const target = document.documentElement;
+		// 	var mutationObserver = new MutationObserver(function(mutations) {
+		// 		mutations.forEach(function(mutation) {
+		// 			console.log(mutation);
+		// 		});
+		// 	});
 			
-			const config = {
-				attributes: true,
-				characterData: true,
-				childList: true,
-				subtree: true,
-				attributeOldValue: true,
-				characterDataOldValue: true
-			}
-			return mutationObserver.observe(target, config)
-		 })
+		// 	const config = {
+		// 		attributes: true,
+		// 		characterData: true,
+		// 		childList: true,
+		// 		subtree: true,
+		// 		attributeOldValue: true,
+		// 		characterDataOldValue: true
+		// 	}
+		// 	return mutationObserver.observe(target, config)
+		//  })
 
 		return this._page;
 	}
