@@ -287,4 +287,4 @@ exports.default = {
 		`;
     }
 };
-//# sourceMappingURL=treeViewPanel.js.map
+//# sourceMappingURL=TreeViewPanel.js.map
