@@ -25,7 +25,7 @@ class ViewPanel {
         this._treePanel = treePanel;
         setInterval(() => {
             this._update();
-        }, 3000);
+        }, 1000);
         this._treePanel.onDidDispose(() => this.dispose(), null, this._disposables);
         this._treePanel.onDidChangeViewState(e => {
             if (this._treePanel.visible) {
@@ -91,7 +91,6 @@ class ViewPanel {
         }
     }
     async _update() {
-        console.log(page);
         let rawReactData = await page.scrape();
         this._treePanel.webview.html = this._getHtmlForWebview(rawReactData);
     }
