@@ -20,31 +20,7 @@ const Name = styled.g`
 		stroke: ${props => (props.children.props.nodeSvgShape.theme === 'light' ? '#181818' : '#F8F8F8')}
 	}
 `
-
-
-const myTreeData = [
-	{
-		name: 'Top Level',
-		props: {
-			keyA: 'val A',
-			keyB: 'val B',
-			keyC: 'val C',
-		},
-		children: [
-			{
-				name: 'Level 2: A',
-				props: {
-					keyA: 'val A',
-					keyB: 'val B',
-					keyC: 'val C',
-				},
-			},
-			{
-				name: 'Level 2: B',
-			},
-		],
-	},
-];
+const myTreeData = window._TREE_DATA;
 
 class D3TreeChart extends Component {
 	constructor(props) {

@@ -8,13 +8,38 @@ exports.default = {
         const bundleUri = bundle.with({
             scheme: 'vscode-resource'
         });
-        console.log("bundle & dir: ", bundle, __dirname);
+        console.log(stringifiedFlatData);
         return `
 		<!DOCTYPE html>
 		<html lang="en">
 		<head>
 			<meta charset="utf-8">
 			<title>Tree Example</title>
+			<script>
+				window._TREE_DATA = [
+					{
+						name: 'App',
+						props: {
+							keyA: 'val A',
+							keyB: 'val B',
+							keyC: 'val C',
+						},
+						children: [
+							{
+								name: 'Event',
+								props: {
+									keyA: 'val A',
+									keyB: 'val B',
+									keyC: 'val C',
+								},
+							},
+							{
+								name: 'Time',
+							},
+						],
+					},
+				];
+			</script>
 		</head>
 			<body>
 				<div id="root"></div>
