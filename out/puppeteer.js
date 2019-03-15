@@ -51,7 +51,7 @@ class Puppeteer {
         });
         this._page.goto(this._url, { waitUntil: 'networkidle0' });
         // await this._page.goto(webSocketDebuggerUrl);
-        this._page.on('console', log => console.log('mutation'));
+        this._page.on('console', (log) => console.log('mutation'));
         await this._page.evaluate(() => {
             const target = document.documentElement;
             var mutationObserver = new MutationObserver(function (mutations) {
