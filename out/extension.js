@@ -91,6 +91,7 @@ class ViewPanel {
         }
     }
     async _update() {
+        console.log(page);
         let rawReactData = await page.scrape();
         this._treePanel.webview.html = this._getHtmlForWebview(rawReactData);
     }
