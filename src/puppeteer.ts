@@ -64,7 +64,7 @@ export default class Puppeteer {
 
 		this._page = await this._browser.pages()
 			.then((pageArr: any) => {
-			return pageArr[0]; 
+			return pageArr[0];
 			});
 		this._page.goto(this._url, { waitUntil: 'networkidle0' });
 		// await this._page.goto(webSocketDebuggerUrl);
@@ -118,54 +118,38 @@ export default class Puppeteer {
 
 				// Define function that traverses the fiber tree, starting from the entry point
 				function fiberWalk(entry: any) {
-					let output:any = [], globalID = 0;
+					let output:any = [], globalId = 1;
 
 					// Recursively traversing through the fiber tree, pushing the node object into the output array
-					function traverse(root: any, level: number, id: number) {
-						if (root.sibling !== null && root.child !== null) {
+					function traverse(root: any, level: number, parentId: number) {
+						if (root.sibling !== null) {
+							globalId += 1
 							output.push(
 								{
 									"name": root.sibling,
 									"level": `${level}`,
-									"id": `${globalID += 1}`,
-									"parentId": `${id}`,
-									"props": JSON.stringify(Object.keys(root.sibling.memoizedProps))
-								},
-								{
-									"name": root.child,
-									"level": `${level}`,
-									"id": `${globalID += 1}`,
-									"parentId": `${id}`,
-									"props": JSON.stringify(Object.keys(root.child.memoizedProps))
-								}
-							);
-							traverse(root.sibling, level, id);
-							traverse(root.child, level + 1, id + 1);
-						} else if (root.sibling !== null && root.child === null) {
-							output.push(
-								{
-									"name": root.sibling,
-									"level": `${level}`,
-									"id": `${globalID += 1}`,
-									"parentId": `${id}`,
+									"id": `${globalId}`,
+									"parentId": `${parentId}`,
 									"props": JSON.stringify(Object.keys(root.sibling.memoizedProps))
 								}
 							);
-							traverse(root.sibling, level, id);
-						} else if (root.child !== null && root.sibling === null) {
-							output.push(
-								{
-									"name": root.child,
-									"level": `${level}`,
-									"id": `${globalID += 1}`,
-									"parentId": `${id}`,
-									"props": JSON.stringify(Object.keys(root.child.memoizedProps))
-								}
-							);
-							traverse(root.child, level + 1, id + 1);
-						} else if (root.child === null && root.sibling === null) {
-							return;
+							traverse(root.sibling, level, parentId);
 						}
+						if (root.child !== null) {
+							parentId += 1;
+							globalId += 1;
+							output.push(
+								{
+									"name": root.child,
+									"level": `${level}`,
+									"id": `${globalId}`,
+									"parentId": `${parentId}`,
+									"props": JSON.stringify(Object.keys(root.child.memoizedProps))
+								}
+							);
+							traverse(root.child, level + 1, parentId);
+						}
+
 					}
 					traverse(entry, 0, 0);
 
@@ -178,7 +162,7 @@ export default class Puppeteer {
 						} else if (typeof el.name.type === 'function') {
 							el.name = 'function';
 						} else if (typeof el.name.type === 'object') {
-							el.name = 'function';
+							el.name = 'object';
 						} else if (typeof el.name.type === 'string') {
 							el.name = el.name.type;
 						}
@@ -186,7 +170,7 @@ export default class Puppeteer {
 
 					// Setting root parent to an empty string
 					output[0].parentId = '';
-
+					console.log(output);
 					return output.slice(0, 25);
 				}
 				return fiberWalk(_entry);
