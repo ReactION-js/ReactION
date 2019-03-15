@@ -8,7 +8,6 @@ exports.default = {
         const bundleUri = bundle.with({
             scheme: 'vscode-resource'
         });
-        console.log("bundle & dir: ", bundle, __dirname);
         return `
 		<!DOCTYPE html>
 		<html lang="en">
