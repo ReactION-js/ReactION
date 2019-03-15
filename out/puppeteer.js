@@ -18,57 +18,59 @@ class Puppeteer {
     // Creates an instance of puppeteer browser and page,
     // opens to _url, defaults to localhost:3000
     async start() {
-        // console.log('before chrome launch');
-        // const chrome = await chromeLauncher.launch({
-        // 	startingUrl: this._url,
-        // 	chromeFlags: ['--disable-gpu', '--no-sandbox'],
-        // 	enableExtensions: true
-        // });
-        // console.log('after chrome launch', chrome.port);
-        // const resp = await util.promisify(request)(`http://localhost:${chrome.port}/json/version`);
-        // console.log(resp, 'hereeee')
-        // const { webSocketDebuggerUrl } = JSON.parse(resp.body);
-        // console.log(webSocketDebuggerUrl, 'heasdfadsfksh;kreeee')
-        // this._browser = await pptr.connect({ browserWSEndpoint: webSocketDebuggerUrl });
-        // console.log('ok....');
-        // this._page = await this._browser.pages()
-        // 	.then((pageArr: any) => {
-        // 			return pageArr[0]; 
-        // 	});
-        // const resp = util.promisify(request)
-        // const pathToExtension = require('path').join(__dirname, 'chrome-extensions');
-        this._browser = await pptr.launch({
-            headless: this._headless,
-            executablePath: this._executablePath,
-            pipe: this._pipe,
-        }).catch((err) => console.log(err));
-        // 	const targets = await browser.targets();
-        // const backgroundPageTarget = targets.find(target => target.type() === 'background_page');
-        // const backgroundPage = await backgroundPageTarget.page();
+        console.log('before chrome launch');
+        const chrome = await chromeLauncher.launch({
+            startingUrl: this._url,
+            chromeFlags: ['--disable-gpu', '--no-sandbox'],
+            enableExtensions: true
+        });
+        console.log('after chrome launch', chrome.port);
+        const resp = await util.promisify(request)(`http://localhost:${chrome.port}/json/version`);
+        console.log(resp, 'hereeee');
+        const { webSocketDebuggerUrl } = JSON.parse(resp.body);
+        console.log(webSocketDebuggerUrl, 'heasdfadsfksh;kreeee');
+        this._browser = await pptr.connect({ browserWSEndpoint: webSocketDebuggerUrl });
+        console.log('ok....');
         this._page = await this._browser.pages()
             .then((pageArr) => {
             return pageArr[0];
         });
-        this._page.goto(this._url, { waitUntil: 'networkidle0' });
+        // const resp = util.promisify(request)
+        // const pathToExtension = require('path').join(__dirname, 'chrome-extensions');
+        // 	this._browser = await pptr.launch(
+        // 		{
+        // 			headless: this._headless,
+        // 			executablePath: this._executablePath,
+        // 			pipe: this._pipe,
+        // 		}
+        // 	).catch((err: any) => console.log(err));
+        // // 	const targets = await browser.targets();
+        // // const backgroundPageTarget = targets.find(target => target.type() === 'background_page');
+        // // const backgroundPage = await backgroundPageTarget.page();
+        // 	this._page = await this._browser.pages()
+        // 		.then((pageArr: any) => {
+        // 		return pageArr[0];
+        // 		});
+        // 	this._page.goto(this._url, { waitUntil: 'networkidle0' });
         // await this._page.goto(webSocketDebuggerUrl);
-        this._page.on('console', (log) => console.log('mutation'));
-        await this._page.evaluate(() => {
-            const target = document.documentElement;
-            var mutationObserver = new MutationObserver(function (mutations) {
-                mutations.forEach(function (mutation) {
-                    console.log(mutation);
-                });
-            });
-            const config = {
-                attributes: true,
-                characterData: true,
-                childList: true,
-                subtree: true,
-                attributeOldValue: true,
-                characterDataOldValue: true
-            };
-            return mutationObserver.observe(target, config);
-        });
+        // this._page.on('console', (log: any) => console.log('mutation'));
+        // await this._page.evaluate(() => {
+        // 	const target = document.documentElement;
+        // 	var mutationObserver = new MutationObserver(function(mutations) {
+        // 		mutations.forEach(function(mutation) {
+        // 			console.log(mutation);
+        // 		});
+        // 	});
+        // 	const config = {
+        // 		attributes: true,
+        // 		characterData: true,
+        // 		childList: true,
+        // 		subtree: true,
+        // 		attributeOldValue: true,
+        // 		characterDataOldValue: true
+        // 	}
+        // 	return mutationObserver.observe(target, config)
+        //  })
         return this._page;
     }
     // Recursive React component scraping algorithm
