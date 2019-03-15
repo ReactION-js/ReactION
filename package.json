@@ -74,7 +74,7 @@
 		"puppeteer": "^1.12.2",
 		"puppeteer-core": "^1.13.0",
 		"request": "^2.88.0",
-		"util": "^0.11.1"
+		"util": "^0.11.1",
 		"react": "^16.5.2",
 		"react-d3-tree": "^1.12.2",
 		"react-dom": "^16.5.2",
