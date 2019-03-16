@@ -3,6 +3,7 @@ import StartExtensionProvider from './StartExtensionProvider';
 import Puppeteer from './Puppeteer';
 import treeView from './treeViewPanel';
 import EmbeddedViewPanel from './EmbeddedViewPanel';
+import TreeNode from './TreeNode';
 
 // Method called when extension is activated
 export function activate(context: vscode.ExtensionContext) {
@@ -108,16 +109,35 @@ class ViewPanel {
 
 	private async _update() {
 		let rawReactData = await this._page.scrape();
-		this._treePanel.webview.html = this._getHtmlForWebview(rawReactData);
+
+		// Build out TreeNode class for React D3 Tree.
+		function buildTree(rawReactData:any) {
+			let tree = new TreeNode(rawReactData[0]);
+
+			rawReactData.forEach((el:any) => {
+				const parentNode = tree._find(tree, el.parentId);
+				// console.log('=============', el.parentId)
+				if (parentNode) {
+					parentNode._add(el);
+				}
+			});
+
+			return tree;
+		}
+
+		console.log(rawReactData);
+
+		const treeData:any = await buildTree(rawReactData);
+
+		this._treePanel.webview.html = this._getHtmlForWebview(treeData);
 	}
 
 	// Putting scraped meta-data to D3 tree diagram
-	private _getHtmlForWebview(rawReactData: Array<object>) {
+	private _getHtmlForWebview(treeData: Array<object>) {
 
 		// Use a nonce to whitelist which scripts can be run
 		const nonce = getNonce();
-		const stringifiedFlatData = JSON.stringify(rawReactData);
-
+		const stringifiedFlatData = JSON.stringify(treeData);
 		return treeView.generateD3(stringifiedFlatData);
 	}
 }
