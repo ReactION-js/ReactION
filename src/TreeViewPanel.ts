@@ -3,12 +3,12 @@ import * as path from 'path';
 
 export default {
 	generateD3:
-		function (stringifiedFlatData: string) {
+		function (stringifiedTreeData: string) {
 			const bundle = vscode.Uri.file(path.join(__dirname, 'build', 'bundle.js'));
 			const bundleUri = bundle.with({
 				scheme: 'vscode-resource'
 			});
-			console.log(stringifiedFlatData);
+			// console.log(stringifiedTreeData);
 			return `
 		<!DOCTYPE html>
 		<html lang="en">
@@ -16,29 +16,7 @@ export default {
 			<meta charset="utf-8">
 			<title>Tree Example</title>
 			<script>
-				window._TREE_DATA = [
-					{
-						name: 'App',
-						props: {
-							keyA: 'val A',
-							keyB: 'val B',
-							keyC: 'val C',
-						},
-						children: [
-							{
-								name: 'Event',
-								props: {
-									keyA: 'val A',
-									keyB: 'val B',
-									keyC: 'val C',
-								},
-							},
-							{
-								name: 'Time',
-							},
-						],
-					},
-				];
+				window._TREE_DATA = [${stringifiedTreeData}];
 			</script>
 		</head>
 			<body>
