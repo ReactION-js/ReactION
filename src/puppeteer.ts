@@ -3,10 +3,9 @@ const pptr = require('puppeteer-core');
 const chromeLauncher = require('chrome-launcher');
 const request = require('request');
 const util = require('util');
-import TreeNode from './TreeNode';
 
 export default class Puppeteer {
-	private _headless: boolean;
+	public _headless: boolean;
 	private _executablePath: string;
 	private _pipe: boolean;
 	private _url: string;
@@ -30,7 +29,7 @@ export default class Puppeteer {
 		// const chrome = await chromeLauncher.launch({
 		// 	startingUrl: this._url,
 		// 	chromeFlags: ['--disable-gpu', '--no-sandbox'],
-		// 	enableExtensions: true
+		// 	headless: true
 		// });
 
 		// console.log('after chrome launch', chrome.port);
@@ -48,9 +47,6 @@ export default class Puppeteer {
 			// const resp = util.promisify(request)
 
 
-
-
-		// const pathToExtension = require('path').join(__dirname, 'chrome-extensions');
 		this._browser = await pptr.launch(
 			{
 				headless: this._headless,
@@ -68,8 +64,7 @@ export default class Puppeteer {
 			return pageArr[0];
 			});
 		this._page.goto(this._url, { waitUntil: 'networkidle0' });
-		// await this._page.goto(webSocketDebuggerUrl);
-		this._page.on('console', (log: any) => console.log('mutation'));
+		// this._page.on('console', (log: any) => console.log('mutation'));
 
 		// await this._page.evaluate(() => {
 		// 	const target = document.documentElement;
@@ -164,23 +159,11 @@ export default class Puppeteer {
 
 					// Setting root parent to an empty string
 					dataArr[0].parentId = '';
-					console.log(dataArr);
-
-					function buildTree(dataArr:any) {
-						let processeddataArr:any = [];
-						let TreeData;
-
-						dataArr.forEach((el:any) => {
-							if (el.parentId === '') {
-								TreeData = new TreeNode(el);
-							}
-						})
-					}
-
-					return buildTree(dataArr);
+					return dataArr;
 				}
 				return fiberWalk(_entry);
 			}).catch((err: any) => { console.log(err); });
+
 		return reactData;
 	}
 }

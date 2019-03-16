@@ -5,7 +5,6 @@ const pptr = require('puppeteer-core');
 const chromeLauncher = require('chrome-launcher');
 const request = require('request');
 const util = require('util');
-const TreeNode_1 = require("./TreeNode");
 class Puppeteer {
     // Default properties for the Puppeteer class.
     constructor() {
@@ -23,7 +22,7 @@ class Puppeteer {
         // const chrome = await chromeLauncher.launch({
         // 	startingUrl: this._url,
         // 	chromeFlags: ['--disable-gpu', '--no-sandbox'],
-        // 	enableExtensions: true
+        // 	headless: true
         // });
         // console.log('after chrome launch', chrome.port);
         // const resp = await util.promisify(request)(`http://localhost:${chrome.port}/json/version`);
@@ -37,7 +36,6 @@ class Puppeteer {
         // 			return pageArr[0];
         // 	});
         // const resp = util.promisify(request)
-        // const pathToExtension = require('path').join(__dirname, 'chrome-extensions');
         this._browser = await pptr.launch({
             headless: this._headless,
             executablePath: this._executablePath,
@@ -51,8 +49,7 @@ class Puppeteer {
             return pageArr[0];
         });
         this._page.goto(this._url, { waitUntil: 'networkidle0' });
-        // await this._page.goto(webSocketDebuggerUrl);
-        this._page.on('console', (log) => console.log('mutation'));
+        // this._page.on('console', (log: any) => console.log('mutation'));
         // await this._page.evaluate(() => {
         // 	const target = document.documentElement;
         // 	var mutationObserver = new MutationObserver(function(mutations) {
@@ -125,17 +122,7 @@ class Puppeteer {
                 traverse(entry, 0, 0);
                 // Setting root parent to an empty string
                 dataArr[0].parentId = '';
-                console.log(dataArr);
-                function buildTree(dataArr) {
-                    let processeddataArr = [];
-                    let TreeData;
-                    dataArr.forEach((el) => {
-                        if (el.parentId === '') {
-                            TreeData = new TreeNode_1.default(el);
-                        }
-                    });
-                }
-                return buildTree(dataArr);
+                return dataArr;
             }
             return fiberWalk(_entry);
         }).catch((err) => { console.log(err); });
