@@ -5,6 +5,7 @@ const StartExtensionProvider_1 = require("./StartExtensionProvider");
 const Puppeteer_1 = require("./Puppeteer");
 const treeViewPanel_1 = require("./treeViewPanel");
 const EmbeddedViewPanel_1 = require("./EmbeddedViewPanel");
+const TreeNode_1 = require("./TreeNode");
 // Method called when extension is activated
 function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand('ReactION.openTree', () => {
@@ -84,13 +85,27 @@ class ViewPanel {
     }
     async _update() {
         let rawReactData = await this._page.scrape();
-        this._treePanel.webview.html = this._getHtmlForWebview(rawReactData);
+        // Build out TreeNode class for React D3 Tree.
+        function buildTree(rawReactData) {
+            let tree = new TreeNode_1.default(rawReactData[0]);
+            rawReactData.forEach((el) => {
+                const parentNode = tree._find(tree, el.parentId);
+                // console.log('=============', el.parentId)
+                if (parentNode) {
+                    parentNode._add(el);
+                }
+            });
+            return tree;
+        }
+        console.log(rawReactData);
+        const treeData = await buildTree(rawReactData);
+        this._treePanel.webview.html = this._getHtmlForWebview(treeData);
     }
     // Putting scraped meta-data to D3 tree diagram
-    _getHtmlForWebview(rawReactData) {
+    _getHtmlForWebview(treeData) {
         // Use a nonce to whitelist which scripts can be run
         const nonce = getNonce();
-        const stringifiedFlatData = JSON.stringify(rawReactData);
+        const stringifiedFlatData = JSON.stringify(treeData);
         return treeViewPanel_1.default.generateD3(stringifiedFlatData);
     }
 }
