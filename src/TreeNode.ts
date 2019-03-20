@@ -2,6 +2,7 @@ export default class TreeNode {
 	public name: string;
 	public id: string;
 	public attributes: any;
+	public parentId: any;
 	public children: any[];
 
 	public constructor(node:any) {
@@ -9,27 +10,32 @@ export default class TreeNode {
 		this.name = node.name;
 		this.id = node.id;
 		this.attributes = node.props;
+		this.parentId = node.parentId;
 		this.children = [];
 	}
 
 	// Add new node to the tree
 	public _add(node:any) {
 		const newNode = new TreeNode(node);
+		// console.log('this', this, 'new node', newNode)
 		this.children.push(newNode);
 	}
 
 	// Search if there is a node with matching id.
-	public _find(root:any, id:any) {
+	public _find(root:any, parentId:any) {
 		let curNode = root;
-		if (curNode.id === id) {
+		if (curNode.id === parentId) {
 			return curNode;
 		}
 		if (curNode.children.length !== 0) {
 			for (let el of curNode.children) {
-				if (this._find(el, id)) {
-					return el;
+				const findParent: any = this._find(el, parentId);
+				if (findParent) {
+					return findParent;
 				}
 			}
 		}
+
+		return false;
 	}
 }
