@@ -37,11 +37,11 @@
 		"commands": [
 			{
 				"command": "ReactION.openTree",
-				"title": "ReactION Tree"
+				"title": "ReactION: Launch"
 			},
 			{
 				"command": "ReactION.openWeb",
-				"title": "ReactION Web"
+				"title": "ReactION: <BETA> Open Embedded Webview"
 			}
 		]
 	},
@@ -51,33 +51,37 @@
 		"watch": "tsc -watch -p ./",
 		"postinstall": "node ./node_modules/vscode/bin/install",
 		"test": "npm run compile && node ./node_modules/vscode/bin/test",
+		"mocha": "mocha src/test/TreeView.test.js --recursive test",
 		"build": "webpack --watch"
 	},
 	"devDependencies": {
-		"typescript": "^3.3.1",
-		"vscode": "^1.1.28",
-		"tslint": "^5.12.1",
-		"@types/node": "^10.12.21",
-		"@types/mocha": "^2.2.42",
-		"webpack": "^4.29.2",
-		"webpack-cli": "^3.2.3",
 		"@babel/core": "^7.2.2",
 		"@babel/preset-env": "^7.3.1",
 		"@babel/preset-react": "^7.0.0",
+		"@types/chai": "^4.1.7",
+		"@types/mocha": "^2.2.42",
+		"@types/node": "^10.12.21",
 		"babel-loader": "^8.0.5",
+		"chai": "^4.2.0",
 		"css-loader": "^2.1.0",
-		"style-loader": "^0.23.1"
+		"style-loader": "^0.23.1",
+		"tslint": "^5.12.1",
+		"typescript": "^3.3.1",
+		"vscode": "^1.1.28",
+		"webpack": "^4.29.2",
+		"webpack-cli": "^3.2.3"
 	},
 	"dependencies": {
 		"chrome-launcher": "^0.10.5",
 		"electron-devtools-installer": "^2.2.4",
 		"puppeteer": "^1.12.2",
 		"puppeteer-core": "^1.13.0",
-		"request": "^2.88.0",
-		"util": "^0.11.1",
 		"react": "^16.5.2",
 		"react-d3-tree": "^1.12.2",
 		"react-dom": "^16.5.2",
-		"styled-components": "^4.1.3"
+		"request": "^2.88.0",
+		"socket.io": "^2.2.0",
+		"styled-components": "^4.1.3",
+		"util": "^0.11.1"
 	}
 }
