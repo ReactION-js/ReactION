@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import Puppeteer from './Puppeteer';
 import treeView from './treeViewPanel';
 import htmlView from './htmlViewPanel';
+
 import TreeNode from './TreeNode';
 
 export default class EmbeddedViewPanel {
@@ -12,6 +13,7 @@ export default class EmbeddedViewPanel {
 	private readonly _treePanel: vscode.WebviewPanel;
 	private _disposables: vscode.Disposable[] = [];
 	public readonly _page: Puppeteer;
+	
 
 	public static createOrShow() {
 		const treeColumn = vscode.ViewColumn.Three;
