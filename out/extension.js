@@ -103,18 +103,33 @@ class ViewPanel {
     }
     async _update() {
         let rawReactData = await this._page.scrape();
+        // console.log(rawReactData);
         // Build out TreeNode class for React D3 Tree.
         function buildTree(rawReactData) {
             let tree = new TreeNode_1.default(rawReactData[0]);
+            const freeNodes = [];
             rawReactData.forEach((el) => {
                 const parentNode = tree._find(tree, el.parentId);
                 if (parentNode) {
                     parentNode._add(el);
                 }
+                else {
+                    freeNodes.push(el);
+                }
             });
+            while (freeNodes.length > 0) {
+                const curEl = freeNodes[0];
+                const parentNode = tree._find(tree, curEl.parentId);
+                if (parentNode) {
+                    parentNode._add(curEl);
+                }
+                freeNodes.shift();
+            }
+            // console.log('tree ', tree)
             return tree;
         }
         const treeData = await buildTree(rawReactData);
+        // console.log('tree data ', treeData);
         this._treePanel.webview.html = this._getHtmlForWebview(treeData);
     }
     // Putting scraped meta-data to D3 tree diagram
