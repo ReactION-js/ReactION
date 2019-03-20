@@ -5,7 +5,8 @@ class TreeNode {
         // console.log(node)
         this.name = node.name;
         this.id = node.id;
-        this.props = node.props;
+        this.attributes = node.props;
+        this.parentId = node.parentId;
         this.children = [];
     }
     // Add new node to the tree
@@ -14,18 +15,20 @@ class TreeNode {
         this.children.push(newNode);
     }
     // Search if there is a node with matching id.
-    _find(root, id) {
+    _find(root, parentId) {
         let curNode = root;
-        if (curNode.id === id) {
+        if (curNode.id === parentId) {
             return curNode;
         }
         if (curNode.children.length !== 0) {
             for (let el of curNode.children) {
-                if (this._find(el, id)) {
-                    return el;
+                const findParent = this._find(el, parentId);
+                if (findParent) {
+                    return findParent;
                 }
             }
         }
+        return false;
     }
 }
 exports.default = TreeNode;
