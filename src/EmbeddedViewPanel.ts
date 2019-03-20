@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import Puppeteer from './Puppeteer';
 import treeView from './treeViewPanel';
 import htmlView from './htmlViewPanel';
+import TreeNode from './TreeNode';
 
 export default class EmbeddedViewPanel {
 
@@ -87,8 +88,40 @@ export default class EmbeddedViewPanel {
 
 	private async _update(): Promise<void> {
 		this._htmlPanel.webview.html = this._getPreviewHtmlForWebview();
-		let rawReactData = await this._page.scrape();
-		this._treePanel.webview.html = this._getHtmlForWebview(rawReactData);
+		let rawReactData: Array<object> = await this._page.scrape();
+
+				// Build out TreeNode class for React D3 Tree.
+				function buildTree(rawReactData: Array<object>) {
+					let tree: TreeNode = new TreeNode(rawReactData[0]);
+					const freeNodes: any = [];
+		
+					rawReactData.forEach((el: any) => {
+						const parentNode: TreeNode = tree._find(tree, el.parentId);
+						if (parentNode) {
+							parentNode._add(el);
+						} else {
+							freeNodes.push(el);
+						}
+					});
+		
+					while (freeNodes.length > 0) {
+						const curEl = freeNodes[0];
+						const parentNode: TreeNode = tree._find(tree, curEl.parentId);
+						if (parentNode) {
+							parentNode._add(curEl);
+						}
+						freeNodes.shift();
+					}
+		
+					// console.log('tree ', tree)
+		
+					return tree;
+				}
+				const treeData: TreeNode = await buildTree(rawReactData);
+		
+				// console.log('tree data ', treeData);
+		
+				this._treePanel.webview.html = this._getHtmlForWebview(treeData);
 	}
 
 	// Putting scraped meta-data to D3 tree diagram
@@ -104,13 +137,4 @@ export default class EmbeddedViewPanel {
 	private _getPreviewHtmlForWebview(): string {
 		return htmlView.html;
 	}
-}
-// For security purposes, we added getNonce function
-function getNonce() {
-	let text = "";
-	const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-	for (let i = 0; i < 32; i++) {
-		text += possible.charAt(Math.floor(Math.random() * possible.length));
-	}
-	return text;
 }
