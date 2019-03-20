@@ -10,9 +10,9 @@ export default class EmbeddedViewPanel {
 	private readonly _htmlPanel: vscode.WebviewPanel;
 	private readonly _treePanel: vscode.WebviewPanel;
 	private _disposables: vscode.Disposable[] = [];
-	public readonly _page: any;
+	public readonly _page: Puppeteer;
 
-	public static createOrShow(extensionPath: string) {
+	public static createOrShow() {
 		const treeColumn = vscode.ViewColumn.Three;
 		const htmlColumn = vscode.ViewColumn.Two;
 		if (EmbeddedViewPanel.currentPanel) {
@@ -39,14 +39,13 @@ export default class EmbeddedViewPanel {
 			enableCommandUris: true
 		});
 
-		EmbeddedViewPanel.currentPanel = new EmbeddedViewPanel(htmlPanel, treePanel, extensionPath);
+		EmbeddedViewPanel.currentPanel = new EmbeddedViewPanel(htmlPanel, treePanel);
 	}
 
 	// Constructor for tree view and html panel
 	private constructor(
 		htmlPanel: vscode.WebviewPanel,
 		treePanel: vscode.WebviewPanel,
-		extensionPath: string,
 	) {
 		this._htmlPanel = htmlPanel;
 		this._treePanel = treePanel;
@@ -69,26 +68,9 @@ export default class EmbeddedViewPanel {
 			}
 		}, null, this._disposables);
 
-		// Handle messages from the webview
-		this._treePanel.webview.onDidReceiveMessage(message => {
-			switch (message.command) {
-				case 'alert':
-					vscode.window.showErrorMessage(message.text);
-					return;
-			}
-		}, null, this._disposables);
-
-		this._treePanel.webview.onDidReceiveMessage(message => {
-			switch (message.command) {
-				case 'notice':
-					vscode.window.showErrorMessage(message.text);
-					return;
-			}
-		}, null, this._disposables);
-
 	}
 
-	public dispose() {
+	public dispose(): void {
 		EmbeddedViewPanel.currentPanel = undefined;
 
 		// Clean up our resources
@@ -103,14 +85,14 @@ export default class EmbeddedViewPanel {
 		}
 	}
 
-	private async _update() {
+	private async _update(): Promise<void> {
 		this._htmlPanel.webview.html = this._getPreviewHtmlForWebview();
 		let rawReactData = await this._page.scrape();
 		this._treePanel.webview.html = this._getHtmlForWebview(rawReactData);
 	}
 
 	// Putting scraped meta-data to D3 tree diagram
-	private _getHtmlForWebview(rawReactData: Array<object>) {
+	private _getHtmlForWebview(rawReactData: Array<object>): string {
 
 		// Use a nonce to whitelist which scripts can be run
 		const nonce = getNonce();
@@ -119,7 +101,7 @@ export default class EmbeddedViewPanel {
 		return treeView.generateD3(stringifiedFlatData);
 	}
 
-	private _getPreviewHtmlForWebview() {
+	private _getPreviewHtmlForWebview(): string {
 		return htmlView.html;
 	}
 }
