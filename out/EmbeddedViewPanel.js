@@ -6,7 +6,7 @@ const treeViewPanel_1 = require("./treeViewPanel");
 const htmlViewPanel_1 = require("./htmlViewPanel");
 class EmbeddedViewPanel {
     // Constructor for tree view and html panel
-    constructor(htmlPanel, treePanel, extensionPath) {
+    constructor(htmlPanel, treePanel) {
         this._disposables = [];
         this._htmlPanel = htmlPanel;
         this._treePanel = treePanel;
@@ -26,23 +26,8 @@ class EmbeddedViewPanel {
                     *************************************/
             }
         }, null, this._disposables);
-        // Handle messages from the webview
-        this._treePanel.webview.onDidReceiveMessage(message => {
-            switch (message.command) {
-                case 'alert':
-                    vscode.window.showErrorMessage(message.text);
-                    return;
-            }
-        }, null, this._disposables);
-        this._treePanel.webview.onDidReceiveMessage(message => {
-            switch (message.command) {
-                case 'notice':
-                    vscode.window.showErrorMessage(message.text);
-                    return;
-            }
-        }, null, this._disposables);
     }
-    static createOrShow(extensionPath) {
+    static createOrShow() {
         const treeColumn = vscode.ViewColumn.Three;
         const htmlColumn = vscode.ViewColumn.Two;
         if (EmbeddedViewPanel.currentPanel) {
@@ -64,7 +49,7 @@ class EmbeddedViewPanel {
             retainContextWhenHidden: true,
             enableCommandUris: true
         });
-        EmbeddedViewPanel.currentPanel = new EmbeddedViewPanel(htmlPanel, treePanel, extensionPath);
+        EmbeddedViewPanel.currentPanel = new EmbeddedViewPanel(htmlPanel, treePanel);
     }
     dispose() {
         EmbeddedViewPanel.currentPanel = undefined;
