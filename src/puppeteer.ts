@@ -135,46 +135,54 @@ export default class Puppeteer {
 					// Recursively traversing through the fiber tree, pushing the node object into the dataArr array
 					function traverse(root: any, level: number, parentId: number) {
 						if (root.sibling !== null) {
-
-							if (typeof root.sibling.type === 'function' && root.sibling.type.name) {
-								globalId += 1
-								dataArr.push(
-									{
-										"name": root.sibling.type.name,
-										"level": `${level}`,
-										"id": `${globalId}`,
-										"parentId": `${parentId}`,
-										"props": JSON.stringify(Object.keys(root.sibling.memoizedProps))
-									}
-								);
-							}
-
+							globalId += 1;
+							dataArr.push(
+								{
+									"name": root.sibling,
+									"level": `${level}`,
+									"id": `${globalId}`,
+									"parentId": `${parentId}`,
+									"props": JSON.stringify(Object.keys(root.sibling.memoizedProps))
+								}
+							);
 							traverse(root.sibling, level, parentId);
 						}
 						if (root.child !== null) {
-
-							if (typeof root.child.type === 'function' && root.child.type.name) {
-								parentId += 1;
-								globalId += 1;
-								dataArr.push(
-									{
-										"name": root.child.type.name,
-										"level": `${level}`,
-										"id": `${globalId}`,
-										"parentId": `${parentId}`,
-										"props": JSON.stringify(Object.keys(root.child.memoizedProps))
-									}
-								);
-							}
-
+							parentId += 1;
+							globalId += 1;
+							dataArr.push(
+								{
+									"name": root.child,
+									"level": `${level}`,
+									"id": `${globalId}`,
+									"parentId": `${parentId}`,
+									"props": JSON.stringify(Object.keys(root.child.memoizedProps))
+								}
+							);
 							traverse(root.child, level + 1, parentId);
 						}
 					}
 
 					traverse(entry, 0, 0);
 
+					// Extracts the type name of each fiber node
+					dataArr.forEach((el: any) => {
+						if (typeof el.name.type === null) {
+							el.name = '';
+						} else if (typeof el.name.type === 'function' && el.name.type.name) {
+							el.name = el.name.type.name;
+						} else if (typeof el.name.type === 'function') {
+							el.name = 'function';
+						} else if (typeof el.name.type === 'object') {
+							el.name = 'function';
+						} else if (typeof el.name.type === 'string') {
+							el.name = el.name.type;
+						}
+					});
+
 					// Setting root parent to an empty string
 					dataArr[0].parentId = '';
+
 					return dataArr;
 				}
 				return fiberWalk(_entry);
