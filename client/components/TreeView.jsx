@@ -1,12 +1,17 @@
 import React, { Component } from 'react';
 import Tree from 'react-d3-tree';
-import styled from 'styled-components'
+import styled from 'styled-components';
+const path = require('path');
+const fs = require('fs');
+
+const userConfigPath = path.join(vscode.workspace.rootPath,"config.js");
+const configs = JSON.parse(fs.readFileSync(userConfigPath));
 
 const TreeStyled = styled.path`
 	.linkBase {
 		fill: none;
 		stroke: #D3D3D3;
-    stroke-width: 3px;
+    stroke-width: 2px;
 	}
 `;
 
@@ -25,8 +30,8 @@ const myTreeData = window._TREE_DATA;
 class D3TreeChart extends Component {
 	constructor(props) {
 		super(props);
-		this.mouseOver = this.mouseOver.bind(this);
-		this.mouseOut = this.mouseOut.bind(this);
+		// this.mouseOver = this.mouseOver.bind(this);
+		// this.mouseOut = this.mouseOut.bind(this);
 		this.state = {
 			orientation: 'vertical',
 			x: 200,
@@ -34,15 +39,14 @@ class D3TreeChart extends Component {
 			nodeSvgShape: {
 				shape: 'circle',
 				shapeProps: {
-
-					r: 15,
-					fill: '#FFAA00',
+					r: 10,
+					fill: '#F8F8F8',
 					stroke: '#D3D3D3',
-					strokeWidth: '3px',
+					strokeWidth: '0px',
 					nodeNameBase: '#F8F8F8',
 				},
-				theme: 'dark',
-				background: '#181818',
+				theme: configs.reactTheme,
+				background: reactTheme === 'dark' ? '#181818' : '#F8F8F8'
 			},
 		}
 
@@ -50,23 +54,23 @@ class D3TreeChart extends Component {
 		this.changeTheme = this.changeTheme.bind(this);
 	}
 
-	mouseOver(nodeData, e) {
-		nodeData
-	}
+	// mouseOver(nodeData, e) {
+	// 	nodeData
+	// }
 
-	mouseOut(nodeData, e) {
-		this.nodeData.setState({
-			nodeSvgShape: {
-				shape: 'circle',
-				shapeProps: {
-					r: 15,
-					fill: '#FFAA00',
-					stroke: '#D3D3D3',
-					strokeWidth: '3px'
-				},
-			}
-		})
-	}
+	// mouseOut(nodeData, e) {
+	// 	this.nodeData.setState({
+	// 		nodeSvgShape: {
+	// 			shape: 'circle',
+	// 			shapeProps: {
+	// 				r: 15,
+	// 				fill: '#1E1E1E',
+	// 				stroke: '#D3D3D3',
+	// 				strokeWidth: '0px'
+	// 			},
+	// 		}
+	// 	})
+	// }
 
 
 	changeOrientation() {
@@ -85,14 +89,14 @@ class D3TreeChart extends Component {
 				nodeSvgShape: {
 					shape: 'circle',
 					shapeProps: {
-						r: 15,
-						fill: '#FFAA00',
+						r: 10,
+						fill: '#1E1E1E',
 						stroke: '#181818',
-						strokeWidth: '3px',
-						nodeNameBase: '#181818',
+						strokeWidth: '0px',
+						nodeNameBase: '#1E1E1E',
 					},
 					theme: 'light',
-					background: '#F8F8F8'
+					background: 'rgb(255,255,255)'
 				},
 			});
 		} else {
@@ -100,14 +104,14 @@ class D3TreeChart extends Component {
 				nodeSvgShape: {
 					shape: 'circle',
 					shapeProps: {
-						r: 15,
-						fill: '#FFAA00',
+						r: 10,
+						fill: '#F8F8F8',
 						stroke: '#F8F8F8',
-						strokeWidth: '3px',
+						strokeWidth: '0px',
 						nodeNameBase: '#F8F8F8',
 					},
 					theme: 'dark',
-					background: '#181818',
+					background: '#1E1E1E',
 				},
 			})
 		}
@@ -120,7 +124,7 @@ class D3TreeChart extends Component {
 		// const { nodeNameBase } = this.state.nodeSvgShape.shapeProps;
 
 		return (
-			<div
+			<div className='treeChart'
 				style={{ width: '100%', height: '100em', display: 'flex', flexDirection: 'column', backgroundColor: background }}
 			>
 				<button
@@ -142,7 +146,7 @@ class D3TreeChart extends Component {
 								onMouseOut={this.mouseOut}
 								orientation={orientation}
 								nodeSvgShape={nodeSvgShape}
-								textLayout={{ textAnchor: "start", x: 20, y: -20, transform: undefined }}
+								textLayout={{ textAnchor: "start", x: 13, y: -10, transform: undefined }}
 							/>
 						</Name>
 					</TreeStyled>
