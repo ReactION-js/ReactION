@@ -1,54 +1,35 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const vscode = require("vscode");
-const htmlViewPanel_1 = require("./htmlViewPanel");
 const treeViewPanel_1 = require("./treeViewPanel");
+const Puppeteer_1 = require("./Puppeteer");
+const TreeNode_1 = require("./TreeNode");
 class ViewPanel {
     // Constructor for tree view and html panel
-    constructor(htmlPanel, treePanel) {
+    constructor(treePanel) {
         this._disposables = [];
-        this._htmlPanel = htmlPanel;
         this._treePanel = treePanel;
-        // Set the webview's initial html content
-        this._update('test');
+        // Running Puppeteer to access React page context
+        this._page = new Puppeteer_1.default();
+        this._page.start();
+        setInterval(() => {
+            this._update();
+        }, 1000);
         this._treePanel.onDidDispose(() => this.dispose(), null, this._disposables);
-        // Update the content based on view changes
-        this._treePanel.onDidChangeViewState(e => {
-            if (this._treePanel.visible) {
-                this._update('test');
-            }
-        }, null, this._disposables);
-        // Handle messages from the webview
-        this._treePanel.webview.onDidReceiveMessage(message => {
-            switch (message.command) {
-                case 'alert':
-                    vscode.window.showErrorMessage(message.text);
-                    return;
-            }
-        }, null, this._disposables);
-        this._treePanel.webview.onDidReceiveMessage(message => {
-            switch (message.command) {
-                case 'notice':
-                    vscode.window.showErrorMessage(message.text);
-                    return;
-            }
-        }, null, this._disposables);
+        // this._treePanel.onDidChangeViewState(() => {
+        // 	if (this._treePanel.visible) {
+        // 		/************************************
+        // 			***Are we using this if statement?***
+        // 			*************************************/
+        // 	}
+        // }, null, this._disposables);
     }
-    static createOrShow() {
-        const treeColumn = vscode.ViewColumn.Three;
-        const htmlColumn = vscode.ViewColumn.Two;
+    static createOrShow(extensionPath) {
+        const treeColumn = vscode.ViewColumn.Two;
         if (ViewPanel.currentPanel) {
-            ViewPanel.currentPanel._htmlPanel.reveal(htmlColumn);
             ViewPanel.currentPanel._treePanel.reveal(treeColumn);
             return;
         }
-        // Show HTML Preview in VS Code
-        const htmlPanel = vscode.window.createWebviewPanel(ViewPanel.viewType, "HTML Preview", htmlColumn, {
-            // Enable javascript in the webview
-            enableScripts: true,
-            retainContextWhenHidden: true,
-            enableCommandUris: true
-        });
         // Show Virtual DOM Tree in VS Code
         const treePanel = vscode.window.createWebviewPanel(ViewPanel.viewType, "Virtual DOM Tree", treeColumn, {
             // Enable javascript in the webview
@@ -56,16 +37,15 @@ class ViewPanel {
             retainContextWhenHidden: true,
             enableCommandUris: true
         });
-        ViewPanel.currentPanel = new ViewPanel(htmlPanel, treePanel);
+        ViewPanel.currentPanel = new ViewPanel(treePanel);
     }
     // Reload previous webview panel state
-    static revive(htmlPanel, treePanel) {
-        ViewPanel.currentPanel = new ViewPanel(htmlPanel, treePanel);
+    static revive(treePanel) {
+        ViewPanel.currentPanel = new ViewPanel(treePanel);
     }
     dispose() {
         ViewPanel.currentPanel = undefined;
         // Clean up our resources
-        this._htmlPanel.dispose();
         this._treePanel.dispose();
         while (this._disposables.length) {
             const x = this._disposables.pop();
@@ -74,18 +54,41 @@ class ViewPanel {
             }
         }
     }
-    async _update(scrape) {
-        this._htmlPanel.webview.html = this._getPreviewHtmlForWebview();
-        const rawReact = await scrape();
-        this._treePanel.webview.html = this._getHtmlForWebview(rawReact);
+    async _update() {
+        let rawReactData = await this._page.scrape();
+        // console.log(rawReactData);
+        // Build out TreeNode class for React D3 Tree.
+        function buildTree(rawReactData) {
+            let tree = new TreeNode_1.default(rawReactData[0]);
+            const freeNodes = [];
+            rawReactData.forEach((el) => {
+                const parentNode = tree._find(tree, el.parentId);
+                if (parentNode) {
+                    parentNode._add(el);
+                }
+                else {
+                    freeNodes.push(el);
+                }
+            });
+            while (freeNodes.length > 0) {
+                const curEl = freeNodes[0];
+                const parentNode = tree._find(tree, curEl.parentId);
+                if (parentNode) {
+                    parentNode._add(curEl);
+                }
+                freeNodes.shift();
+            }
+            // console.log('tree ', tree)
+            return tree;
+        }
+        const treeData = await buildTree(rawReactData);
+        // console.log('tree data ', treeData);
+        this._treePanel.webview.html = this._getHtmlForWebview(treeData);
     }
     // Putting scraped meta-data to D3 tree diagram
-    _getHtmlForWebview(rawTreeData) {
-        const flatData = JSON.stringify(rawTreeData);
-        return treeViewPanel_1.default.generateD3(flatData);
-    }
-    _getPreviewHtmlForWebview() {
-        return htmlViewPanel_1.default.html;
+    _getHtmlForWebview(treeData) {
+        const stringifiedFlatData = JSON.stringify(treeData);
+        return treeViewPanel_1.default.generateD3(stringifiedFlatData);
     }
 }
 ViewPanel.viewType = 'ReactION';
