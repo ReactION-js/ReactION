@@ -1,6 +1,11 @@
 import React, { Component } from 'react';
 import Tree from 'react-d3-tree';
-import styled from 'styled-components'
+import styled from 'styled-components';
+const path = require('path');
+const fs = require('fs');
+
+const userConfigPath = path.join(vscode.workspace.rootPath,"config.js");
+const configs = JSON.parse(fs.readFileSync(userConfigPath));
 
 const TreeStyled = styled.path`
 	.linkBase {
@@ -40,8 +45,8 @@ class D3TreeChart extends Component {
 					strokeWidth: '0px',
 					nodeNameBase: '#F8F8F8',
 				},
-				theme: 'dark',
-				background: '#1E1E1E',
+				theme: configs.reactTheme,
+				background: reactTheme === 'dark' ? '#181818' : '#F8F8F8'
 			},
 		}
 
