@@ -91,20 +91,38 @@ export class ViewPanel {
 	private async _update(): Promise<void> {
 		let rawReactData: Array<object> = await this._page.scrape();
 
+		// console.log(rawReactData);
+
 		// Build out TreeNode class for React D3 Tree.
 		function buildTree(rawReactData: Array<object>) {
 			let tree: TreeNode = new TreeNode(rawReactData[0]);
+			const freeNodes: any = [];
 
 			rawReactData.forEach((el: any) => {
 				const parentNode: TreeNode = tree._find(tree, el.parentId);
 				if (parentNode) {
 					parentNode._add(el);
+				} else {
+					freeNodes.push(el);
 				}
 			});
+
+			while (freeNodes.length > 0) {
+				const curEl = freeNodes[0];
+				const parentNode: TreeNode = tree._find(tree, curEl.parentId);
+				if (parentNode) {
+					parentNode._add(curEl);
+				}
+				freeNodes.shift();
+			}
+
+			// console.log('tree ', tree)
 
 			return tree;
 		}
 		const treeData: TreeNode = await buildTree(rawReactData);
+
+		// console.log('tree data ', treeData);
 
 		this._treePanel.webview.html = this._getHtmlForWebview(treeData);
 	}
