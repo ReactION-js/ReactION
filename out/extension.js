@@ -12,7 +12,7 @@ function activate(context) {
         ViewPanel.createOrShow(context.extensionPath);
     }));
     context.subscriptions.push(vscode.commands.registerCommand('ReactION.openWeb', () => {
-        EmbeddedViewPanel_1.default.createOrShow(context.extensionPath);
+        EmbeddedViewPanel_1.default.createOrShow();
     }));
     vscode.window.registerTreeDataProvider('startExtension', new StartExtensionProvider_1.default());
 }
@@ -20,7 +20,7 @@ exports.activate = activate;
 // Putting Tree Diagram in the Webview
 class ViewPanel {
     // Constructor for tree view and html panel
-    constructor(treePanel, extensionPath) {
+    constructor(treePanel) {
         this._disposables = [];
         this._treePanel = treePanel;
         // Running Puppeteer to access React page context
@@ -30,28 +30,13 @@ class ViewPanel {
             this._update();
         }, 1000);
         this._treePanel.onDidDispose(() => this.dispose(), null, this._disposables);
-        this._treePanel.onDidChangeViewState(e => {
-            if (this._treePanel.visible) {
-                /************************************
-                    ***Are we using this if statement?***
-                    *************************************/
-            }
-        }, null, this._disposables);
-        // Handle messages from the webview
-        this._treePanel.webview.onDidReceiveMessage(message => {
-            switch (message.command) {
-                case 'alert':
-                    vscode.window.showErrorMessage(message.text);
-                    return;
-            }
-        }, null, this._disposables);
-        this._treePanel.webview.onDidReceiveMessage(message => {
-            switch (message.command) {
-                case 'notice':
-                    vscode.window.showErrorMessage(message.text);
-                    return;
-            }
-        }, null, this._disposables);
+        // this._treePanel.onDidChangeViewState(() => {
+        // 	if (this._treePanel.visible) {
+        // 		/************************************
+        // 			***Are we using this if statement?***
+        // 			*************************************/
+        // 	}
+        // }, null, this._disposables);
     }
     static createOrShow(extensionPath) {
         const treeColumn = vscode.ViewColumn.Two;
@@ -66,11 +51,11 @@ class ViewPanel {
             retainContextWhenHidden: true,
             enableCommandUris: true
         });
-        ViewPanel.currentPanel = new ViewPanel(treePanel, extensionPath);
+        ViewPanel.currentPanel = new ViewPanel(treePanel);
     }
     // Reload previous webview panel state
-    static revive(treePanel, extensionPath) {
-        ViewPanel.currentPanel = new ViewPanel(treePanel, extensionPath);
+    static revive(treePanel) {
+        ViewPanel.currentPanel = new ViewPanel(treePanel);
     }
     dispose() {
         ViewPanel.currentPanel = undefined;
@@ -85,20 +70,33 @@ class ViewPanel {
     }
     async _update() {
         let rawReactData = await this._page.scrape();
+        // console.log(rawReactData);
         // Build out TreeNode class for React D3 Tree.
         function buildTree(rawReactData) {
             let tree = new TreeNode_1.default(rawReactData[0]);
+            const freeNodes = [];
             rawReactData.forEach((el) => {
                 const parentNode = tree._find(tree, el.parentId);
-                // console.log('=============', el.parentId)
                 if (parentNode) {
                     parentNode._add(el);
                 }
+                else {
+                    freeNodes.push(el);
+                }
             });
+            while (freeNodes.length > 0) {
+                const curEl = freeNodes[0];
+                const parentNode = tree._find(tree, curEl.parentId);
+                if (parentNode) {
+                    parentNode._add(curEl);
+                }
+                freeNodes.shift();
+            }
+            // console.log('tree ', tree)
             return tree;
         }
-        console.log(rawReactData);
         const treeData = await buildTree(rawReactData);
+        // console.log('tree data ', treeData);
         this._treePanel.webview.html = this._getHtmlForWebview(treeData);
     }
     // Putting scraped meta-data to D3 tree diagram
@@ -110,6 +108,7 @@ class ViewPanel {
     }
 }
 ViewPanel.viewType = 'ReactION';
+exports.ViewPanel = ViewPanel;
 // For security purposes, we added getNonce function
 function getNonce() {
     let text = "";
