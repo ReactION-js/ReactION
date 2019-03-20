@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { Component } from 'react';
 import Tree from 'react-d3-tree';
 import styled from 'styled-components'
 
@@ -6,23 +6,9 @@ const TreeStyled = styled.path`
 	.linkBase {
 		fill: none;
 		stroke: #D3D3D3;
-    stroke-width: 3px;
+    stroke-width: 2px;
 	}
 `;
-
-const Button = styled.div`
-	display: flex;
-	flex-direction: column;
-	.button{
-		background: 'white'
-		color: 'black'
-		font-size: 1em;
-		margin: 1em;
-		padding: 0.25em 1em;
-		border: 2px solid black;
-		border-radius: 3px;
-	}
-`
 
 const Name = styled.g`
 	.nodeNameBase {
@@ -31,62 +17,55 @@ const Name = styled.g`
 		fill: ${props => (props.children.props.nodeSvgShape.theme === 'light' ? '#181818' : '#F8F8F8')}
 	}
 	.nodeAttributesBase{
-		stroke: ${props => (props.children.props.nodeSvgShape.theme === 'light' ? '#181818' : '#F8F8F8')};
-		display : ${props => (props.children.props.nodeSvgShape.mouseOver === 'true' ? '#181818' : '#F8F8F8')};
+		stroke: ${props => (props.children.props.nodeSvgShape.theme === 'light' ? '#181818' : '#F8F8F8')}
 	}
 `
-
-const myTreeData = [
-	{
-		name: 'Top Level',
-		attributes: {
-			keyA: 'val A',
-			keyB: 'val B',
-			keyC: 'val C',
-		},
-		children: [
-			{
-				name: 'Level 2: A',
-				attributes: {
-					keyA: 'val A',
-					keyB: 'val B',
-					keyC: 'val C',
-				},
-			},
-			{
-				name: 'Level 2: B',
-			},
-		],
-	},
-];
+const myTreeData = window._TREE_DATA;
 
 class D3TreeChart extends Component {
 	constructor(props) {
 		super(props);
-
+		// this.mouseOver = this.mouseOver.bind(this);
+		// this.mouseOut = this.mouseOut.bind(this);
 		this.state = {
 			orientation: 'vertical',
 			x: 200,
 			y: 100,
 			nodeSvgShape: {
 				shape: 'circle',
-				display: 'none',
 				shapeProps: {
-					r: 15,
-					fill: '#FFAA00',
+					r: 10,
+					fill: '#F8F8F8',
 					stroke: '#D3D3D3',
-					strokeWidth: '3px',
+					strokeWidth: '0px',
+					nodeNameBase: '#F8F8F8',
 				},
 				theme: 'dark',
-				mouseOver: 'false',
-				background: '#181818'
+				background: '#1E1E1E',
 			},
 		}
 
 		this.changeOrientation = this.changeOrientation.bind(this);
 		this.changeTheme = this.changeTheme.bind(this);
-
 	}
+
+	// mouseOver(nodeData, e) {
+	// 	nodeData
+	// }
+
+	// mouseOut(nodeData, e) {
+	// 	this.nodeData.setState({
+	// 		nodeSvgShape: {
+	// 			shape: 'circle',
+	// 			shapeProps: {
+	// 				r: 15,
+	// 				fill: '#1E1E1E',
+	// 				stroke: '#D3D3D3',
+	// 				strokeWidth: '0px'
+	// 			},
+	// 		}
+	// 	})
+	// }
 
 
 	changeOrientation() {
@@ -105,14 +84,14 @@ class D3TreeChart extends Component {
 				nodeSvgShape: {
 					shape: 'circle',
 					shapeProps: {
-						r: 15,
-						fill: '#FFAA00',
+						r: 10,
+						fill: '#1E1E1E',
 						stroke: '#181818',
-						strokeWidth: '3px',
-						nodeNameBase: '#181818',
+						strokeWidth: '0px',
+						nodeNameBase: '#1E1E1E',
 					},
 					theme: 'light',
-					background: '#F8F8F8'
+					background: 'rgb(255,255,255)'
 				},
 			});
 		} else {
@@ -120,15 +99,14 @@ class D3TreeChart extends Component {
 				nodeSvgShape: {
 					shape: 'circle',
 					shapeProps: {
-						r: 15,
-						fill: '#FFAA00',
+						r: 10,
+						fill: '#F8F8F8',
 						stroke: '#F8F8F8',
-						strokeWidth: '3px',
+						strokeWidth: '0px',
 						nodeNameBase: '#F8F8F8',
 					},
-
 					theme: 'dark',
-					background: '#181818',
+					background: '#1E1E1E',
 				},
 			})
 		}
@@ -138,21 +116,20 @@ class D3TreeChart extends Component {
 	render() {
 		const { orientation, nodeSvgShape } = this.state;
 		const { background } = this.state.nodeSvgShape;
+		// const { nodeNameBase } = this.state.nodeSvgShape.shapeProps;
 
 		return (
-			<div
+			<div className='treeChart'
 				style={{ width: '100%', height: '100em', display: 'flex', flexDirection: 'column', backgroundColor: background }}
 			>
-				<Button>
-					<button
-						onClick={this.changeOrientation}
-						counter='Orientation'
-					>click to change orientation</button>
-					<button
-						onClick={this.changeTheme}
-						counter='Background'
-					>click to change Theme</button>
-				</Button>
+				<button
+					onClick={this.changeOrientation}
+					counter='Orientation'
+				>click to change orientation</button>
+				<button
+					onClick={this.changeTheme}
+					counter='Background'
+				>click to change Theme</button>
 				<br></br>
 				<div style={{ width: '100%', height: '98em' }}>
 					<TreeStyled>
@@ -160,9 +137,11 @@ class D3TreeChart extends Component {
 							<Tree
 								translate={{ x: this.state.x, y: this.state.y }}
 								data={myTreeData}
+								onMouseOver={this.mouseOver}
+								onMouseOut={this.mouseOut}
 								orientation={orientation}
 								nodeSvgShape={nodeSvgShape}
-								textLayout={{ textAnchor: "start", x: 20, y: -20, transform: undefined }}
+								textLayout={{ textAnchor: "start", x: 13, y: -10, transform: undefined }}
 							/>
 						</Name>
 					</TreeStyled>

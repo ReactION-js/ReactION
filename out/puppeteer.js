@@ -22,7 +22,7 @@ class Puppeteer {
         // const chrome = await chromeLauncher.launch({
         // 	startingUrl: this._url,
         // 	chromeFlags: ['--disable-gpu', '--no-sandbox'],
-        // 	enableExtensions: true
+        // 	headless: true
         // });
         // console.log('after chrome launch', chrome.port);
         // const resp = await util.promisify(request)(`http://localhost:${chrome.port}/json/version`);
@@ -33,10 +33,9 @@ class Puppeteer {
         // console.log('ok....');
         // this._page = await this._browser.pages()
         // 	.then((pageArr: any) => {
-        // 			return pageArr[0]; 
+        // 			return pageArr[0];
         // 	});
         // const resp = util.promisify(request)
-        // const pathToExtension = require('path').join(__dirname, 'chrome-extensions');
         this._browser = await pptr.launch({
             headless: this._headless,
             executablePath: this._executablePath,
@@ -50,26 +49,25 @@ class Puppeteer {
             return pageArr[0];
         });
         this._page.goto(this._url, { waitUntil: 'networkidle0' });
-        // await this._page.goto(webSocketDebuggerUrl);
-        this._page.on('console', (log) => console.log('mutation'));
-        await this._page.evaluate(() => {
-            const target = document.documentElement;
-            var mutationObserver = new MutationObserver(function (mutations) {
-                mutations.forEach(function (mutation) {
-                    console.log(mutation);
-                });
-            });
-            const config = {
-                attributes: true,
-                characterData: true,
-                childList: true,
-                subtree: true,
-                attributeOldValue: true,
-                characterDataOldValue: true
-            };
-            return mutationObserver.observe(target, config);
-        });
-        return this._page;
+        // this._page.on('console', (log: any) => console.log('mutation'));
+        // await this._page.evaluate(() => {
+        // 	const target = document.documentElement;
+        // 	var mutationObserver = new MutationObserver(function(mutations) {
+        // 		mutations.forEach(function(mutation) {
+        // 			console.log(mutation);
+        // 		});
+        // 	});
+        // 	const config = {
+        // 		attributes: true,
+        // 		characterData: true,
+        // 		childList: true,
+        // 		subtree: true,
+        // 		attributeOldValue: true,
+        // 		characterDataOldValue: true
+        // 	}
+        // 	return mutationObserver.observe(target, config)
+        //  })
+        return await this._page;
     }
     // Recursive React component scraping algorithm
     scrape() {
@@ -90,56 +88,41 @@ class Puppeteer {
             })();
             // Define function that traverses the fiber tree, starting from the entry point
             function fiberWalk(entry) {
-                let output = [], globalId = 1;
-                // Recursively traversing through the fiber tree, pushing the node object into the output array
+                let dataArr = [], globalId = 1;
+                // Recursively traversing through the fiber tree, pushing the node object into the dataArr array
                 function traverse(root, level, parentId) {
                     if (root.sibling !== null) {
-                        globalId += 1;
-                        output.push({
-                            "name": root.sibling,
-                            "level": `${level}`,
-                            "id": `${globalId}`,
-                            "parentId": `${parentId}`,
-                            "props": JSON.stringify(Object.keys(root.sibling.memoizedProps))
-                        });
+                        if (typeof root.sibling.type === 'function' && root.sibling.type.name) {
+                            globalId += 1;
+                            dataArr.push({
+                                "name": root.sibling.type.name,
+                                "level": `${level}`,
+                                "id": `${globalId}`,
+                                "parentId": `${parentId}`,
+                                "props": JSON.stringify(Object.keys(root.sibling.memoizedProps))
+                            });
+                        }
                         traverse(root.sibling, level, parentId);
                     }
                     if (root.child !== null) {
-                        parentId += 1;
-                        globalId += 1;
-                        output.push({
-                            "name": root.child,
-                            "level": `${level}`,
-                            "id": `${globalId}`,
-                            "parentId": `${parentId}`,
-                            "props": JSON.stringify(Object.keys(root.child.memoizedProps))
-                        });
+                        if (typeof root.child.type === 'function' && root.child.type.name) {
+                            parentId += 1;
+                            globalId += 1;
+                            dataArr.push({
+                                "name": root.child.type.name,
+                                "level": `${level}`,
+                                "id": `${globalId}`,
+                                "parentId": `${parentId}`,
+                                "props": JSON.stringify(Object.keys(root.child.memoizedProps))
+                            });
+                        }
                         traverse(root.child, level + 1, parentId);
                     }
                 }
                 traverse(entry, 0, 0);
-                // Extracts the type name of each fiber node
-                output.forEach((el) => {
-                    if (typeof el.name.type === null) {
-                        el.name = '';
-                    }
-                    else if (typeof el.name.type === 'function' && el.name.type.name) {
-                        el.name = el.name.type.name;
-                    }
-                    else if (typeof el.name.type === 'function') {
-                        el.name = 'function';
-                    }
-                    else if (typeof el.name.type === 'object') {
-                        el.name = 'object';
-                    }
-                    else if (typeof el.name.type === 'string') {
-                        el.name = el.name.type;
-                    }
-                });
                 // Setting root parent to an empty string
-                output[0].parentId = '';
-                console.log(output);
-                return output.slice(0, 25);
+                dataArr[0].parentId = '';
+                return dataArr;
             }
             return fiberWalk(_entry);
         }).catch((err) => { console.log(err); });
