@@ -12,7 +12,6 @@ class TreeNode {
     // Add new node to the tree
     _add(node) {
         const newNode = new TreeNode(node);
-        // console.log('this', this, 'new node', newNode)
         this.children.push(newNode);
     }
     // Search if there is a node with matching id.
