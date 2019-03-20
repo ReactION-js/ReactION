@@ -8,7 +8,7 @@ export default class Puppeteer {
 	public _headless: boolean;
 	private _executablePath: string;
 	private _pipe: boolean;
-	private _url: string;
+	public _url: string;
 	private _page: any;
 	private _browser: any;
 
@@ -93,11 +93,11 @@ export default class Puppeteer {
 
 		// All code inside .evaluate is executed in the pages context
 		const reactData = this._page.evaluate(
-			async () => {
+			async (): Promise<Array<object>> => {
 
 				// Access the React Dom
 				// & create entry point for fiber node through DOM element
-				const _entry = (() => {
+				const _entry = ((): any => {
 
 					// @ts-ignore
 					const domElements = document.querySelector('body').children;
