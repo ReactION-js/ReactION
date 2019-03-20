@@ -3,8 +3,19 @@ const pptr = require('puppeteer-core');
 const chromeLauncher = require('chrome-launcher');
 const request = require('request');
 const util = require('util');
+const path = require('path');
+const fs = require('fs');
+import * as vscode from 'vscode';
 
+const userConfigPath = path.join(vscode.workspace.rootPath,"reactION-config.json");
+// need to wait for config file to be created in user's work directory if not found 
+const intvl = setInterval(function() {
+	if (fs.stat(userConfigPath)) {
+		clearInterval(intvl);
+	}
+}, 500)
 export default class Puppeteer {
+
 	public _headless: boolean;
 	private _executablePath: string;
 	private _pipe: boolean;
@@ -14,10 +25,15 @@ export default class Puppeteer {
 
 	// Default properties for the Puppeteer class.
 	public constructor() {
-		this._headless = false;
+
+		console.log('config path', userConfigPath)
+		const configs = JSON.parse(fs.readFileSync(userConfigPath));
+		console.log(configs);
+
+		this._headless = configs.headless_browser;
 		this._executablePath = '/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome';
 		this._pipe = true;
-		this._url = 'http://localhost:3000';
+		this._url = configs.localhost;
 		this._page = '';
 		this._browser = '';
 	}

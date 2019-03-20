@@ -5,7 +5,7 @@ export default class TreeNode {
 	public parentId: any;
 	public children: any[];
 
-	public constructor(node:any) {
+	public constructor(node: any) {
 		// console.log(node)
 		this.name = node.name;
 		this.id = node.id;
@@ -15,9 +15,8 @@ export default class TreeNode {
 	}
 
 	// Add new node to the tree
-	public _add(node:any) {
+	public _add(node: any) {
 		const newNode = new TreeNode(node);
-		// console.log('this', this, 'new node', newNode)
 		this.children.push(newNode);
 	}
 
@@ -35,7 +34,6 @@ export default class TreeNode {
 				}
 			}
 		}
-
 		return false;
 	}
 }
