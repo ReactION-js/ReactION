@@ -4,6 +4,7 @@ const vscode = require("vscode");
 const Puppeteer_1 = require("./Puppeteer");
 const treeViewPanel_1 = require("./treeViewPanel");
 const htmlViewPanel_1 = require("./htmlViewPanel");
+const TreeNode_1 = require("./TreeNode");
 class EmbeddedViewPanel {
     // Constructor for tree view and html panel
     constructor(htmlPanel, treePanel) {
@@ -66,7 +67,33 @@ class EmbeddedViewPanel {
     async _update() {
         this._htmlPanel.webview.html = this._getPreviewHtmlForWebview();
         let rawReactData = await this._page.scrape();
-        this._treePanel.webview.html = this._getHtmlForWebview(rawReactData);
+        // Build out TreeNode class for React D3 Tree.
+        function buildTree(rawReactData) {
+            let tree = new TreeNode_1.default(rawReactData[0]);
+            const freeNodes = [];
+            rawReactData.forEach((el) => {
+                const parentNode = tree._find(tree, el.parentId);
+                if (parentNode) {
+                    parentNode._add(el);
+                }
+                else {
+                    freeNodes.push(el);
+                }
+            });
+            while (freeNodes.length > 0) {
+                const curEl = freeNodes[0];
+                const parentNode = tree._find(tree, curEl.parentId);
+                if (parentNode) {
+                    parentNode._add(curEl);
+                }
+                freeNodes.shift();
+            }
+            // console.log('tree ', tree)
+            return tree;
+        }
+        const treeData = await buildTree(rawReactData);
+        // console.log('tree data ', treeData);
+        this._treePanel.webview.html = this._getHtmlForWebview(treeData);
     }
     // Putting scraped meta-data to D3 tree diagram
     _getHtmlForWebview(rawReactData) {
@@ -81,13 +108,4 @@ class EmbeddedViewPanel {
 }
 EmbeddedViewPanel.viewType = 'ReactION';
 exports.default = EmbeddedViewPanel;
-// For security purposes, we added getNonce function
-function getNonce() {
-    let text = "";
-    const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    for (let i = 0; i < 32; i++) {
-        text += possible.charAt(Math.floor(Math.random() * possible.length));
-    }
-    return text;
-}
 //# sourceMappingURL=EmbeddedViewPanel.js.map
