@@ -3,7 +3,7 @@ import * as path from 'path';
 
 export default {
 	generateD3:
-		function (stringifiedTreeData: string) {
+		function (stringifiedTreeData: string): string {
 			const bundle = vscode.Uri.file(path.join(__dirname, 'build', 'bundle.js'));
 			const bundleUri = bundle.with({
 				scheme: 'vscode-resource'
