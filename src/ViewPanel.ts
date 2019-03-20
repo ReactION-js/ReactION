@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import htmlView from './htmlViewPanel';
 import treeView from './treeViewPanel';
-
 export default class ViewPanel {
 
 	public static currentPanel: ViewPanel | undefined;
