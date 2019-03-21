@@ -35,12 +35,8 @@ export function activate(context: vscode.ExtensionContext) {
 			// else read off and apply config to the running instance
 			parseInfo = JSON.parse(fs.readFileSync(configPath));
 
-<<<<<<< HEAD
 		}
 	});
-=======
-	}});
->>>>>>> 5d6a6fb0dbb09512524bd2e5053685c3688b5bd9
 
 
 	context.subscriptions.push(vscode.commands.registerCommand('ReactION.openTree', () => {
