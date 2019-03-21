@@ -25,7 +25,7 @@ Make sure you have *Google Chrome* installed on your computer. Also, our extensi
 3. Open VS Code Extension mode by pressing ```F5``` or ```ctr+5```
 4. When a new VS Code window pops up, open the React code file that you want to run the extension on
 5. ```npm start``` your React file and run your application in ```localhost:3000``` (default) 
-6. Run the extension by clicking on the ReactION logo on the side pannel or ```ReactION:Launch```
+6. Run the extension by clicking on the ReactION logo on the side panel or ```ReactION:Launch```
 7. Enjoy the tree view!
 
 ![](resources/demo.gif)
