@@ -13,7 +13,7 @@ export default class EmbeddedViewPanel {
 	private readonly _treePanel: vscode.WebviewPanel;
 	private _disposables: vscode.Disposable[] = [];
 	public readonly _page: Puppeteer;
-	
+
 
 	public static createOrShow() {
 		const treeColumn = vscode.ViewColumn.Three;
@@ -65,9 +65,6 @@ export default class EmbeddedViewPanel {
 		this._treePanel.onDidDispose(() => this.dispose(), null, this._disposables);
 		this._treePanel.onDidChangeViewState(e => {
 			if (this._treePanel.visible) {
-				/************************************
-					***Are we using this if statement?***
-					*************************************/
 			}
 		}, null, this._disposables);
 
@@ -92,47 +89,37 @@ export default class EmbeddedViewPanel {
 		this._htmlPanel.webview.html = this._getPreviewHtmlForWebview();
 		let rawReactData: Array<object> = await this._page.scrape();
 
-				// Build out TreeNode class for React D3 Tree.
-				function buildTree(rawReactData: Array<object>) {
-					let tree: TreeNode = new TreeNode(rawReactData[0]);
-					const freeNodes: any = [];
-		
-					rawReactData.forEach((el: any) => {
-						const parentNode: TreeNode = tree._find(tree, el.parentId);
-						if (parentNode) {
-							parentNode._add(el);
-						} else {
-							freeNodes.push(el);
-						}
-					});
-		
-					while (freeNodes.length > 0) {
-						const curEl = freeNodes[0];
-						const parentNode: TreeNode = tree._find(tree, curEl.parentId);
-						if (parentNode) {
-							parentNode._add(curEl);
-						}
-						freeNodes.shift();
-					}
-		
-					// console.log('tree ', tree)
-		
-					return tree;
+		// Build out TreeNode class for React D3 Tree.
+		function buildTree(rawReactData: Array<object>) {
+			let tree: TreeNode = new TreeNode(rawReactData[0]);
+			const freeNodes: any = [];
+
+			rawReactData.forEach((el: any) => {
+				const parentNode: TreeNode = tree._find(tree, el.parentId);
+				if (parentNode) {
+					parentNode._add(el);
+				} else {
+					freeNodes.push(el);
 				}
-				const treeData: TreeNode = await buildTree(rawReactData);
-		
-				// console.log('tree data ', treeData);
-		
-				this._treePanel.webview.html = this._getHtmlForWebview(treeData);
+			});
+
+			while (freeNodes.length > 0) {
+				const curEl = freeNodes[0];
+				const parentNode: TreeNode = tree._find(tree, curEl.parentId);
+				if (parentNode) {
+					parentNode._add(curEl);
+				}
+				freeNodes.shift();
+			}
+			return tree;
+		}
+		const treeData: TreeNode = await buildTree(rawReactData);
+		this._treePanel.webview.html = this._getHtmlForWebview(treeData);
 	}
 
 	// Putting scraped meta-data to D3 tree diagram
 	private _getHtmlForWebview(rawReactData: Array<object>): string {
-
-		// Use a nonce to whitelist which scripts can be run
-		const nonce = getNonce();
 		const stringifiedFlatData = JSON.stringify(rawReactData);
-
 		return treeView.generateD3(stringifiedFlatData);
 	}
 

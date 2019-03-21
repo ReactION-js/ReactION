@@ -3,8 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const assert = require("assert");
 const puppeteer = require('puppeteer');
 const { describe, it, before } = require('mocha');
-const { expect } = require('chai');
-const global = undefined;
+// const { expect } = require('chai');
+// const global: any = undefined;
 describe('on page load', () => {
     test('h1 loads correctly', async () => {
         let browser = await puppeteer.launch({});

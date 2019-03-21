@@ -22,9 +22,6 @@ class EmbeddedViewPanel {
         this._treePanel.onDidDispose(() => this.dispose(), null, this._disposables);
         this._treePanel.onDidChangeViewState(e => {
             if (this._treePanel.visible) {
-                /************************************
-                    ***Are we using this if statement?***
-                    *************************************/
             }
         }, null, this._disposables);
     }
@@ -88,17 +85,13 @@ class EmbeddedViewPanel {
                 }
                 freeNodes.shift();
             }
-            // console.log('tree ', tree)
             return tree;
         }
         const treeData = await buildTree(rawReactData);
-        // console.log('tree data ', treeData);
         this._treePanel.webview.html = this._getHtmlForWebview(treeData);
     }
     // Putting scraped meta-data to D3 tree diagram
     _getHtmlForWebview(rawReactData) {
-        // Use a nonce to whitelist which scripts can be run
-        const nonce = getNonce();
         const stringifiedFlatData = JSON.stringify(rawReactData);
         return treeViewPanel_1.default.generateD3(stringifiedFlatData);
     }

@@ -14,6 +14,7 @@ const TreeStyled = styled.path`
 		stroke: #D3D3D3;
     stroke-width: 2px;
 	}
+	font-family: 'Crimson Text', serif
 `;
 
 const Name = styled.g`
@@ -27,13 +28,11 @@ const Name = styled.g`
 	}
 `
 const myTreeData = window._TREE_DATA;
-// const config = window._CONFIG;
+
 
 class D3TreeChart extends Component {
 	constructor(props) {
 		super(props);
-		// this.mouseOver = this.mouseOver.bind(this);
-		// this.mouseOut = this.mouseOut.bind(this);
 		this.state = {
 			orientation: 'vertical',
 			x: 200,
@@ -42,41 +41,20 @@ class D3TreeChart extends Component {
 				shape: 'circle',
 				shapeProps: {
 					r: 10,
-					fill: '#F8F8F8',
-					stroke: '#D3D3D3',
+					fill: '#1E1E1E',
+					stroke: '#181818',
 					strokeWidth: '0px',
-					nodeNameBase: '#F8F8F8',
+					nodeNameBase: '#1E1E1E',
 				},
-				theme: 'dark',
-				background: '#181818'
+				theme: 'light',
+				background: 'rgb(255,255,255)'
 			},
+			theme: 'dark',
+			background: '#181818'
 		}
-
 		this.changeOrientation = this.changeOrientation.bind(this);
-		this.changeTheme = this.changeTheme.bind(this);
+		// this.changeTheme = this.changeTheme.bind(this);
 	}
-
-	// mouseOver(nodeData, e) {
-	// 	console.log('before ', nodeData)
-	// 	console.log('before e', e)
-	// 	nodeData.display = "flex";
-	// 	// console.log('after ', nodeData.display)
-	// }
-
-	// mouseOut(nodeData, e) {
-		// this.nodeData.setState({
-		// 	nodeSvgShape: {
-		// 		shape: 'circle',
-		// 		shapeProps: {
-		// 			r: 15,
-		// 			fill: '#1E1E1E',
-		// 			stroke: '#D3D3D3',
-		// 			strokeWidth: '0px'
-		// 		},
-		// 	}
-		// })
-	// 	nodeData.display = "none";
-	// }
 
 
 	changeOrientation() {
@@ -88,46 +66,45 @@ class D3TreeChart extends Component {
 		}
 	}
 
-	changeTheme() {
-		const { theme } = this.state.nodeSvgShape;
-		if (theme === 'dark') {
-			this.setState({
-				nodeSvgShape: {
-					shape: 'circle',
-					shapeProps: {
-						r: 10,
-						fill: '#1E1E1E',
-						stroke: '#181818',
-						strokeWidth: '0px',
-						nodeNameBase: '#1E1E1E',
-					},
-					theme: 'light',
-					background: 'rgb(255,255,255)'
-				},
-			});
-		} else {
-			this.setState({
-				nodeSvgShape: {
-					shape: 'circle',
-					shapeProps: {
-						r: 10,
-						fill: '#F8F8F8',
-						stroke: '#F8F8F8',
-						strokeWidth: '0px',
-						nodeNameBase: '#F8F8F8',
-					},
-					theme: 'dark',
-					background: '#1E1E1E',
-				},
-			})
-		}
-	};
+	// changeTheme() {
+	// 	const { theme } = this.state.nodeSvgShape;
+	// 	if (theme === 'dark') {
+	// 		this.setState({
+	// 			nodeSvgShape: {
+	// 				shape: 'circle',
+	// 				shapeProps: {
+	// 					r: 10,
+	// 					fill: '#1E1E1E',
+	// 					stroke: '#181818',
+	// 					strokeWidth: '0px',
+	// 					nodeNameBase: '#1E1E1E',
+	// 				},
+	// 				theme: 'light',
+	// 				background: 'rgb(255,255,255)'
+	// 			},
+	// 		});
+	// 	} else {
+	// 		this.setState({
+	// 			nodeSvgShape: {
+	// 				shape: 'circle',
+	// 				shapeProps: {
+	// 					r: 10,
+	// 					fill: '#F8F8F8',
+	// 					stroke: '#F8F8F8',
+	// 					strokeWidth: '0px',
+	// 					nodeNameBase: '#F8F8F8',
+	// 				},
+	// 				theme: 'dark',
+	// 				background: '#1E1E1E',
+	// 			},
+	// 		})
+	// 	}
+	// };
 
 
 	render() {
 		const { orientation, nodeSvgShape } = this.state;
 		const { background } = this.state.nodeSvgShape;
-		// const { nodeNameBase } = this.state.nodeSvgShape.shapeProps;
 
 		return (
 			<div className='treeChart'
@@ -137,11 +114,11 @@ class D3TreeChart extends Component {
 					onClick={this.changeOrientation}
 					counter='Orientation'
 				>click to change orientation</button>
-				<button
+				{/* <button
 					onClick={this.changeTheme}
 					counter='Background'
 				>click to change Theme</button>
-				<br></br>
+				<br></br> */}
 				<div style={{ width: '100%', height: '98em' }}>
 					<TreeStyled>
 						<Name>
@@ -154,10 +131,8 @@ class D3TreeChart extends Component {
 								nodeSvgShape={nodeSvgShape}
 								allowForeignObjects
 								nodeLabelComponent={{
-									render: <NodeLabel className='myLabelComponentInSvg' />,
-									// foreignObjectWrapper: {
-									// 	y: 24
-									// }
+									render:
+										<NodeLabel className='myLabelComponentInSvg' />,
 								}}
 								textLayout={{ textAnchor: "start", x: 13, y: 0, transform: undefined }}
 							/>
