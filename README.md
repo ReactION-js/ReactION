@@ -14,14 +14,12 @@
 
 [ReactION](https://github.com/ReactION-js/ReactION/) enables you to view the React component tree inside your editor, making it easier for you to develop React applications. [ReactION](https://github.com/ReactION-js/ReactION/) is powered by [Chrome Headless](https://developers.google.com/web/updates/2017/04/headless-chrome), and works by starting a headless Chrome instance in a new process. This enables a secure way to render web content inside VS Code, and enables interesting features such as in-editor debugging and more!
 
-![](resources/demo.gif)
-
 #### ReactION is in active development. Please follow this repo for contribution guidelines and our development road map.
 
 ## Prerequisite
 Make sure you have *Google Chrome* installed on your computer. Also, our extension currently only runs in VS Code environment, so make sure you are using VS Code as the code editor.
 
-## Setup:
+## Setup
 1. Clone the repo and run ```npm install```
 2. Run ```npm run build ```
 3. Open VS Code Extension mode by pressing ```F5``` or ```ctr+5```
@@ -29,6 +27,8 @@ Make sure you have *Google Chrome* installed on your computer. Also, our extensi
 5. ```npm start``` your React file and run your application in ```localhost:3000``` (default) 
 6. Run the extension by clicking on the ReactION logo on the side pannel or ```ReactION:Launch```
 7. Enjoy the tree view!
+
+![](resources/demo.gif)
 
 ## Features  
 - React Fiber Tree structure shown inside VS Code (Powered by [Chrome Headless](https://developers.google.com/web/updates/2017/04/headless-chrome)).
