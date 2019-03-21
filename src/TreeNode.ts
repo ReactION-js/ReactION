@@ -4,6 +4,7 @@ export default class TreeNode {
 	public attributes: any;
 	public parentId: any;
 	public children: any[];
+	public display: string;
 
 	public constructor(node: any) {
 		// console.log(node)
@@ -11,6 +12,7 @@ export default class TreeNode {
 		this.id = node.id;
 		this.attributes = node.props;
 		this.parentId = node.parentId;
+		this.display = node.display;
 		this.children = [];
 	}
 
