@@ -11,7 +11,7 @@ export default class ViewPanel {
 	private readonly _treePanel: vscode.WebviewPanel;
 	private _disposables: vscode.Disposable[] = [];
 	public readonly _page: Puppeteer;
-	public readonly _parseInfo : any;
+	public readonly _parseInfo: any;
 
 	// Constructor for tree view and html panel
 	public constructor(
@@ -25,17 +25,9 @@ export default class ViewPanel {
 		this._page = new Puppeteer(parseInfo);
 		this._page.start();
 		setInterval(() => {
-			// console.log('interval')
 			this._update();
 		}, 1000);
 		this._treePanel.onDidDispose(() => this.dispose(), null, this._disposables);
-		// this._treePanel.onDidChangeViewState(() => {
-		// 	if (this._treePanel.visible) {
-		// 		/************************************
-		// 			***Are we using this if statement?***
-		// 			*************************************/
-		// 	}
-		// }, null, this._disposables);
 	}
 
 
@@ -58,11 +50,6 @@ export default class ViewPanel {
 		ViewPanel.currentPanel = new ViewPanel(treePanel, parseInfo);
 	}
 
-	// // Reload previous webview panel state
-	// public static revive(treePanel: vscode.WebviewPanel): void {
-	// 	ViewPanel.currentPanel = new ViewPanel(treePanel, this._parseInfo);
-	// }
-
 	public dispose(): void {
 		ViewPanel.currentPanel = undefined;
 
@@ -79,8 +66,6 @@ export default class ViewPanel {
 
 	private async _update(): Promise<void> {
 		let rawReactData: Array<object> = await this._page.scrape();
-
-		// console.log(rawReactData);
 
 		// Build out TreeNode class for React D3 Tree.
 		function buildTree(rawReactData: Array<object>) {
@@ -104,15 +89,9 @@ export default class ViewPanel {
 				}
 				freeNodes.shift();
 			}
-
-			// console.log('tree ', tree)
-
 			return tree;
 		}
 		const treeData: TreeNode = await buildTree(rawReactData);
-
-		// console.log('tree data ', treeData);
-
 		this._treePanel.webview.html = this._getHtmlForWebview(treeData);
 	}
 

@@ -8,7 +8,7 @@ export default {
 			const bundleUri = bundle.with({
 				scheme: 'vscode-resource'
 			});
-			// console.log('tree data ', stringifiedTreeData);
+
 			return `
 		<!DOCTYPE html>
 		<html lang="en">

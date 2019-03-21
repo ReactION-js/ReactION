@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 class TreeNode {
     constructor(node) {
-        // console.log(node)
         this.name = node.name;
         this.id = node.id;
         this.attributes = node.props;
