@@ -7,7 +7,6 @@ export default class TreeNode {
 	public display: string;
 
 	public constructor(node: any) {
-		// console.log(node)
 		this.name = node.name;
 		this.id = node.id;
 		this.attributes = node.props;
@@ -23,7 +22,7 @@ export default class TreeNode {
 	}
 
 	// Search if there is a node with matching id.
-	public _find(root:any, parentId:any) {
+	public _find(root: any, parentId: any) {
 		let curNode = root;
 		if (curNode.id === parentId) {
 			return curNode;
