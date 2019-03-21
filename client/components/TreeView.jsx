@@ -1,11 +1,12 @@
 import React, { Component } from 'react';
 import Tree from 'react-d3-tree';
+import NodeLabel from './NodeLabel.jsx';
 import styled from 'styled-components';
-const path = require('path');
-const fs = require('fs');
+// const path = require('path');
+// const fs = require('fs');
 
-const userConfigPath = path.join(vscode.workspace.rootPath,"config.js");
-const configs = JSON.parse(fs.readFileSync(userConfigPath));
+// const userConfigPath = path.join(vscode.workspace.rootPath,"config.js");
+// const configs = JSON.parse(fs.readFileSync(userConfigPath));
 
 const TreeStyled = styled.path`
 	.linkBase {
@@ -26,6 +27,7 @@ const Name = styled.g`
 	}
 `
 const myTreeData = window._TREE_DATA;
+// const config = window._CONFIG;
 
 class D3TreeChart extends Component {
 	constructor(props) {
@@ -45,8 +47,8 @@ class D3TreeChart extends Component {
 					strokeWidth: '0px',
 					nodeNameBase: '#F8F8F8',
 				},
-				theme: configs.reactTheme,
-				background: reactTheme === 'dark' ? '#181818' : '#F8F8F8'
+				theme: 'dark',
+				background: '#181818'
 			},
 		}
 
@@ -54,9 +56,9 @@ class D3TreeChart extends Component {
 		this.changeTheme = this.changeTheme.bind(this);
 	}
 
-	// mouseOver(nodeData, e) {
-	// 	nodeData
-	// }
+	mouseOver(nodeData, e) {
+		console.log(nodeData, e.message)
+	}
 
 	// mouseOut(nodeData, e) {
 	// 	this.nodeData.setState({
@@ -146,6 +148,13 @@ class D3TreeChart extends Component {
 								onMouseOut={this.mouseOut}
 								orientation={orientation}
 								nodeSvgShape={nodeSvgShape}
+								allowForeignObjects
+								nodeLabelComponent={{
+									render: <NodeLabel className='myLabelComponentInSvg' />,
+									// foreignObjectWrapper: {
+									// 	y: 24
+									// }
+								}}
 								textLayout={{ textAnchor: "start", x: 13, y: -10, transform: undefined }}
 							/>
 						</Name>
