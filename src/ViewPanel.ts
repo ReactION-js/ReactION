@@ -11,8 +11,35 @@ export default class ViewPanel {
 	private readonly _treePanel: vscode.WebviewPanel;
 	private _disposables: vscode.Disposable[] = [];
 	public readonly _page: Puppeteer;
+	public readonly _parseInfo : any;
 
-	public static createOrShow(extensionPath: string) {
+	// Constructor for tree view and html panel
+	public constructor(
+		treePanel: vscode.WebviewPanel,
+		parseInfo: any
+	) {
+		this._treePanel = treePanel;
+		this._parseInfo = parseInfo;
+
+		// Running Puppeteer to access React page context
+		this._page = new Puppeteer(parseInfo);
+		this._page.start();
+		setInterval(() => {
+			// console.log('interval')
+			this._update();
+		}, 1000);
+		this._treePanel.onDidDispose(() => this.dispose(), null, this._disposables);
+		// this._treePanel.onDidChangeViewState(() => {
+		// 	if (this._treePanel.visible) {
+		// 		/************************************
+		// 			***Are we using this if statement?***
+		// 			*************************************/
+		// 	}
+		// }, null, this._disposables);
+	}
+
+
+	public static createOrShow(extensionPath: string, parseInfo: any) {
 		const treeColumn = vscode.ViewColumn.Two;
 		if (ViewPanel.currentPanel) {
 			ViewPanel.currentPanel._treePanel.reveal(treeColumn);
@@ -28,35 +55,13 @@ export default class ViewPanel {
 			enableCommandUris: true
 		});
 
-		ViewPanel.currentPanel = new ViewPanel(treePanel);
+		ViewPanel.currentPanel = new ViewPanel(treePanel, parseInfo);
 	}
 
-	// Reload previous webview panel state
-	public static revive(treePanel: vscode.WebviewPanel): void {
-		ViewPanel.currentPanel = new ViewPanel(treePanel);
-	}
-
-	// Constructor for tree view and html panel
-	private constructor (
-		treePanel: vscode.WebviewPanel,
-	) {
-		this._treePanel = treePanel;
-
-	   // Running Puppeteer to access React page context
-		this._page = new Puppeteer();
-		this._page.start();
-		setInterval(() => {
-			this._update();
-		}, 1000);
-		this._treePanel.onDidDispose(() => this.dispose(), null, this._disposables);
-		// this._treePanel.onDidChangeViewState(() => {
-		// 	if (this._treePanel.visible) {
-		// 		/************************************
-		// 			***Are we using this if statement?***
-		// 			*************************************/
-		// 	}
-		// }, null, this._disposables);
-	}
+	// // Reload previous webview panel state
+	// public static revive(treePanel: vscode.WebviewPanel): void {
+	// 	ViewPanel.currentPanel = new ViewPanel(treePanel, this._parseInfo);
+	// }
 
 	public dispose(): void {
 		ViewPanel.currentPanel = undefined;
@@ -115,6 +120,10 @@ export default class ViewPanel {
 	private _getHtmlForWebview(treeData: TreeNode): string {
 
 		const stringifiedFlatData: string = JSON.stringify(treeData);
-		return treeView.generateD3(stringifiedFlatData);
+		console.log(treeData)
+
+		// console.log(stringifiedFlatData);
+
+		return treeView.generateD3(stringifiedFlatData, this._parseInfo);
 	}
 }
