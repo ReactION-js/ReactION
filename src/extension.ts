@@ -7,45 +7,47 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
+let parseInfo: any;
+
 // Method called when extension is activated
 export function activate(context: vscode.ExtensionContext) {
 
 	console.log('workspaceFolders:', vscode.workspace.rootPath);
 	const rootPath = vscode.workspace.rootPath;
 	const configPath = path.join(rootPath, "reactION-config.json");
-	const setup: any = {};
+	const setup = `
 
-	setup.system = os.platform();
-	setup.executablePath = '';
-	setup.localhost = 'localhost:3000';
-	setup.headless_browser = false;
-	setup.headless_embedded = true;
-	setup.reactTheme = 'dark';
+	setup.system = os.platform(); ${  /* Determines the OS of your machine */'' }
+
+	setup.executablePath = ''; ${  /* Path of user's chrome install */'' }
+
+	setup.localhost = "localhost:3000'; ${  /* Default port where server listens */'' }
+
+	setup.headless_browser = false; ${  /* Headless mode for external browser */'' }
+
+	setup.headless_embedded = true; ${  /* Headless mode for embedded webview */'' }
+
+	setup.reactTheme = 'dark'; ${  /* Default theme in embedded webview */'' }
+	
+	`;
 
 	fs.stat(configPath, (err: any, stats: any)=> {
 		if (err) {
 			console.log(err);
 		}
 		if (!stats) {
-			console.log(stats);
-			fs.writeFile(configPath, JSON.stringify(setup), (err: any) => {
-				if (err) {
-					console.log(err);
-				}
-				else {
-					console.log('The file has been saved!');
-				}
-			});
+			fs.writeFileSync(configPath, JSON.stringify(setup));
 		}
 		else {
-			console.log(stats);
 			// else read off and apply config to the running instance
+			parseInfo = JSON.parse(fs.readFileSync(configPath));
+			console.log('parseInfo: ', parseInfo);
 
 	}});
-	
+
 
 	context.subscriptions.push(vscode.commands.registerCommand('ReactION.openTree', () => {
-		ViewPanel.createOrShow(context.extensionPath);
+		ViewPanel.createOrShow(context.extensionPath, parseInfo);
 	}));
 
 	context.subscriptions.push(vscode.commands.registerCommand('ReactION.openWeb', () => {
