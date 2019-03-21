@@ -56,22 +56,26 @@ class D3TreeChart extends Component {
 		this.changeTheme = this.changeTheme.bind(this);
 	}
 
-	mouseOver(nodeData, e) {
-		console.log(nodeData, e.message)
-	}
+	// mouseOver(nodeData, e) {
+	// 	console.log('before ', nodeData)
+	// 	console.log('before e', e)
+	// 	nodeData.display = "flex";
+	// 	// console.log('after ', nodeData.display)
+	// }
 
 	// mouseOut(nodeData, e) {
-	// 	this.nodeData.setState({
-	// 		nodeSvgShape: {
-	// 			shape: 'circle',
-	// 			shapeProps: {
-	// 				r: 15,
-	// 				fill: '#1E1E1E',
-	// 				stroke: '#D3D3D3',
-	// 				strokeWidth: '0px'
-	// 			},
-	// 		}
-	// 	})
+		// this.nodeData.setState({
+		// 	nodeSvgShape: {
+		// 		shape: 'circle',
+		// 		shapeProps: {
+		// 			r: 15,
+		// 			fill: '#1E1E1E',
+		// 			stroke: '#D3D3D3',
+		// 			strokeWidth: '0px'
+		// 		},
+		// 	}
+		// })
+	// 	nodeData.display = "none";
 	// }
 
 
@@ -152,7 +156,7 @@ class D3TreeChart extends Component {
 								nodeLabelComponent={{
 									render: <NodeLabel className='myLabelComponentInSvg' />,
 								}}
-								textLayout={{ textAnchor: "start", x: 13, y: -10, transform: undefined }}
+								textLayout={{ textAnchor: "start", x: 13, y: 0, transform: undefined }}
 							/>
 						</Name>
 					</TreeStyled>

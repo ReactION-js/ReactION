@@ -7,6 +7,7 @@ class TreeNode {
         this.id = node.id;
         this.attributes = node.props;
         this.parentId = node.parentId;
+        this.display = node.display;
         this.children = [];
     }
     // Add new node to the tree

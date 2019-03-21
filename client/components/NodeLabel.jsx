@@ -1,34 +1,55 @@
 import React from 'react';
 
-const divStyle = {
-	display: 'flex',
-	flexDirection: 'column',
-	width: 700,
-	height: 600
-}
+
 
 class NodeLabel extends React.PureComponent {
-	constructor (props) {
-		super(props)
+	constructor() {
+		super();
 		this.state = {
-			isHidden: true,
-			display: block
+			divStyle: {
+				display: "none",
+				flexDirection: 'column'
+			}
 		}
+		this.mouseEnter = this.mouseEnter.bind(this);
+		this.mouseOut = this.mouseOut.bind(this);
 	}
 
-	toggleHidden () {
+	mouseEnter() {
+		console.log('mouse entered')
 		this.setState({
-		  isHidden: !this.state.isHidden,
-		  display: block	
+			divStyle: {
+				display: "flex",
+				flexDirection: 'column'
+			}
 		})
-	}	
-	
+	}
+
+	mouseOut() {
+		console.log('mouse out')
+		this.setState({
+			divStyle: {
+				display: "none",
+				flexDirection: 'column'
+			}
+		})
+	}
+
 	render() {
 		const { className, nodeData } = this.props
+		const elArr = []
+		nodeData.attributes.map((el) => {
+			elArr.push(<p>{el}</p>)
+		})
+
 		return (
-			<div className={className} style={divStyle} onMouseEnter={this.toggleHidden.bind(this)} onMouseLeave={this.toggleHidden.bind(this)}>
-				<span>{nodeData.name}</span>
-				<span>{nodeData.attributes}</span>
+			<div className={className} onMouseEnter={this.mouseEnter} onMouseOut={this.mouseOut}>
+				<h2>{nodeData.name}</h2>
+				<div
+					style={this.state.divStyle}
+				>
+					{elArr}
+				</div>
 			</div>
 		)
 	}
