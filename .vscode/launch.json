@@ -9,11 +9,15 @@
 			"type": "extensionHost",
 			"request": "launch",
 			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}"],
-			"outFiles": ["${workspaceFolder}/src"],
+			"args": [
+				"--extensionDevelopmentPath=${workspaceRoot}"
+			],
+			"outFiles": [
+				"${workspaceFolder}/src"
+			],
 			"preLaunchTask": "npm: watch",
 			"stopOnEntry": false,
-      "sourceMaps": true,
-	},
+			"sourceMaps": true,
+		},
 	]
 }
