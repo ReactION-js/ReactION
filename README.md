@@ -30,18 +30,15 @@ Make sure you have Google Chrome installed on your computer. Also, our extension
 6. Run the extension by clicking on the ReactION logo on the side pannel or ```ReactION:Launch```
 7. Enjoy the tree view!
 
-## Features
-
+## Features  
 - React Fiber Tree structure shown inside VS Code (Powered by [Chrome Headless](https://developers.google.com/web/updates/2017/04/headless-chrome)).
 - Ability to edit components on the HTML preview and see the component hierarchy on the side panel.
 - Alternatable theme based on user preference (i.e., Light and Dark).
 
-## Add Browser Preview for the Ultimate Experience
-
+## Add Browser Preview for the Ultimate Experience  
 You can enable in-editor HTML preview by installing [Browser Preview](https://marketplace.visualstudio.com/items?itemName=auchenberg.vscode-browser-preview)
 
-## Changing Default Settings
-
+## Changing Default Settings  
 You can change the following default seetings in the Configuration file:
 - React Tree View Theme
 - Server to launch when starting the extension
@@ -59,23 +56,21 @@ Configure by using the following configuration:
 }
 ```
 
-## Contributing 
-
+## Contributing  
 ReactION is currently in beta release. Please let us know about bugs and suggestions at ReactION@email.com.  Feel free to fork this repo and submit pull requests! 
 
-## Watch It
-
+## Watch It  
 [Watch an animated gif](docs/DEBUGGING.md) showing how to open the preview and debug a browser app.
 
-## Team
+## Team  
 [Andy Tran](http://github.com/andyxtran) |
 [Carson Chen](http://github.com/CarsonCYChen) |
 [Daniel Wu](http://github.com/wdanni) |
 [Jinsung Park](http://github.com/jsliapark) 
 
-## Designer
+## Designer  
 [Yoojin Jung](https://github.com/jsliapark/ReactION/blob/staging/resources/Text_2.png)
 
-## License
+## License  
 MIT - check out [licence](https://github.com/ReactION-js/ReactION/LICENSE) page for more details
 
