@@ -7,6 +7,7 @@ const ViewPanel_1 = require("./ViewPanel");
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+let parseInfo;
 // Method called when extension is activated
 function activate(context) {
     console.log('workspaceFolders:', vscode.workspace.rootPath);
@@ -24,23 +25,15 @@ function activate(context) {
             console.log(err);
         }
         if (!stats) {
-            console.log(stats);
-            fs.writeFile(configPath, JSON.stringify(setup), (err) => {
-                if (err) {
-                    console.log(err);
-                }
-                else {
-                    console.log('The file has been saved!');
-                }
-            });
+            fs.writeFileSync(configPath, JSON.stringify(setup));
         }
         else {
-            console.log(stats);
             // else read off and apply config to the running instance
+            parseInfo = JSON.parse(fs.readFileSync(configPath));
         }
     });
     context.subscriptions.push(vscode.commands.registerCommand('ReactION.openTree', () => {
-        ViewPanel_1.default.createOrShow(context.extensionPath);
+        ViewPanel_1.default.createOrShow(context.extensionPath, parseInfo);
     }));
     context.subscriptions.push(vscode.commands.registerCommand('ReactION.openWeb', () => {
         EmbeddedViewPanel_1.default.createOrShow();
