@@ -4,11 +4,9 @@ const vscode = require("vscode");
 const StartExtensionProvider_1 = require("./StartExtensionProvider");
 const EmbeddedViewPanel_1 = require("./EmbeddedViewPanel");
 const ViewPanel_1 = require("./ViewPanel");
-const TreeNode_1 = require("./TreeNode");
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-
 // Method called when extension is activated
 function activate(context) {
     console.log('workspaceFolders:', vscode.workspace.rootPath);
