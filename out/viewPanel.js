@@ -6,13 +6,15 @@ const Puppeteer_1 = require("./Puppeteer");
 const TreeNode_1 = require("./TreeNode");
 class ViewPanel {
     // Constructor for tree view and html panel
-    constructor(treePanel) {
+    constructor(treePanel, parseInfo) {
         this._disposables = [];
         this._treePanel = treePanel;
+        this._parseInfo = parseInfo;
         // Running Puppeteer to access React page context
-        this._page = new Puppeteer_1.default();
+        this._page = new Puppeteer_1.default(parseInfo);
         this._page.start();
         setInterval(() => {
+            // console.log('interval')
             this._update();
         }, 1000);
         this._treePanel.onDidDispose(() => this.dispose(), null, this._disposables);
@@ -24,7 +26,7 @@ class ViewPanel {
         // 	}
         // }, null, this._disposables);
     }
-    static createOrShow(extensionPath) {
+    static createOrShow(extensionPath, parseInfo) {
         const treeColumn = vscode.ViewColumn.Two;
         if (ViewPanel.currentPanel) {
             ViewPanel.currentPanel._treePanel.reveal(treeColumn);
@@ -37,12 +39,12 @@ class ViewPanel {
             retainContextWhenHidden: true,
             enableCommandUris: true
         });
-        ViewPanel.currentPanel = new ViewPanel(treePanel);
+        ViewPanel.currentPanel = new ViewPanel(treePanel, parseInfo);
     }
-    // Reload previous webview panel state
-    static revive(treePanel) {
-        ViewPanel.currentPanel = new ViewPanel(treePanel);
-    }
+    // // Reload previous webview panel state
+    // public static revive(treePanel: vscode.WebviewPanel): void {
+    // 	ViewPanel.currentPanel = new ViewPanel(treePanel, this._parseInfo);
+    // }
     dispose() {
         ViewPanel.currentPanel = undefined;
         // Clean up our resources
@@ -88,7 +90,9 @@ class ViewPanel {
     // Putting scraped meta-data to D3 tree diagram
     _getHtmlForWebview(treeData) {
         const stringifiedFlatData = JSON.stringify(treeData);
-        return treeViewPanel_1.default.generateD3(stringifiedFlatData);
+        console.log(treeData);
+        // console.log(stringifiedFlatData);
+        return treeViewPanel_1.default.generateD3(stringifiedFlatData, this._parseInfo);
     }
 }
 ViewPanel.viewType = 'ReactION';
