@@ -1,41 +1,58 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const vscode = require("vscode");
-const treeViewPanel_1 = require("./treeViewPanel");
 const Puppeteer_1 = require("./Puppeteer");
+const treeViewPanel_1 = require("./treeViewPanel");
+const htmlViewPanel_1 = require("./htmlViewPanel");
 const TreeNode_1 = require("./TreeNode");
-class ViewPanel {
+class EmbeddedViewPanel {
     // Constructor for tree view and html panel
-    constructor(treePanel, parseInfo) {
+    constructor(htmlPanel, treePanel) {
         this._disposables = [];
+        this._htmlPanel = htmlPanel;
         this._treePanel = treePanel;
-        this._parseInfo = parseInfo;
         // Running Puppeteer to access React page context
-        this._page = new Puppeteer_1.default(parseInfo);
+        this._page = new Puppeteer_1.default();
+        this._page._headless = true;
         this._page.start();
+        // ******* fix this set interval... doesn't need it ******
         setInterval(() => {
             this._update();
         }, 1000);
         this._treePanel.onDidDispose(() => this.dispose(), null, this._disposables);
+        this._treePanel.onDidChangeViewState(e => {
+            if (this._treePanel.visible) {
+            }
+        }, null, this._disposables);
     }
-    static createOrShow(extensionPath, parseInfo) {
-        const treeColumn = vscode.ViewColumn.Two;
-        if (ViewPanel.currentPanel) {
-            ViewPanel.currentPanel._treePanel.reveal(treeColumn);
+    static createOrShow() {
+        const treeColumn = vscode.ViewColumn.Three;
+        const htmlColumn = vscode.ViewColumn.Two;
+        if (EmbeddedViewPanel.currentPanel) {
+            EmbeddedViewPanel.currentPanel._htmlPanel.reveal(htmlColumn);
+            EmbeddedViewPanel.currentPanel._treePanel.reveal(treeColumn);
             return;
         }
-        // Show Virtual DOM Tree in VS Code
-        const treePanel = vscode.window.createWebviewPanel(ViewPanel.viewType, "Virtual DOM Tree", treeColumn, {
+        // Show HTML Preview in VS Code
+        const htmlPanel = vscode.window.createWebviewPanel(EmbeddedViewPanel.viewType, "HTML Preview", htmlColumn, {
             // Enable javascript in the webview
             enableScripts: true,
             retainContextWhenHidden: true,
             enableCommandUris: true
         });
-        ViewPanel.currentPanel = new ViewPanel(treePanel, parseInfo);
+        // Show Virtual DOM Tree in VS Code
+        const treePanel = vscode.window.createWebviewPanel(EmbeddedViewPanel.viewType, "Virtual DOM Tree", treeColumn, {
+            // Enable javascript in the webview
+            enableScripts: true,
+            retainContextWhenHidden: true,
+            enableCommandUris: true
+        });
+        EmbeddedViewPanel.currentPanel = new EmbeddedViewPanel(htmlPanel, treePanel);
     }
     dispose() {
-        ViewPanel.currentPanel = undefined;
+        EmbeddedViewPanel.currentPanel = undefined;
         // Clean up our resources
+        this._htmlPanel.dispose();
         this._treePanel.dispose();
         while (this._disposables.length) {
             const x = this._disposables.pop();
@@ -45,6 +62,7 @@ class ViewPanel {
         }
     }
     async _update() {
+        this._htmlPanel.webview.html = this._getPreviewHtmlForWebview();
         let rawReactData = await this._page.scrape();
         // Build out TreeNode class for React D3 Tree.
         function buildTree(rawReactData) {
@@ -73,11 +91,14 @@ class ViewPanel {
         this._treePanel.webview.html = this._getHtmlForWebview(treeData);
     }
     // Putting scraped meta-data to D3 tree diagram
-    _getHtmlForWebview(treeData) {
-        const stringifiedFlatData = JSON.stringify(treeData);
-        return treeViewPanel_1.default.generateD3(stringifiedFlatData, this._parseInfo);
+    _getHtmlForWebview(rawReactData) {
+        const stringifiedFlatData = JSON.stringify(rawReactData);
+        return treeViewPanel_1.default.generateD3(stringifiedFlatData);
+    }
+    _getPreviewHtmlForWebview() {
+        return htmlViewPanel_1.default.html;
     }
 }
-ViewPanel.viewType = 'ReactION';
-exports.default = ViewPanel;
-//# sourceMappingURL=ViewPanel.js.map
+EmbeddedViewPanel.viewType = 'ReactION';
+exports.default = EmbeddedViewPanel;
+//# sourceMappingURL=EmbeddedViewPanel.js.map
