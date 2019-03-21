@@ -7,24 +7,24 @@ const request = require('request');
 const util = require('util');
 const path = require('path');
 const fs = require('fs');
-const vscode = require("vscode");
-const userConfigPath = path.join(vscode.workspace.rootPath, "reactION-config.json");
-// need to wait for config file to be created in user's work directory if not found 
-const intvl = setInterval(function () {
-    if (fs.stat(userConfigPath)) {
-        clearInterval(intvl);
-    }
-}, 500);
+// const userConfigPath = path.join(vscode.workspace.rootPath,"reactION-config.json");
+// need to wait for config file to be created in user's work directory if not found
+// const intvl = setInterval(function() {
+// 	if (fs.stat(userConfigPath)) {
+// 		clearInterval(intvl);
+// 	}
+// }, 500)
 class Puppeteer {
     // Default properties for the Puppeteer class.
-    constructor() {
-        console.log('config path', userConfigPath);
-        const configs = JSON.parse(fs.readFileSync(userConfigPath));
-        console.log(configs);
-        this._headless = configs.headless_browser;
+    constructor(parseInfo) {
+        // console.log('parse info in pptr', parseInfo)
+        // console.log('config path', userConfigPath)
+        // const configs = JSON.parse(fs.readFileSync(userConfigPath));
+        // console.log(configs);
+        this._headless = false;
         this._executablePath = '/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome';
         this._pipe = true;
-        this._url = configs.localhost;
+        this._url = parseInfo.localhost;
         this._page = '';
         this._browser = '';
     }
@@ -111,7 +111,7 @@ class Puppeteer {
                             "level": `${level}`,
                             "id": `${globalId}`,
                             "parentId": `${parentId}`,
-                            "props": JSON.stringify(Object.keys(root.sibling.memoizedProps))
+                            "props": Object.keys(root.sibling.memoizedProps)
                         });
                         traverse(root.sibling, level, parentId);
                     }
@@ -123,7 +123,7 @@ class Puppeteer {
                             "level": `${level}`,
                             "id": `${globalId}`,
                             "parentId": `${parentId}`,
-                            "props": JSON.stringify(Object.keys(root.child.memoizedProps))
+                            "props": Object.keys(root.child.memoizedProps)
                         });
                         traverse(root.child, level + 1, parentId);
                     }

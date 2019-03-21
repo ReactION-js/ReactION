@@ -3,12 +3,12 @@ import * as path from 'path';
 
 export default {
 	generateD3:
-		function (stringifiedTreeData: string): string {
+		function (stringifiedTreeData: string, parseInfo: any): string {
 			const bundle = vscode.Uri.file(path.join(__dirname, 'build', 'bundle.js'));
 			const bundleUri = bundle.with({
 				scheme: 'vscode-resource'
 			});
-			// console.log(stringifiedTreeData);
+			// console.log('tree data ', stringifiedTreeData);
 			return `
 		<!DOCTYPE html>
 		<html lang="en">
@@ -17,6 +17,7 @@ export default {
 			<title>Tree Example</title>
 			<script>
 				window._TREE_DATA = [${stringifiedTreeData}];
+				// window._CONFIG = ${parseInfo};
 			</script>
 		</head>
 			<body>
