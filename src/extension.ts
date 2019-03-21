@@ -22,7 +22,7 @@ export function activate(context: vscode.ExtensionContext) {
 	setup.headless_embedded = true;
 	setup.reactTheme = 'dark';
 
-	fs.stat(configPath, (err: any, stats: any)=> {
+	fs.stat(configPath, (err: any, stats: any) => {
 		if (err) {
 			console.log(err);
 		}
@@ -41,8 +41,9 @@ export function activate(context: vscode.ExtensionContext) {
 			console.log(stats);
 			// else read off and apply config to the running instance
 
-	}});
-	
+		}
+	});
+
 
 	context.subscriptions.push(vscode.commands.registerCommand('ReactION.openTree', () => {
 		ViewPanel.createOrShow(context.extensionPath);

@@ -14,6 +14,7 @@ exports.default = {
 		<html lang="en">
 		<head>
 			<meta charset="utf-8">
+			<link href="https://fonts.googleapis.com/css?family=Slabo+27px" rel="stylesheet">
 			<title>Tree Example</title>
 			<script>
 				window._TREE_DATA = [${stringifiedTreeData}];

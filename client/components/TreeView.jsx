@@ -4,7 +4,7 @@ import styled from 'styled-components';
 const path = require('path');
 const fs = require('fs');
 
-const userConfigPath = path.join(vscode.workspace.rootPath,"config.js");
+const userConfigPath = path.join(vscode.workspace.rootPath, "config.js");
 const configs = JSON.parse(fs.readFileSync(userConfigPath));
 
 const TreeStyled = styled.path`
@@ -20,6 +20,7 @@ const Name = styled.g`
 		stroke: ${props => (props.children.props.nodeSvgShape.theme === 'light' ? '#181818' : '#F8F8F8')}
 		font-size: large;
 		fill: ${props => (props.children.props.nodeSvgShape.theme === 'light' ? '#181818' : '#F8F8F8')}
+		font-family: 'Slabo 27px', serif;
 	}
 	.nodeAttributesBase{
 		stroke: ${props => (props.children.props.nodeSvgShape.theme === 'light' ? '#181818' : '#F8F8F8')}
@@ -27,11 +28,10 @@ const Name = styled.g`
 `
 const myTreeData = window._TREE_DATA;
 
+
 class D3TreeChart extends Component {
 	constructor(props) {
 		super(props);
-		// this.mouseOver = this.mouseOver.bind(this);
-		// this.mouseOut = this.mouseOut.bind(this);
 		this.state = {
 			orientation: 'vertical',
 			x: 200,
@@ -53,25 +53,6 @@ class D3TreeChart extends Component {
 		this.changeOrientation = this.changeOrientation.bind(this);
 		this.changeTheme = this.changeTheme.bind(this);
 	}
-
-	// mouseOver(nodeData, e) {
-	// 	nodeData
-	// }
-
-	// mouseOut(nodeData, e) {
-	// 	this.nodeData.setState({
-	// 		nodeSvgShape: {
-	// 			shape: 'circle',
-	// 			shapeProps: {
-	// 				r: 15,
-	// 				fill: '#1E1E1E',
-	// 				stroke: '#D3D3D3',
-	// 				strokeWidth: '0px'
-	// 			},
-	// 		}
-	// 	})
-	// }
-
 
 	changeOrientation() {
 		const { orientation } = this.state;
@@ -121,7 +102,6 @@ class D3TreeChart extends Component {
 	render() {
 		const { orientation, nodeSvgShape } = this.state;
 		const { background } = this.state.nodeSvgShape;
-		// const { nodeNameBase } = this.state.nodeSvgShape.shapeProps;
 
 		return (
 			<div className='treeChart'
