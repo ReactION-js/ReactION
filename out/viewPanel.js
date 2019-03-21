@@ -90,8 +90,6 @@ class ViewPanel {
     // Putting scraped meta-data to D3 tree diagram
     _getHtmlForWebview(treeData) {
         const stringifiedFlatData = JSON.stringify(treeData);
-        console.log(treeData);
-        // console.log(stringifiedFlatData);
         return treeViewPanel_1.default.generateD3(stringifiedFlatData, this._parseInfo);
     }
 }
