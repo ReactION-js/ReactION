@@ -18,21 +18,19 @@
 
 #### ReactION is in active development. Please follow this repo for contribution guidelines and our development road map.
 
+## Prerequisite
+Make sure you have Google Chrome installed on your computer. Also, our extension currently only runs in VS Code environment, so make sure you are using VS Code as the code editor.
 
-## Setup
-| ReactION beta |
-| ------------- | ------------- |
-| 1. Clone the repo and ```npm install``` |
-| 2. ```npm run build ```|
-|3. Open VS Code Extension mode by pressing ```F5``` or ```ctr+5```
-|4. When a new VS Code window pops up, open the React code file that you want to run the extension on|
-|5. ```npm start``` your React file and set it to ```localhost:3000``` (default) |
-|6. Run the extension by clicking on the ReactION logo on the side pannel or ```ReactION:Launch```
+## Setup:
+1. Clone the repo and run ```npm install```
+2. Run ```npm run build ```
+3. Open VS Code Extension mode by pressing ```F5``` or ```ctr+5```
+4. When a new VS Code window pops up, open the React code file that you want to run the extension on
+5. ```npm start``` your React file and run your application in ```localhost:3000``` (default) 
+6. Run the extension by clicking on the ReactION logo on the side pannel or ```ReactION:Launch```
+7. Enjoy the tree view!
 
-
-Make sure you have Google Chrome installed on your computer.
-
-## Features <hr>
+## Features
 
 - React Fiber Tree structure shown inside VS Code (Powered by [Chrome Headless](https://developers.google.com/web/updates/2017/04/headless-chrome)).
 - Ability to edit components on the HTML preview and see the component hierarchy on the side panel.
@@ -52,20 +50,12 @@ Configure by using the following configuration:
 
 ```json
 {
-    "version": "0.1.0",
-    "configurations": [
-        {
-            "type": "browser-preview",
-            "request": "attach",
-            "name": "Browser Preview: Attach"
-        },
-        {
-            "type": "browser-preview",
-            "request": "launch",
-            "name": "Browser Preview: Launch",
-            "url": "http://localhost:3000"
-        }
-    ]
+  "system": "darwin",
+  "executablePath": "",
+  "localhost": "localhost:3000",
+  "headless_browser": false,
+  "headless_embedded": true,
+  "reactTheme": "dark"
 }
 ```
 

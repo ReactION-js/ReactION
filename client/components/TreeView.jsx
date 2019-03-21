@@ -1,11 +1,12 @@
 import React, { Component } from 'react';
 import Tree from 'react-d3-tree';
+import NodeLabel from './NodeLabel.jsx';
 import styled from 'styled-components';
-const path = require('path');
-const fs = require('fs');
+// const path = require('path');
+// const fs = require('fs');
 
-const userConfigPath = path.join(vscode.workspace.rootPath, "config.js");
-const configs = JSON.parse(fs.readFileSync(userConfigPath));
+// const userConfigPath = path.join(vscode.workspace.rootPath,"config.js");
+// const configs = JSON.parse(fs.readFileSync(userConfigPath));
 
 const TreeStyled = styled.path`
 	.linkBase {
@@ -13,6 +14,7 @@ const TreeStyled = styled.path`
 		stroke: #D3D3D3;
     stroke-width: 2px;
 	}
+	font-family: 'Crimson Text', serif
 `;
 
 const Name = styled.g`
@@ -20,13 +22,13 @@ const Name = styled.g`
 		stroke: ${props => (props.children.props.nodeSvgShape.theme === 'light' ? '#181818' : '#F8F8F8')}
 		font-size: large;
 		fill: ${props => (props.children.props.nodeSvgShape.theme === 'light' ? '#181818' : '#F8F8F8')}
-		font-family: 'Slabo 27px', serif;
 	}
 	.nodeAttributesBase{
 		stroke: ${props => (props.children.props.nodeSvgShape.theme === 'light' ? '#181818' : '#F8F8F8')}
 	}
 `
 const myTreeData = window._TREE_DATA;
+// const config = window._CONFIG;
 
 
 class D3TreeChart extends Component {
@@ -45,14 +47,33 @@ class D3TreeChart extends Component {
 					strokeWidth: '0px',
 					nodeNameBase: '#F8F8F8',
 				},
-				theme: configs.reactTheme,
-				background: reactTheme === 'dark' ? '#181818' : '#F8F8F8'
+				theme: 'dark',
+				background: '#181818'
 			},
 		}
 
 		this.changeOrientation = this.changeOrientation.bind(this);
 		this.changeTheme = this.changeTheme.bind(this);
 	}
+
+	mouseOver(nodeData, e) {
+		console.log(nodeData, e.message)
+	}
+
+	// mouseOut(nodeData, e) {
+	// 	this.nodeData.setState({
+	// 		nodeSvgShape: {
+	// 			shape: 'circle',
+	// 			shapeProps: {
+	// 				r: 15,
+	// 				fill: '#1E1E1E',
+	// 				stroke: '#D3D3D3',
+	// 				strokeWidth: '0px'
+	// 			},
+	// 		}
+	// 	})
+	// }
+
 
 	changeOrientation() {
 		const { orientation } = this.state;
@@ -126,6 +147,11 @@ class D3TreeChart extends Component {
 								onMouseOut={this.mouseOut}
 								orientation={orientation}
 								nodeSvgShape={nodeSvgShape}
+								allowForeignObjects
+								nodeLabelComponent={{
+									render:
+										<NodeLabel className='myLabelComponentInSvg' />,
+								}}
 								textLayout={{ textAnchor: "start", x: 13, y: -10, transform: undefined }}
 							/>
 						</Name>
