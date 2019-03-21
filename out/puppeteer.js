@@ -1,28 +1,30 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const puppeteer = require('puppeteer');
+const pptr = require('puppeteer-core');
 class Puppeteer {
     // Default properties for the Puppeteer class.
-    constructor() {
+    constructor(parseInfo) {
         this._headless = false;
         this._executablePath = '/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome';
         this._pipe = true;
-        this._url = 'http://localhost:3000';
+        this._url = parseInfo.localhost;
         this._page = '';
         this._browser = '';
     }
     // Creates an instance of puppeteer browser and page,
-    // opens to _url, defaults to localhost:3000.
+    // opens to _url, defaults to localhost:3000
     async start() {
-        this._browser = await puppeteer.launch({
+        this._browser = await pptr.launch({
             headless: this._headless,
             executablePath: this._executablePath,
-            pipe: this._pipe
+            pipe: this._pipe,
         }).catch((err) => console.log(err));
-        this._page = await this._browser.pages().then((pageArr) => { return pageArr[0]; });
-        // this._page.goto(this._url, { waitUntil: 'networkidle0' });
-        await this._page.goto(this._url);
-        return this._page;
+        this._page = await this._browser.pages()
+            .then((pageArr) => {
+            return pageArr[0];
+        });
+        this._page.goto(this._url, { waitUntil: 'networkidle0' });
+        return await this._page;
     }
     // Recursive React component scraping algorithm
     scrape() {
@@ -43,53 +45,38 @@ class Puppeteer {
             })();
             // Define function that traverses the fiber tree, starting from the entry point
             function fiberWalk(entry) {
-                let output = [], globalID = 0;
-                // Recursively traversing through the fiber tree, pushing the node object into the output array
-                function traverse(root, level, id) {
-                    if (root.sibling !== null && root.child !== null) {
-                        output.push({
+                let dataArr = [], globalId = 1;
+                // Recursively traversing through the fiber tree, pushing the node object into the dataArr array
+                function traverse(root, level, parentId) {
+                    if (root.sibling !== null) {
+                        globalId += 1;
+                        dataArr.push({
                             "name": root.sibling,
                             "level": `${level}`,
-                            "id": `${globalID += 1}`,
-                            "parentId": `${id}`,
-                            "props": JSON.stringify(Object.keys(root.sibling.memoizedProps))
-                        }, {
+                            "id": `${globalId}`,
+                            "parentId": `${parentId}`,
+                            "display": "none",
+                            "props": Object.keys(root.sibling.memoizedProps)
+                        });
+                        traverse(root.sibling, level, parentId);
+                    }
+                    if (root.child !== null) {
+                        parentId += 1;
+                        globalId += 1;
+                        dataArr.push({
                             "name": root.child,
                             "level": `${level}`,
-                            "id": `${globalID += 1}`,
-                            "parentId": `${id}`,
-                            "props": JSON.stringify(Object.keys(root.child.memoizedProps))
+                            "id": `${globalId}`,
+                            "parentId": `${parentId}`,
+                            "display": "none",
+                            "props": Object.keys(root.child.memoizedProps)
                         });
-                        traverse(root.sibling, level, id);
-                        traverse(root.child, level + 1, id + 1);
-                    }
-                    else if (root.sibling !== null && root.child === null) {
-                        output.push({
-                            "name": root.sibling,
-                            "level": `${level}`,
-                            "id": `${globalID += 1}`,
-                            "parentId": `${id}`,
-                            "props": JSON.stringify(Object.keys(root.sibling.memoizedProps))
-                        });
-                        traverse(root.sibling, level, id);
-                    }
-                    else if (root.child !== null && root.sibling === null) {
-                        output.push({
-                            "name": root.child,
-                            "level": `${level}`,
-                            "id": `${globalID += 1}`,
-                            "parentId": `${id}`,
-                            "props": JSON.stringify(Object.keys(root.child.memoizedProps))
-                        });
-                        traverse(root.child, level + 1, id + 1);
-                    }
-                    else if (root.child === null && root.sibling === null) {
-                        return;
+                        traverse(root.child, level + 1, parentId);
                     }
                 }
                 traverse(entry, 0, 0);
                 // Extracts the type name of each fiber node
-                output.forEach((el) => {
+                dataArr.forEach((el) => {
                     if (typeof el.name.type === null) {
                         el.name = '';
                     }
@@ -107,8 +94,8 @@ class Puppeteer {
                     }
                 });
                 // Setting root parent to an empty string
-                output[0].parentId = '';
-                return output.slice(0, 25);
+                dataArr[0].parentId = '';
+                return dataArr;
             }
             return fiberWalk(_entry);
         }).catch((err) => { console.log(err); });
