@@ -19,7 +19,7 @@
 #### ReactION is in active development. Please follow this repo for contribution guidelines and our development road map.
 
 ## Prerequisite
-Make sure you have Google Chrome installed on your computer. Also, our extension currently only runs in VS Code environment, so make sure you are using VS Code as the code editor.
+Make sure you have *Google Chrome* installed on your computer. Also, our extension currently only runs in VS Code environment, so make sure you are using VS Code as the code editor.
 
 ## Setup:
 1. Clone the repo and run ```npm install```
@@ -44,6 +44,7 @@ You can change the following default seetings in the Configuration file:
 - Server to launch when starting the extension
 
 Configure by using the following configuration:
+
 
 ```json
 {
