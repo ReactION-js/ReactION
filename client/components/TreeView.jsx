@@ -18,7 +18,7 @@ const TreeStyled = styled.path`
 `;
 
 const Name = styled.g`
-	.nodeNameBase {
+	.nodenamebase {
 		stroke: ${props => (props.children.props.nodeSvgShape.theme === 'light' ? '#181818' : '#F8F8F8')}
 		font-size: large;
 		fill: ${props => (props.children.props.nodeSvgShape.theme === 'light' ? '#181818' : '#F8F8F8')}
@@ -44,7 +44,7 @@ class D3TreeChart extends Component {
 					fill: '#1E1E1E',
 					stroke: '#181818',
 					strokeWidth: '0px',
-					nodeNameBase: '#1E1E1E',
+					nodenamebase: '#1E1E1E',
 				},
 				theme: 'light',
 				background: 'rgb(255,255,255)'
@@ -77,7 +77,7 @@ class D3TreeChart extends Component {
 	// 					fill: '#1E1E1E',
 	// 					stroke: '#181818',
 	// 					strokeWidth: '0px',
-	// 					nodeNameBase: '#1E1E1E',
+	// 					nodenamebase: '#1E1E1E',
 	// 				},
 	// 				theme: 'light',
 	// 				background: 'rgb(255,255,255)'
@@ -92,7 +92,7 @@ class D3TreeChart extends Component {
 	// 					fill: '#F8F8F8',
 	// 					stroke: '#F8F8F8',
 	// 					strokeWidth: '0px',
-	// 					nodeNameBase: '#F8F8F8',
+	// 					nodenamebase: '#F8F8F8',
 	// 				},
 	// 				theme: 'dark',
 	// 				background: '#1E1E1E',
