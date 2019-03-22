@@ -1,0 +1,8 @@
+{
+	"system": "darwin",
+	"executablePath": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+	"localhost": "localhost:3000",
+	"headless_browser": false,
+	"headless_embedded": true,
+	"reactTheme": "dark"
+}
