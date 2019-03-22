@@ -36,7 +36,7 @@ Make sure you have *Google Chrome* installed on your computer. Also, our extensi
 You can download the extension directly from the [Marketplace](https://marketplace.visualstudio.com/items?itemName=ReactION-js.ReactION).
 
 # Current Features  
-- [x] React Fiber Tree structure shown inside VS Code (Powered by [Chrome Headless](https://developers.google.com/web/updates/2017/04/headless- [ ]chrome)).
+- [x] React Fiber Tree structure shown inside VS Code (Powered by [Chrome Headless](https://developers.google.com/web/updates/2017/04/headless)).
 - [x] Ability to edit components on the HTML preview and see the component hierarchy on the side panel.
 - [x] Alternatable theme based on user preference (i.e., Light and Dark).
 
