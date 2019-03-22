@@ -2,12 +2,11 @@ import * as vscode from 'vscode';
 import StartExtensionProvider from './StartExtensionProvider';
 import EmbeddedViewPanel from './EmbeddedViewPanel';
 import ViewPanel from './ViewPanel';
-import TreeNode from './TreeNode';
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-let parseInfo;
+let parseInfo: any;
 
 // Method called when extension is activated
 export function activate(context: vscode.ExtensionContext) {
@@ -44,7 +43,7 @@ export function activate(context: vscode.ExtensionContext) {
 	}));
 
 	context.subscriptions.push(vscode.commands.registerCommand('ReactION.openWeb', () => {
-		EmbeddedViewPanel.createOrShow();
+		EmbeddedViewPanel.createOrShow(context.extensionPath, parseInfo);
 	}));
 
 	vscode.window.registerTreeDataProvider('startExtension', new StartExtensionProvider());
