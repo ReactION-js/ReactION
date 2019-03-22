@@ -7,44 +7,53 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-let parseInfo: any;
-
 // Method called when extension is activated
 export function activate(context: vscode.ExtensionContext) {
 
+	let parseInfo: any;
+
 	console.log('workspaceFolders:', vscode.workspace.rootPath);
 	const rootPath = vscode.workspace.rootPath;
-	const configPath = path.join(rootPath, "reactION-config.json");
+	const configPath = path.join(rootPath, "reactION-config.js");
 	const setup = `
-
-	setup.system = os.platform(); ${  /* Determines the OS of your machine */'' }
-
-	setup.executablePath = ''; ${  /* Path of user's chrome install */'' }
-
-	setup.localhost = "localhost:3000'; ${  /* Default port where server listens */'' }
-
-	setup.headless_browser = false; ${  /* Headless mode for external browser */'' }
-
-	setup.headless_embedded = true; ${  /* Headless mode for embedded webview */'' }
-
-	setup.reactTheme = 'dark'; ${  /* Default theme in embedded webview */'' }
 	
+	const data = {
+
+		// Determines the OS of your machine //
+		system: "${os.platform()}",
+
+		// Path of user's chrome install //
+		executablePath: "${''}", 
+
+		// Default port where server listens //
+		localhost: "${"localhost:3000"}", 
+
+		// Headless mode for external browser //
+		headless_browser: "${false}", 
+
+		// Headless mode for embedded webview //
+		headless_embedded: "${true}", 
+
+		// Default theme in embedded webview //
+		reactTheme: "${'dark'}",
+	
+	}
+
+	module.exports = data;
+
 	`;
 
-	fs.stat(configPath, (err: any, stats: any)=> {
-		if (err) {
-			console.log(err);
-		}
-		if (!stats) {
-			fs.writeFileSync(configPath, JSON.stringify(setup));
-		}
-		else {
-			// else read off and apply config to the running instance
-			parseInfo = JSON.parse(fs.readFileSync(configPath));
-			console.log('parseInfo: ', parseInfo);
-
-	}});
-
+	if (!fs.existsSync(path)) {
+		console.log('configPath to be created!')
+		fs.writeFileSync(configPath, setup);
+		parseInfo = require(configPath);
+		console.log(parseInfo)
+		vscode.window.showInformationMessage('config file created!')
+	}
+	else {
+		parseInfo = require(configPath);
+		vscode.window.showInformationMessage('parseInfo: ', parseInfo);
+	}
 
 	context.subscriptions.push(vscode.commands.registerCommand('ReactION.openTree', () => {
 		ViewPanel.createOrShow(context.extensionPath, parseInfo);
