@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const vscode = require("vscode");
 const StartExtensionProvider_1 = require("./StartExtensionProvider");
-const EmbeddedViewPanel_1 = require("./EmbeddedViewPanel");
 const ViewPanel_1 = require("./ViewPanel");
 const fs = require('fs');
 const path = require('path');
@@ -51,9 +50,9 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand('ReactION.openTree', () => {
         ViewPanel_1.default.createOrShow(context.extensionPath, parseInfo);
     }));
-    context.subscriptions.push(vscode.commands.registerCommand('ReactION.openWeb', () => {
-        EmbeddedViewPanel_1.default.createOrShow(context.extensionPath, parseInfo);
-    }));
+    // context.subscriptions.push(vscode.commands.registerCommand('ReactION.openWeb', () => {
+    // 	EmbeddedViewPanel.createOrShow(context.extensionPath, parseInfo);
+    // }));
     vscode.window.registerTreeDataProvider('startExtension', new StartExtensionProvider_1.default());
 }
 exports.activate = activate;

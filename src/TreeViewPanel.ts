@@ -9,6 +9,8 @@ export default {
 				scheme: 'vscode-resource'
 			});
 
+			console.log(stringifiedTreeData)
+
 			return `
 		<!DOCTYPE html>
 		<html lang="en">

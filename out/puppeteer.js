@@ -55,7 +55,6 @@ class Puppeteer {
                             "level": `${level}`,
                             "id": `${globalId}`,
                             "parentId": `${parentId}`,
-                            "display": "none",
                             "props": Object.keys(root.sibling.memoizedProps)
                         });
                         traverse(root.sibling, level, parentId);
