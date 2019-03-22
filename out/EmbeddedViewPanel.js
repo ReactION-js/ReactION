@@ -7,25 +7,22 @@ const htmlViewPanel_1 = require("./htmlViewPanel");
 const TreeNode_1 = require("./TreeNode");
 class EmbeddedViewPanel {
     // Constructor for tree view and html panel
-    constructor(htmlPanel, treePanel) {
+    constructor(htmlPanel, treePanel, parseInfo) {
         this._disposables = [];
         this._htmlPanel = htmlPanel;
         this._treePanel = treePanel;
+        this._parseInfo = parseInfo;
+        // Starts the instance of the embedded webview
+        this._htmlPanel.webview.html = this._getPreviewHtmlForWebview();
         // Running Puppeteer to access React page context
-        this._page = new Puppeteer_1.default();
-        this._page._headless = true;
+        this._page = new Puppeteer_1.default(parseInfo);
         this._page.start();
-        // ******* fix this set interval... doesn't need it ******
         setInterval(() => {
             this._update();
         }, 1000);
         this._treePanel.onDidDispose(() => this.dispose(), null, this._disposables);
-        this._treePanel.onDidChangeViewState(e => {
-            if (this._treePanel.visible) {
-            }
-        }, null, this._disposables);
     }
-    static createOrShow() {
+    static createOrShow(extensionPath, parseInfo) {
         const treeColumn = vscode.ViewColumn.Three;
         const htmlColumn = vscode.ViewColumn.Two;
         if (EmbeddedViewPanel.currentPanel) {
@@ -47,7 +44,7 @@ class EmbeddedViewPanel {
             retainContextWhenHidden: true,
             enableCommandUris: true
         });
-        EmbeddedViewPanel.currentPanel = new EmbeddedViewPanel(htmlPanel, treePanel);
+        EmbeddedViewPanel.currentPanel = new EmbeddedViewPanel(htmlPanel, treePanel, parseInfo);
     }
     dispose() {
         EmbeddedViewPanel.currentPanel = undefined;
@@ -62,7 +59,6 @@ class EmbeddedViewPanel {
         }
     }
     async _update() {
-        this._htmlPanel.webview.html = this._getPreviewHtmlForWebview();
         let rawReactData = await this._page.scrape();
         // Build out TreeNode class for React D3 Tree.
         function buildTree(rawReactData) {
@@ -91,9 +87,9 @@ class EmbeddedViewPanel {
         this._treePanel.webview.html = this._getHtmlForWebview(treeData);
     }
     // Putting scraped meta-data to D3 tree diagram
-    _getHtmlForWebview(rawReactData) {
-        const stringifiedFlatData = JSON.stringify(rawReactData);
-        return treeViewPanel_1.default.generateD3(stringifiedFlatData);
+    _getHtmlForWebview(treeData) {
+        const stringifiedFlatData = JSON.stringify(treeData);
+        return treeViewPanel_1.default.generateD3(stringifiedFlatData, this._parseInfo);
     }
     _getPreviewHtmlForWebview() {
         return htmlViewPanel_1.default.html;
