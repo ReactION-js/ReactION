@@ -1,4 +1,4 @@
-const pptr = require('puppeteer-core');
+const puppeteer = require('puppeteer-core');
 
 export default class Puppeteer {
 
@@ -11,7 +11,6 @@ export default class Puppeteer {
 
 	// Default properties for the Puppeteer class.
 	public constructor(parseInfo: any) {
-
 		this._headless = false;
 		this._executablePath = '/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome';
 		this._pipe = true;
@@ -23,7 +22,7 @@ export default class Puppeteer {
 	// Creates an instance of puppeteer browser and page,
 	// opens to _url, defaults to localhost:3000
 	public async start() {
-		this._browser = await pptr.launch(
+		this._browser = await puppeteer.launch(
 			{
 				headless: this._headless,
 				executablePath: this._executablePath,
@@ -35,7 +34,7 @@ export default class Puppeteer {
 			.then((pageArr: any) => {
 				return pageArr[0];
 			});
-		this._page.goto(this._url, { waitUntil: 'networkidle0' });
+		this._page.goto(this._url);
 
 		return await this._page;
 	}

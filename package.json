@@ -41,7 +41,7 @@
       },
       {
         "command": "ReactION.openWeb",
-        "title": "ReactION: <BETA> Open Embedded Webview"
+        "title": "ReactION: Embedded Webview"
       }
     ]
   },
