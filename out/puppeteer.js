@@ -1,11 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const pptr = require('puppeteer-core');
+const puppeteer = require('puppeteer-core');
 class Puppeteer {
     // Default properties for the Puppeteer class.
     constructor(parseInfo) {
         this._headless = false;
-        this._executablePath = '/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome';
+        this._executablePath = parseInfo.executablePath;
         this._pipe = true;
         this._url = parseInfo.localhost;
         this._page = '';
@@ -14,7 +14,7 @@ class Puppeteer {
     // Creates an instance of puppeteer browser and page,
     // opens to _url, defaults to localhost:3000
     async start() {
-        this._browser = await pptr.launch({
+        this._browser = await puppeteer.launch({
             headless: this._headless,
             executablePath: this._executablePath,
             pipe: this._pipe,
@@ -23,7 +23,7 @@ class Puppeteer {
             .then((pageArr) => {
             return pageArr[0];
         });
-        this._page.goto(this._url, { waitUntil: 'networkidle0' });
+        this._page.goto(this._url);
         return await this._page;
     }
     // Recursive React component scraping algorithm
@@ -55,7 +55,6 @@ class Puppeteer {
                             "level": `${level}`,
                             "id": `${globalId}`,
                             "parentId": `${parentId}`,
-                            "display": "none",
                             "props": Object.keys(root.sibling.memoizedProps)
                         });
                         traverse(root.sibling, level, parentId);
