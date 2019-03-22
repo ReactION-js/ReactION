@@ -50,9 +50,9 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand('ReactION.openTree', () => {
         ViewPanel_1.default.createOrShow(context.extensionPath, parseInfo);
     }));
-    // context.subscriptions.push(vscode.commands.registerCommand('ReactION.openWeb', () => {
-    // 	EmbeddedViewPanel.createOrShow(context.extensionPath, parseInfo);
-    // }));
+    context.subscriptions.push(vscode.commands.registerCommand('ReactION.openWeb', () => {
+        EmbeddedViewPanel_1.default.createOrShow(context.extensionPath, parseInfo);
+    }));
     vscode.window.registerTreeDataProvider('startExtension', new StartExtensionProvider_1.default());
 }
 exports.activate = activate;
