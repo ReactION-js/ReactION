@@ -48,7 +48,7 @@ export function activate(context: vscode.ExtensionContext) {
 			console.log(err);
 		}
 		if (!stats) {
-			fs.writeFileSync(configPath, JSON.stringify(setup));
+			fs.writeFileSync(configPath, JSON.stringify(setup, null, '\t'));
 		}
 		else {
 			// else read off and apply config to the running instance
