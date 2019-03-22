@@ -42,9 +42,13 @@
       },
       {
         "command": "ReactION.openWeb",
-        "title": "ReactION: <BETA> Open Embedded Webview"
+        "title": "ReactION: Embedded Webview"
       }
     ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ReactION-js/ReactION"
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
