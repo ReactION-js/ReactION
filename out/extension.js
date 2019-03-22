@@ -14,6 +14,7 @@ function activate(context) {
     const configPath = path.join(rootPath, "reactION-config.json");
     const setup = {};
     setup.system = process.platform;
+    // Setting the executable path on config file based on user's OS.
     switch (setup.system) {
         // For iOS environment.
         case 'darwin':

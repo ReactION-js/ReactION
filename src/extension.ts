@@ -17,6 +17,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	setup.system = process.platform;
 
+	// Setting the executable path on config file based on user's OS.
 	switch(setup.system) {
 
 		// For iOS environment.
