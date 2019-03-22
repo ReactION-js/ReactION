@@ -60,9 +60,6 @@ Configure by using the following configuration:
 ## Contributing  
 ReactION is currently in beta release. Please let us know about bugs and suggestions at ReactION@email.com.  Feel free to fork this repo and submit pull requests! 
 
-## Watch It  
-[Watch an animated gif](src/Demo.gif) showing how to open the preview and debug a browser app.
-
 ## Team  
 [Andy Tran](http://github.com/andyxtran) |
 [Carson Chen](http://github.com/CarsonCYChen) |
