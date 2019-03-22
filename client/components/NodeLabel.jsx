@@ -16,7 +16,6 @@ class NodeLabel extends React.PureComponent {
 	}
 
 	mouseEnter() {
-		console.log('mouse entered')
 		this.setState({
 			divStyle: {
 				display: "flex",
@@ -26,7 +25,6 @@ class NodeLabel extends React.PureComponent {
 	}
 
 	mouseOut() {
-		console.log('mouse out')
 		this.setState({
 			divStyle: {
 				display: "none",
