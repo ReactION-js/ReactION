@@ -28,7 +28,7 @@ Make sure you have *Google Chrome* installed on your computer. Also, our extensi
 6. Run the extension by clicking on the ReactION logo on the side pannel or ```ReactION:Launch```
 7. Enjoy the tree view!
 
-![](resources/demo.gif)
+![](src/Demo.gif)
 
 ## Features  
 - React Fiber Tree structure shown inside VS Code (Powered by [Chrome Headless](https://developers.google.com/web/updates/2017/04/headless-chrome)).
@@ -61,7 +61,7 @@ Configure by using the following configuration:
 ReactION is currently in beta release. Please let us know about bugs and suggestions at ReactION@email.com.  Feel free to fork this repo and submit pull requests! 
 
 ## Watch It  
-[Watch an animated gif](docs/DEBUGGING.md) showing how to open the preview and debug a browser app.
+[Watch an animated gif](src/Demo.gif) showing how to open the preview and debug a browser app.
 
 ## Team  
 [Andy Tran](http://github.com/andyxtran) |
