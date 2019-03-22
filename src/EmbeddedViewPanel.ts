@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 import Puppeteer from './Puppeteer';
 import treeView from './treeViewPanel';
 import htmlView from './htmlViewPanel';
-
 import TreeNode from './TreeNode';
 
 export default class EmbeddedViewPanel {
@@ -13,9 +12,31 @@ export default class EmbeddedViewPanel {
 	private readonly _treePanel: vscode.WebviewPanel;
 	private _disposables: vscode.Disposable[] = [];
 	public readonly _page: Puppeteer;
+	public readonly _parseInfo: any;
 
+	// Constructor for tree view and html panel
+	public constructor(
+		htmlPanel: vscode.WebviewPanel,
+		treePanel: vscode.WebviewPanel,
+		parseInfo: any
+	) {
+		this._htmlPanel = htmlPanel;
+		this._treePanel = treePanel;
+		this._parseInfo = parseInfo;
 
-	public static createOrShow() {
+		// Starts the instance of the embedded webview
+		this._htmlPanel.webview.html = this._getPreviewHtmlForWebview();
+
+		// Running Puppeteer to access React page context
+		this._page = new Puppeteer(parseInfo);
+		this._page.start();
+		setInterval(() => {
+			this._update();
+		}, 1000);
+		this._treePanel.onDidDispose(() => this.dispose(), null, this._disposables);
+	}
+
+	public static createOrShow(extensionPath: string, parseInfo: any) {
 		const treeColumn = vscode.ViewColumn.Three;
 		const htmlColumn = vscode.ViewColumn.Two;
 		if (EmbeddedViewPanel.currentPanel) {
@@ -42,32 +63,7 @@ export default class EmbeddedViewPanel {
 			enableCommandUris: true
 		});
 
-		EmbeddedViewPanel.currentPanel = new EmbeddedViewPanel(htmlPanel, treePanel);
-	}
-
-	// Constructor for tree view and html panel
-	private constructor(
-		htmlPanel: vscode.WebviewPanel,
-		treePanel: vscode.WebviewPanel,
-	) {
-		this._htmlPanel = htmlPanel;
-		this._treePanel = treePanel;
-
-		// Running Puppeteer to access React page context
-		this._page = new Puppeteer();
-		this._page._headless = true;
-		this._page.start();
-
-		// ******* fix this set interval... doesn't need it ******
-		setInterval(() => {
-			this._update();
-		}, 1000);
-		this._treePanel.onDidDispose(() => this.dispose(), null, this._disposables);
-		this._treePanel.onDidChangeViewState(e => {
-			if (this._treePanel.visible) {
-			}
-		}, null, this._disposables);
-
+		EmbeddedViewPanel.currentPanel = new EmbeddedViewPanel(htmlPanel, treePanel, parseInfo);
 	}
 
 	public dispose(): void {
@@ -86,7 +82,6 @@ export default class EmbeddedViewPanel {
 	}
 
 	private async _update(): Promise<void> {
-		this._htmlPanel.webview.html = this._getPreviewHtmlForWebview();
 		let rawReactData: Array<object> = await this._page.scrape();
 
 		// Build out TreeNode class for React D3 Tree.
@@ -118,9 +113,9 @@ export default class EmbeddedViewPanel {
 	}
 
 	// Putting scraped meta-data to D3 tree diagram
-	private _getHtmlForWebview(rawReactData: Array<object>): string {
-		const stringifiedFlatData = JSON.stringify(rawReactData);
-		return treeView.generateD3(stringifiedFlatData);
+	private _getHtmlForWebview(treeData: TreeNode): string {
+		const stringifiedFlatData = JSON.stringify(treeData);
+		return treeView.generateD3(stringifiedFlatData, this._parseInfo);
 	}
 
 	private _getPreviewHtmlForWebview(): string {
