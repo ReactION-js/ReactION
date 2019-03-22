@@ -12,7 +12,7 @@ export default class Puppeteer {
 	// Default properties for the Puppeteer class.
 	public constructor(parseInfo: any) {
 		this._headless = false;
-		this._executablePath = '/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome';
+		this._executablePath = parseInfo.executablePath;
 		this._pipe = true;
 		this._url = parseInfo.localhost;
 		this._page = '';
