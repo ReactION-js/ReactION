@@ -62,9 +62,9 @@ export function activate(context: vscode.ExtensionContext) {
 		ViewPanel.createOrShow(context.extensionPath, parseInfo);
 	}));
 
-	context.subscriptions.push(vscode.commands.registerCommand('ReactION.openWeb', () => {
-		EmbeddedViewPanel.createOrShow(context.extensionPath, parseInfo);
-	}));
+	// context.subscriptions.push(vscode.commands.registerCommand('ReactION.openWeb', () => {
+	// 	EmbeddedViewPanel.createOrShow(context.extensionPath, parseInfo);
+	// }));
 
 	vscode.window.registerTreeDataProvider('startExtension', new StartExtensionProvider());
 }
