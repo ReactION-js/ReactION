@@ -1,8 +1,10 @@
 {
   "name": "ReactION",
-  "displayName": "ReactION",
-  "description": "",
-  "version": "0.1.0",
+  "displayName": "ReactION-BETA",
+  "publisher": "ReactION-JS",
+  "description": "React Component Visualizer for VS Code",
+  "version": "0.1.1",
+  "icon": "./resources/color.png",
   "engines": {
     "vscode": "^1.31.0"
   },
@@ -41,9 +43,13 @@
       },
       {
         "command": "ReactION.openWeb",
-        "title": "ReactION: <BETA> Open Embedded Webview"
+        "title": "ReactION: Embedded Webview"
       }
     ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ReactION-js/ReactION"
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
