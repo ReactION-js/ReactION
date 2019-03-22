@@ -2,7 +2,7 @@
 // The module 'assert' provides assertion methods from node
 import * as vscode from 'vscode';
 import * as assert from 'assert';
-import { ViewPanel } from '../extension';
+import ViewPanel from '../ViewPanel';
 
 // You can import and use all API from the 'vscode' module
 // as well as import your extension to test it
@@ -18,7 +18,7 @@ const treePanel: any = vscode.window.createWebviewPanel(ViewPanel.viewType, "Vir
     enableCommandUris: true
 });
 
-ViewPanel.createOrShow(treePanel);
+ViewPanel.createOrShow('extension path', treePanel);
 
 // Defines a Mocha test suite to group tests of similar kind together
 suite("Extension Tests", function () {
