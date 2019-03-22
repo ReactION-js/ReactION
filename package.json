@@ -1,6 +1,7 @@
 {
   "name": "ReactION",
   "displayName": "ReactION",
+  "publisher": "ReactION-JS",
   "description": "",
   "version": "0.1.0",
   "engines": {
