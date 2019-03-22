@@ -2,11 +2,6 @@ import React, { Component } from 'react';
 import Tree from 'react-d3-tree';
 import NodeLabel from './NodeLabel.jsx';
 import styled from 'styled-components';
-// const path = require('path');
-// const fs = require('fs');
-
-// const userConfigPath = path.join(vscode.workspace.rootPath,"config.js");
-// const configs = JSON.parse(fs.readFileSync(userConfigPath));
 
 const TreeStyled = styled.path`
 	.linkBase {
@@ -28,7 +23,6 @@ const Name = styled.g`
 	}
 `
 const myTreeData = window._TREE_DATA;
-
 
 class D3TreeChart extends Component {
 	constructor(props) {
