@@ -2,23 +2,42 @@ import * as vscode from 'vscode';
 import StartExtensionProvider from './StartExtensionProvider';
 import EmbeddedViewPanel from './EmbeddedViewPanel';
 import ViewPanel from './ViewPanel';
-import TreeNode from './TreeNode';
 const fs = require('fs');
 const path = require('path');
-const os = require('os');
+// const os = require('os');
 
-let parseInfo;
+let parseInfo: {};
 
 // Method called when extension is activated
 export function activate(context: vscode.ExtensionContext) {
 
-	console.log('workspaceFolders:', vscode.workspace.rootPath);
 	const rootPath = vscode.workspace.rootPath;
 	const configPath = path.join(rootPath, "reactION-config.json");
 	const setup: any = {};
 
-	setup.system = os.platform();
-	setup.executablePath = '';
+	setup.system = process.platform;
+
+	// Setting the executable path on config file based on user's OS.
+	switch(setup.system) {
+
+		// For iOS environment.
+		case 'darwin':
+			setup.executablePath = '/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome';
+			break;
+
+		// For Linux environment.
+		case 'linux':
+			setup.executablePath = '';
+			vscode.window.showInformationMessage('Please specify your Chrominum executablePath in reactION.config.json file created in your local directory.');
+			break;
+
+		// For Window 10 environment.
+		case 'win32':
+			setup.executablePath = 'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe';
+			break;
+		default:
+			vscode.window.showInformationMessage('Current Operating System is not supported.');
+	}
 	setup.localhost = 'localhost:3000';
 	setup.headless_browser = false;
 	setup.headless_embedded = true;
@@ -29,7 +48,7 @@ export function activate(context: vscode.ExtensionContext) {
 			console.log(err);
 		}
 		if (!stats) {
-			fs.writeFileSync(configPath, JSON.stringify(setup));
+			fs.writeFileSync(configPath, JSON.stringify(setup, null, '\t'));
 		}
 		else {
 			// else read off and apply config to the running instance
@@ -43,9 +62,9 @@ export function activate(context: vscode.ExtensionContext) {
 		ViewPanel.createOrShow(context.extensionPath, parseInfo);
 	}));
 
-	context.subscriptions.push(vscode.commands.registerCommand('ReactION.openWeb', () => {
-		EmbeddedViewPanel.createOrShow();
-	}));
+	// context.subscriptions.push(vscode.commands.registerCommand('ReactION.openWeb', () => {
+	// 	EmbeddedViewPanel.createOrShow(context.extensionPath, parseInfo);
+	// }));
 
 	vscode.window.registerTreeDataProvider('startExtension', new StartExtensionProvider());
 }
