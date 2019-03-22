@@ -6,16 +6,31 @@ const EmbeddedViewPanel_1 = require("./EmbeddedViewPanel");
 const ViewPanel_1 = require("./ViewPanel");
 const fs = require('fs');
 const path = require('path');
-const os = require('os');
+// const os = require('os');
 let parseInfo;
 // Method called when extension is activated
 function activate(context) {
-    console.log('workspaceFolders:', vscode.workspace.rootPath);
     const rootPath = vscode.workspace.rootPath;
     const configPath = path.join(rootPath, "reactION-config.json");
     const setup = {};
-    setup.system = os.platform();
-    setup.executablePath = '';
+    setup.system = process.platform;
+    switch (setup.system) {
+        // For iOS environment.
+        case 'darwin':
+            setup.executablePath = '/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome';
+            break;
+        // For Linux environment.
+        case 'linux':
+            setup.executablePath = '';
+            vscode.window.showInformationMessage('Please specify your Chrominum executablePath in reactION.config.json file created in your local directory.');
+            break;
+        // For Window 10 environment.
+        case 'win32':
+            setup.executablePath = 'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe';
+            break;
+        default:
+            vscode.window.showInformationMessage('Current Operating System is not supported.');
+    }
     setup.localhost = 'localhost:3000';
     setup.headless_browser = false;
     setup.headless_embedded = true;
