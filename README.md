@@ -14,10 +14,20 @@
 
 With [ReactION](https://github.com/ReactION-js/ReactION/)'s hot-reloading HTML previewer and component visualizer you can optimize your React development workflow. ReactION is currently in <i>active development</i> so we welcome any constructive feedback or contributions to this product. Please follow this repo for contribution guidelines and our development road map.
 
+## Features in the pipeline
+======================[For Picture] =============================
+1. No setup required- ReactION requires NO modification to your codebase, but installing the VS Code extension.
+2. Works with any React application - ReactION supports React 16.1+ (including React Fiber) and React Router v4.
+3. Visualize your app - ReactION shows the current structure of your application in real time on hot reload.
+4. Preview your HTML - Live render of your App through the in-editor HTML preview in sync with the tree view.
+5. From Tree to Codes - ReactION will open up the React file that is associated with the particular component on the tree view when you click it. 
+6. Gain quick insights into your React tree state - the React tree nodes will have different colors based on its current state and props, including the latest component change.
+7. Debug your React - With ReactION, you can travel through different state changes of your React application
+
 ## Prerequisite
 Make sure you have *Google Chrome* installed on your computer. Also, our extension currently only runs in VS Code environment, so make sure you are using VS Code as the code editor.
 
-## Demo
+## Demo of current product
 ![](src/Demo.gif)
 
 ## How to Use 
@@ -43,17 +53,15 @@ You can download the extension directly from the [Marketplace](https://marketpla
 - [ ] Clicking on the node triggering associated React component file
 - [ ] Re-rendering on save
 - [ ] Node color difference based on its status
+- [ ] Time Traveling your React application
 
-## Add Browser Preview for the Ultimate Experience  
-You can enable in-editor HTML preview by installing [Browser Preview](https://marketplace.visualstudio.com/items?itemName=auchenberg.vscode-browser-preview)
-
-## Changing Default Settings  
-You can change the following default seetings in the Configuration file:
+## Configuring ReactION's Default Settings  
+You can change the following default settings in the Configuration file:
 - React Tree View Theme
-- Server to launch when starting the extension
+- Change the server port that ReactION listens to
+- Change whether or not to have an external Chrome instance
 
-Configure by using the following configuration:
-
+You can configure ReactION's default settings through the ReactION-config.json file as such:
 
 ```json
 {
@@ -65,7 +73,6 @@ Configure by using the following configuration:
   "reactTheme": "dark"
 }
 ```
-
 ## Contributing  
 ReactION is currently in beta release. Please let us know about bugs and suggestions at the [issue](https://github.com/ReactION-js/ReactION/issues) section.  Feel free to fork this repo and submit pull requests! 
 
