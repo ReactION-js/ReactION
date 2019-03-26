@@ -82,6 +82,7 @@ You can configure ReactION's default settings through the ReactION-config.json f
 - [React](https://reactjs.org/) - Webview
 - [React-D3-Tree](https://github.com/bkrem/react-d3-tree) - Visualize components
 - [Mocha](https://mochajs.org/) - Testing
+- Love ❤️
 
 ## Contributing  
 ReactION is currently in beta release. Please let us know about bugs and suggestions at the [issue](https://github.com/ReactION-js/ReactION/issues) section.  Feel free to fork this repo and submit pull requests! 
