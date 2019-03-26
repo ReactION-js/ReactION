@@ -10,9 +10,9 @@
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/ReactION-js/ReactION/pulls) 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/ReactION-js/ReactION/LICENSE)
 
-<h4 align="center">A React development enviornment with hot-reloading HTML previewer and component visualizer inside your editor.</h4>
+<h4 align="center">A React development enviornment inside your editor.</h4>
 
-[ReactION](https://github.com/ReactION-js/ReactION/) optimizes your React devlopement workflow. [ReactION](https://github.com/ReactION-js/ReactION/) is powered by [Chrome Headless](https://developers.google.com/web/updates/2017/04/headless-chrome), and works by starting a headless Chrome instance in a new process. This enables a secure way to render web content inside VS Code, and enables interesting features such as in-editor debugging and more!
+[ReactION](https://github.com/ReactION-js/ReactION/)with hot-reloading HTML previewer and component visualizer optimizes your React development workflow.
 
 #### ReactION is in active development. Please follow this repo for contribution guidelines and our development road map.
 
