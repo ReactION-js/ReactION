@@ -2,7 +2,7 @@
   <br>
     <img src="https://github.com/jsliapark/ReactION/blob/staging/resources/Text_2.png?raw=true" alt="logo" width="400">
   <br>
-  React Component Visualizer for VS Code
+  Dedicated React IDE VS Code
   <br>
   <br>
 </h1>
