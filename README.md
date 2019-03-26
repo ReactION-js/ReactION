@@ -10,20 +10,20 @@
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/ReactION-js/ReactION/pulls) 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/ReactION-js/ReactION/LICENSE)
 
-<h4 align="center">A React development enviornment inside your VS Code editor.</h4>
+<h4 align="center">A React development environment inside your VS Code editor.</h4>
 
 [ReactION](https://github.com/ReactION-js/ReactION/)'s hot-reloading HTML previewer and component visualizer helps you streamline your React development workflow. ReactION is currently in <i>active development</i> so we welcome any constructive feedback or contributions to this product. Please follow this repo for contribution guidelines and our development road map.
 
 ## Features in the pipeline
 ![]<img src="https://github.com/ReactION-js/ReactION/blob/master/src/ReactION-sample.png" alt="features">
 <br>
-1. No setup required- ReactION requires NO modification to your codebase, but installing the VS Code extension.
-2. Works with any React application - ReactION supports React 16.1+ (including React Fiber) and React Router v4.
-3. Visualize your app - ReactION shows the current structure of your application in real time on hot reload.
-4. Preview your HTML - Live render of your App through the in-editor HTML preview in sync with the tree view.
-5. From Tree to Codes - ReactION will open up the React file that is associated with the particular component on the tree view when you click it. 
-6. Gain quick insights into your React tree state - the React tree nodes will have different colors based on its current state and props, including the latest component change.
-7. Debug your React - With ReactION, you can travel through different state changes of your React application
+
+1. Works with any React application - ReactION supports React 16.1+ (including React Fiber) and React Router v4.
+2. Visualize your app - ReactION shows the current structure of your application in real time with hot reloading.
+3. Preview your HTML - Live render of your App through the in-editor HTML preview in sync with the tree view.
+4. From Tree to Codes - ReactION will open up the React file that is associated with the particular component on the tree view when you click it. 
+5. Gain quick insights into your React tree state - the React tree nodes will have different colors based on its current state and props, including the latest component change.
+6. Debug your React - With ReactION, you can travel through different state changes of your React application
 
 ## Prerequisite
 Make sure you have *Google Chrome* installed on your computer. Also, our extension currently only runs in VS Code environment, so make sure you are using VS Code as the code editor.
@@ -32,6 +32,7 @@ Make sure you have *Google Chrome* installed on your computer. Also, our extensi
 ![](src/Demo.gif)
 
 ## Current Features  
+- [x] No setup required! ReactION requires NO modification to your codebase, but installing the VS Code extension.
 - [x] React Fiber Tree structure shown inside VS Code (Powered by [Chrome Headless](https://developers.google.com/web/updates/2017/04/headless)).
 - [x] Ability to edit components on the HTML preview and see the component hierarchy on the side panel.
 - [x] Alternatable theme based on user preference (i.e., Light and Dark).
