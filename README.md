@@ -12,7 +12,7 @@
 
 <h4 align="center">A React development enviornment inside your editor.</h4>
 
-[ReactION](https://github.com/ReactION-js/ReactION/)with hot-reloading HTML previewer and component visualizer optimizes your React development workflow.
+With [ReactION](https://github.com/ReactION-js/ReactION/)'s hot-reloading HTML previewer and component visualizer you can optimize your React development workflow.
 
 #### ReactION is in active development. Please follow this repo for contribution guidelines and our development road map.
 
