@@ -30,6 +30,18 @@ Make sure you have *Google Chrome* installed on your computer. Also, our extensi
 ## Demo of current product
 ![](src/Demo.gif)
 
+## Current Features  
+- [x] React Fiber Tree structure shown inside VS Code (Powered by [Chrome Headless](https://developers.google.com/web/updates/2017/04/headless)).
+- [x] Ability to edit components on the HTML preview and see the component hierarchy on the side panel.
+- [x] Alternatable theme based on user preference (i.e., Light and Dark).
+
+## Vision
+- [ ] In-editor HTML preview in sync with the tree view
+- [ ] Clicking on the node triggering associated React component file
+- [ ] Re-rendering on save
+- [ ] Node color difference based on its status
+- [ ] Time Traveling your React application
+
 ## How to Use 
 #### [Download Directly from GitHub]  
 1. Clone the repo and run ```npm install```
@@ -42,18 +54,6 @@ Make sure you have *Google Chrome* installed on your computer. Also, our extensi
 
 #### [Download From VS Code Marketplace]
 You can download the extension directly from the [Marketplace](https://marketplace.visualstudio.com/items?itemName=ReactION-js.ReactION).
-
-## Current Features  
-- [x] React Fiber Tree structure shown inside VS Code (Powered by [Chrome Headless](https://developers.google.com/web/updates/2017/04/headless)).
-- [x] Ability to edit components on the HTML preview and see the component hierarchy on the side panel.
-- [x] Alternatable theme based on user preference (i.e., Light and Dark).
-
-## Vision
-- [ ] In-editor HTML preview in sync with the tree view
-- [ ] Clicking on the node triggering associated React component file
-- [ ] Re-rendering on save
-- [ ] Node color difference based on its status
-- [ ] Time Traveling your React application
 
 ## Configuring ReactION's Default Settings  
 You can change the following default settings in the Configuration file:
