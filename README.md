@@ -10,7 +10,7 @@
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/ReactION-js/ReactION/pulls) 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/ReactION-js/ReactION/LICENSE)
 
-<h4 align="center">A React development enviornment inside your editor.</h4>
+<h4 align="center">A React development enviornment inside your VS Code editor.</h4>
 
 With [ReactION](https://github.com/ReactION-js/ReactION/)'s hot-reloading HTML previewer and component visualizer you can optimize your React development workflow. ReactION is currently in <i>active development</i> so we welcome any constructive feedback or contributions to this product. Please follow this repo for contribution guidelines and our development road map.
 
