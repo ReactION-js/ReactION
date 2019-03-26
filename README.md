@@ -15,7 +15,7 @@
 [ReactION](https://github.com/ReactION-js/ReactION/)'s hot-reloading HTML previewer and component visualizer helps you streamline your React development workflow. ReactION is currently in <i>active development</i> so we welcome any constructive feedback or contributions to this product. Please follow this repo for contribution guidelines and our development road map.
 
 ## Features in the pipeline
-<img src="https://github.com/ReactION-js/ReactION/blob/master/src/ReactION-sample.png" alt="features">
+![]<img src="https://github.com/ReactION-js/ReactION/blob/master/src/ReactION-sample.png" alt="features">
 <br>
 1. No setup required- ReactION requires NO modification to your codebase, but installing the VS Code extension.
 2. Works with any React application - ReactION supports React 16.1+ (including React Fiber) and React Router v4.
