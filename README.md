@@ -26,7 +26,8 @@
 6. Debug your React - With ReactION, you can travel through different state changes of your React application
 
 ## Prerequisite
-Make sure you have *Google Chrome* installed on your computer. Also, our extension currently only runs in VS Code environment, so make sure you are using VS Code as the code editor.
+- Make sure you have *Google Chrome* installed on your computer. Also, our extension currently only runs in VS Code environment, so make sure you are using VS Code as the code editor. 
+- Also, you will need a React application. Feel free to fork and clone our sample app [here!](https://github.com/ReactION-js/sample-project-react)
 
 ## Demo of current product
 ![](src/Demo.gif)
