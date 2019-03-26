@@ -35,7 +35,7 @@ Make sure you have *Google Chrome* installed on your computer. Also, our extensi
 - [x] Ability to edit components on the HTML preview and see the component hierarchy on the side panel.
 - [x] Alternatable theme based on user preference (i.e., Light and Dark).
 
-## Vision
+## In Progress
 - [ ] In-editor HTML preview in sync with the tree view
 - [ ] Clicking on the node triggering associated React component file
 - [ ] Re-rendering on save
