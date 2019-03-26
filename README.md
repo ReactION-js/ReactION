@@ -73,6 +73,16 @@ You can configure ReactION's default settings through the ReactION-config.json f
   "reactTheme": "dark"
 }
 ```
+
+## Built With
+- TypeScript
+- Node.js
+- Puppeteer
+- WebSockets
+- React
+- React-D3-Tree
+- Mocha
+
 ## Contributing  
 ReactION is currently in beta release. Please let us know about bugs and suggestions at the [issue](https://github.com/ReactION-js/ReactION/issues) section.  Feel free to fork this repo and submit pull requests! 
 
