@@ -75,13 +75,13 @@ You can configure ReactION's default settings through the ReactION-config.json f
 ```
 
 ## Built With
-- TypeScript(https://www.typescriptlang.org/) - For the codebase
-- Node.js(https://nodejs.org/en/) - File system, testing, core extension functionality
-- Puppeteer(https://pptr.dev/) - Headless Chrome browser
-- WebSockets(https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API) - Connection between HTML and tree view
-- React(https://reactjs.org/) - Webview
-- React-D3-Tree(https://github.com/bkrem/react-d3-tree) - Visualize components
-- Mocha(https://mochajs.org/) - Testing
+- [TypeScript](https://www.typescriptlang.org/) - For the codebase
+- [Node.js](https://nodejs.org/en/) - File system, testing, core extension functionality
+- [Puppeteer](https://pptr.dev/) - Headless Chrome browser
+- [WebSockets](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API) - Connection between HTML and tree view
+- [React](https://reactjs.org/) - Webview
+- [React-D3-Tree](https://github.com/bkrem/react-d3-tree) - Visualize components
+- [Mocha](https://mochajs.org/) - Testing
 
 ## Contributing  
 ReactION is currently in beta release. Please let us know about bugs and suggestions at the [issue](https://github.com/ReactION-js/ReactION/issues) section.  Feel free to fork this repo and submit pull requests! 
