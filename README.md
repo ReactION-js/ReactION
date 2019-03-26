@@ -100,5 +100,5 @@ ReactION is currently in beta release. Please let us know about bugs and suggest
 [Yoojin Jung](https://github.com/jsliapark/ReactION/blob/staging/resources/Text_2.png)
 
 ## License  
-MIT - check out [licence](https://github.com/ReactION-js/ReactION/LICENSE) page for more details
+MIT - check out [license](https://github.com/ReactION-js/ReactION/LICENSE) page for more details
 
