@@ -16,6 +16,7 @@
 
 ## Features in the pipeline
 <img src="https://github.com/ReactION-js/ReactION/blob/master/src/ReactION-sample.png" alt="features">
+<br>
 1. No setup required- ReactION requires NO modification to your codebase, but installing the VS Code extension.
 2. Works with any React application - ReactION supports React 16.1+ (including React Fiber) and React Router v4.
 3. Visualize your app - ReactION shows the current structure of your application in real time on hot reload.
