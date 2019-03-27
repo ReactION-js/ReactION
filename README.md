@@ -18,8 +18,6 @@
 <img src="https://github.com/ReactION-js/ReactION/blob/master/src/ReactION-sample.png?raw=true" alt="features">
 <br>
 
-![](src/ReactION-sample.png)
-
 1. **Works with any React application** - ReactION supports React 16.1+ (including React Fiber) and React Router v4.
 2. **Visualize your app** - ReactION shows the current structure of your application in real time with hot reloading.
 3. **Preview your HTML** - Live render of your App through the in-editor HTML preview in sync with the tree view.
