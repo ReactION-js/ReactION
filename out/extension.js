@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const vscode = require("vscode");
 const StartExtensionProvider_1 = require("./StartExtensionProvider");
+const EmbeddedViewPanel_1 = require("./EmbeddedViewPanel");
 const ViewPanel_1 = require("./ViewPanel");
 const fs = require('fs');
 const path = require('path');
