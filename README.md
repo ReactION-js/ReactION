@@ -12,7 +12,7 @@
 
 <h4 align="center">A React development environment inside your VS Code editor.</h4>
 
-[ReactION](https://github.com/ReactION-js/ReactION/)'s hot-reloading HTML previewer and component visualizer helps you streamline your React development workflow. ReactION is currently in <i>active development</i> so we welcome any constructive feedback or contributions to this product. Please follow this repo for contribution guidelines and our development road map.
+[ReactION](https://github.com/ReactION-js/ReactION)'s hot-reloading HTML previewer and component visualizer helps you streamline your React development workflow. ReactION is currently in <i>active development</i> so we welcome any constructive feedback or contributions to this product. Please follow this repo for contribution guidelines and our development road map.
 
 ## Features in the pipeline
 <img src="https://github.com/ReactION-js/ReactION/blob/master/src/ReactION-sample.png" alt="features">
@@ -26,7 +26,7 @@
 6. **Debug your React** - With ReactION, you can travel through different state changes of your React application
 
 ## Prerequisite
-- Make sure you have *Google Chrome* installed on your computer. Also, our extension currently only runs in VS Code environment, so make sure you are using VS Code as the code editor. 
+- Make sure you have [Google Chrome](https://www.google.com/chrome/) installed on your computer. Also, our extension currently only runs in VS Code environment, so make sure you are using VS Code as the code editor. 
 - Also, you will need a React application. Feel free to fork and clone our sample app [here!](https://github.com/ReactION-js/sample-project-react)
 
 ## Demo of current product
