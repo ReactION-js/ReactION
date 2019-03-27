@@ -7,7 +7,7 @@
   <br>
 </h1>
 
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/ReactION-js/ReactION/pulls) 
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/ReactION-js/ReactION/pulls)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/ReactION-js/ReactION/LICENSE)
 
 <h4 align="center">A React development environment inside your VS Code editor.</h4>
@@ -15,24 +15,26 @@
 [ReactION](https://reactionjs.io/)'s hot-reloading HTML previewer and component visualizer helps you streamline your React development workflow. ReactION is currently in <i>active development</i> so we welcome any constructive feedback or contributions to this product. Please follow this repo for contribution guidelines and our development road map.
 
 ## Features in the pipeline
-<img src="https://github.com/ReactION-js/ReactION/blob/master/src/ReactION-sample.png" alt="features">
+<img src="https://github.com/ReactION-js/ReactION/blob/master/src/ReactION-sample.png?raw=true" alt="features">
 <br>
+
+![](src/ReactION-sample.png)
 
 1. **Works with any React application** - ReactION supports React 16.1+ (including React Fiber) and React Router v4.
 2. **Visualize your app** - ReactION shows the current structure of your application in real time with hot reloading.
 3. **Preview your HTML** - Live render of your App through the in-editor HTML preview in sync with the tree view.
-4. **From Tree to Codes** - ReactION will open up the React file that is associated with the particular component on the tree view when you click it. 
+4. **From Tree to Codes** - ReactION will open up the React file that is associated with the particular component on the tree view when you click it.
 5. **Gain quick insights into your React tree state** - the React tree nodes will have different colors based on its current state and props, including the latest component change.
 6. **Debug your React** - With ReactION, you can travel through different state changes of your React application
 
 ## Prerequisite
-- Make sure you have [Google Chrome](https://www.google.com/chrome/) installed on your computer. Also, our extension currently only runs in VS Code environment, so make sure you are using VS Code as the code editor. 
+- Make sure you have [Google Chrome](https://www.google.com/chrome/) installed on your computer. Also, our extension currently only runs in VS Code environment, so make sure you are using VS Code as the code editor.
 - Also, you will need a React application. Feel free to fork and clone our sample app [here!](https://github.com/ReactION-js/sample-project-react)
 
 ## Demo of current product
 ![](src/Demo.gif)
 
-## Current Features  
+## Current Features
 - [x] No setup required! ReactION requires NO modification to your codebase, but installing the VS Code extension.
 - [x] React Fiber Tree structure shown inside VS Code (Powered by [Chrome Headless](https://developers.google.com/web/updates/2017/04/headless)).
 - [x] Ability to edit components on the HTML preview and see the component hierarchy on the side panel.
@@ -45,13 +47,13 @@
 - [ ] Node color difference based on its status
 - [ ] Time Traveling your React application
 
-## How to Use 
-#### [Download Directly from GitHub]  
+## How to Use
+#### [Download Directly from GitHub]
 1. Clone the repo and run ```npm install```
 2. Run ```npm run build ```
 3. Open VS Code Extension mode by pressing ```F5``` or ```ctr+5```
 4. When a new VS Code window pops up, open the React code file that you want to run the extension on
-5. ```npm start``` your React file and run your application in ```localhost:3000``` (default) 
+5. ```npm start``` your React file and run your application in ```localhost:3000``` (default)
 6. Run the main extension by clicking on the ReactION logo on the side panel or ```ReactION:Launch```
 7. Run the embedded HTML webview version with the command ```cmd + shift + p``` then ```ReactION: Embedded Webview```
 8. Enjoy the tree view!
@@ -59,7 +61,7 @@
 #### [Download From VS Code Marketplace]
 You can download the extension directly from the [Marketplace](https://marketplace.visualstudio.com/items?itemName=ReactION-js.ReactION).
 
-## Configuring ReactION's Default Settings  
+## Configuring ReactION's Default Settings
 You can change the following default settings in the Configuration file:
 - React Tree View Theme
 - Change the server port that ReactION listens to
@@ -88,18 +90,18 @@ You can configure ReactION's default settings through the ReactION-config.json f
 - [Mocha](https://mochajs.org/) - Testing
 - Love ❤️
 
-## Contributing  
-ReactION is currently in beta release. Please let us know about bugs and suggestions at the [issue](https://github.com/ReactION-js/ReactION/issues) section.  Feel free to fork this repo and submit pull requests! 
+## Contributing
+ReactION is currently in beta release. Please let us know about bugs and suggestions at the [issue](https://github.com/ReactION-js/ReactION/issues) section.  Feel free to fork this repo and submit pull requests!
 
-## Team  
+## Team
 [Andy Tran](http://github.com/andyxtran) |
 [Carson Chen](http://github.com/CarsonCYChen) |
 [Daniel Wu](http://github.com/wdanni) |
-[Jinsung Park](http://github.com/jsliapark) 
+[Jinsung Park](http://github.com/jsliapark)
 
-## Designer  
+## Designer
 [Yoojin Jung](https://github.com/jsliapark/ReactION/blob/staging/resources/Text_2.png)
 
-## License  
+## License
 MIT - check out [license](https://github.com/ReactION-js/ReactION/LICENSE) page for more details
 
