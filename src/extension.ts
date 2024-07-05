@@ -1,17 +1,22 @@
 import * as vscode from 'vscode';
-import StartExtensionProvider from './StartExtensionProvider';
+import StartExtensionProvider from './startExtensionProvider';
 import EmbeddedViewPanel from './EmbeddedViewPanel';
 import ViewPanel from './ViewPanel';
 const fs = require('fs');
 const path = require('path');
-// const os = require('os');
 
 let parseInfo: {};
+let subscriptions: { dispose: () => void }[] = [];
 
 // Method called when extension is activated
 export function activate(context: vscode.ExtensionContext) {
+	const workspaceFolders = vscode.workspace.workspaceFolders;
+	if (!workspaceFolders) {
+		vscode.window.showErrorMessage("No workspace is opened. Please open a workspace and try again.");
+		return;
+	}
 
-	const rootPath = vscode.workspace.rootPath;
+	const rootPath = workspaceFolders[0].uri.fsPath;
 	const configPath = path.join(rootPath, "reactION-config.json");
 	const setup: any = {};
 
@@ -58,16 +63,23 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 
-	context.subscriptions.push(vscode.commands.registerCommand('ReactION.openTree', () => {
+	subscriptions.push(vscode.commands.registerCommand('ReactION.openTree', () => {
 		ViewPanel.createOrShow(context.extensionPath, parseInfo);
 	}));
 
-	context.subscriptions.push(vscode.commands.registerCommand('ReactION.openWeb', () => {
+	subscriptions.push(vscode.commands.registerCommand('ReactION.openWeb', () => {
 		EmbeddedViewPanel.createOrShow(context.extensionPath, parseInfo);
 	}));
 
 	vscode.window.registerTreeDataProvider('startExtension', new StartExtensionProvider());
+
+	context.subscriptions.push(...subscriptions);
 }
 
 // This method is called when your extension is deactivated
-export function deactivate() { }
+export function deactivate() {
+    // Dispose of subscriptions
+    subscriptions.forEach(subscription => subscription.dispose());
+    subscriptions = [];
+    console.log("Extension has been deactivated");
+}

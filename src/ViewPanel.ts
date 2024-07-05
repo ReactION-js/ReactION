@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import treeView from './treeViewPanel';
-import Puppeteer from './Puppeteer';
+import treeView from './TreeViewPanel';
+import Puppeteer from './puppeteer';
 import TreeNode from './TreeNode';
 
 export default class ViewPanel {

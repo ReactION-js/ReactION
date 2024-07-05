@@ -1,13 +1,15 @@
 import React, { Component } from 'react';
-import D3TreeChart from './components/TreeView.jsx';
+import D3TreeChart from './components/TreeView';
 
-class App extends Component {
+interface Props {}
+
+class App extends Component<Props> {
 	render() {
 		return (
 			<div>
 				<D3TreeChart />
 			</div>
-		)
+		);
 	}
 }
 
