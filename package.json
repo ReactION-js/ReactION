@@ -12,10 +12,7 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:ReactION.openTree",
-    "onCommand:ReactION.openWeb",
-    "onWebviewPanel:ReactION",
-    "onView:startExtension"
+    "onWebviewPanel:ReactION"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -64,21 +61,29 @@
     "@babel/preset-env": "^7.3.1",
     "@babel/preset-react": "^7.0.0",
     "@babel/preset-typescript": "^7.3.3",
+    "@types/babel__traverse": "^7.20.6",
+    "@types/chai": "^4.3.16",
+    "@types/lodash": "^4.17.6",
     "@types/mocha": "^2.2.42",
     "@types/node": "^10.12.21",
+    "@types/puppeteer": "^7.0.4",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@types/styled-components": "^5.1.34",
     "babel-jest": "^24.5.0",
     "babel-loader": "^8.0.5",
     "css-loader": "^2.1.0",
+    "puppeteer": "^22.12.1",
     "style-loader": "^0.23.1",
     "tslint": "^5.12.1",
-    "typescript": "^3.3.1",
+    "typescript": "^5.5.3",
     "vscode": "^1.1.28",
     "webpack": "^4.29.2",
     "webpack-cli": "^3.2.3"
   },
   "dependencies": {
     "electron-devtools-installer": "^2.2.4",
-    "puppeteer-core": "^1.13.0",
+    "puppeteer-core": "^14.4.0",
     "react": "^16.5.2",
     "react-d3-tree": "^1.12.2",
     "react-dom": "^16.5.2",
