@@ -1,8 +1,17 @@
 import * as vscode from 'vscode';
-import Puppeteer from './Puppeteer';
-import treeView from './treeViewPanel';
+import Puppeteer from './puppeteer';
+import treeView from './TreeViewPanel';
 import htmlView from './htmlViewPanel';
 import TreeNode from './TreeNode';
+
+interface ParseInfo {
+	[key: string]: any;
+}
+
+interface RawReactData {
+	parentId: string;
+	[key: string]: any;
+}
 
 export default class EmbeddedViewPanel {
 
@@ -12,13 +21,13 @@ export default class EmbeddedViewPanel {
 	private readonly _treePanel: vscode.WebviewPanel;
 	private _disposables: vscode.Disposable[] = [];
 	public readonly _page: Puppeteer;
-	public readonly _parseInfo: any;
+	public readonly _parseInfo: ParseInfo;
 
 	// Constructor for tree view and html panel
 	public constructor(
 		htmlPanel: vscode.WebviewPanel,
 		treePanel: vscode.WebviewPanel,
-		parseInfo: any
+		parseInfo: ParseInfo
 	) {
 		this._htmlPanel = htmlPanel;
 		this._treePanel = treePanel;
@@ -30,15 +39,18 @@ export default class EmbeddedViewPanel {
 		// Running Puppeteer to access React page context
 		this._page = new Puppeteer(parseInfo);
 		this._page.start();
+
 		setInterval(() => {
 			this._update();
 		}, 1000);
+
 		this._treePanel.onDidDispose(() => this.dispose(), null, this._disposables);
 	}
 
 	public static createOrShow(extensionPath: string, parseInfo: any) {
 		const treeColumn = vscode.ViewColumn.Three;
 		const htmlColumn = vscode.ViewColumn.Two;
+
 		if (EmbeddedViewPanel.currentPanel) {
 			EmbeddedViewPanel.currentPanel._htmlPanel.reveal(htmlColumn);
 			EmbeddedViewPanel.currentPanel._treePanel.reveal(treeColumn);
@@ -47,7 +59,6 @@ export default class EmbeddedViewPanel {
 
 		// Show HTML Preview in VS Code
 		const htmlPanel = vscode.window.createWebviewPanel(EmbeddedViewPanel.viewType, "HTML Preview", htmlColumn, {
-
 			// Enable javascript in the webview
 			enableScripts: true,
 			retainContextWhenHidden: true,
@@ -56,7 +67,6 @@ export default class EmbeddedViewPanel {
 
 		// Show Virtual DOM Tree in VS Code
 		const treePanel = vscode.window.createWebviewPanel(EmbeddedViewPanel.viewType, "Virtual DOM Tree", treeColumn, {
-
 			// Enable javascript in the webview
 			enableScripts: true,
 			retainContextWhenHidden: true,
@@ -82,14 +92,14 @@ export default class EmbeddedViewPanel {
 	}
 
 	private async _update(): Promise<void> {
-		let rawReactData: Array<object> = await this._page.scrape();
+		let rawReactData: RawReactData[] = await this._page.scrape();
 
 		// Build out TreeNode class for React D3 Tree.
-		function buildTree(rawReactData: Array<object>) {
+		function buildTree(rawReactData: RawReactData[]): TreeNode {
 			let tree: TreeNode = new TreeNode(rawReactData[0]);
-			const freeNodes: any = [];
+			const freeNodes: RawReactData[] = [];
 
-			rawReactData.forEach((el: any) => {
+			rawReactData.forEach((el) => {
 				const parentNode: TreeNode = tree._find(tree, el.parentId);
 				if (parentNode) {
 					parentNode._add(el);
@@ -99,12 +109,13 @@ export default class EmbeddedViewPanel {
 			});
 
 			while (freeNodes.length > 0) {
-				const curEl = freeNodes[0];
-				const parentNode: TreeNode = tree._find(tree, curEl.parentId);
-				if (parentNode) {
+				const curEl = freeNodes.shift();
+				if (curEl) {
+					const parentNode = tree._find(tree, curEl.parentId);
+					if (parentNode) {
 					parentNode._add(curEl);
+					}
 				}
-				freeNodes.shift();
 			}
 			return tree;
 		}
