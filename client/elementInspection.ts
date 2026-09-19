@@ -5,6 +5,7 @@ import type {
   HooksNode,
   InspectedElement,
   InspectedElementResponse,
+  InspectElementRequest,
 } from "react-devtools-inline/frontend";
 
 export type InspectableCategory = "props" | "state" | "context" | "hooks";
@@ -102,13 +103,14 @@ export class ElementInspector {
     path: Array<string | number> | null,
     forceFullData: boolean,
   ): void {
-    this.bridge.send("inspectElement", {
+    const payload: InspectElementRequest = {
       id,
       rendererID,
       path,
       forceFullData,
       requestID: this.nextRequestID++,
-    });
+    };
+    this.bridge.send("inspectElement", payload);
   }
 
   private stopPolling(): void {
