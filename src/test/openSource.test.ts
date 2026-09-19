@@ -11,6 +11,7 @@ import { resolveSourceFileName } from "../openSource";
 describe("resolveSourceFileName", () => {
   let workspaceRoot: string;
   let outsideFile: string;
+  let symlinkIntoOutside: string;
 
   before(() => {
     workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "reaction-opensource-"));
@@ -23,6 +24,16 @@ describe("resolveSourceFileName", () => {
     const outsideDir = fs.mkdtempSync(path.join(os.tmpdir(), "reaction-opensource-outside-"));
     outsideFile = path.join(outsideDir, "Secret.txt");
     fs.writeFileSync(outsideFile, "secret\n");
+
+    // A symlink INSIDE the workspace pointing at that outside dir, mirroring
+    // pnpm's node_modules/* (symlinked into a content-addressable store) or
+    // Yarn/Lerna/Nx workspaces symlinking packages/* from outside the
+    // currently-open folder. A path through it is lexically inside
+    // workspaceRoot (isInsideWorkspace passes) and fs.existsSync/statSync
+    // follow it to a real file (isRealFile passes) -- only realpath
+    // resolution catches that it's physically outside.
+    symlinkIntoOutside = path.join(workspaceRoot, "src", "evil-link");
+    fs.symlinkSync(outsideDir, symlinkIntoOutside, "dir");
   });
 
   after(() => {
@@ -102,5 +113,13 @@ describe("resolveSourceFileName", () => {
       resolveSourceFileName(`webpack://my-app/./${traversal}`, workspaceRoot),
       undefined,
     );
+  });
+
+  // Regression: a path with no ".." at all -- lexically inside workspaceRoot
+  // -- but that traverses a symlink to a file physically outside it used to
+  // pass both isInsideWorkspace and isRealFile.
+  it("returns undefined for a path that traverses a symlink pointing outside the workspace", () => {
+    const throughSymlink = path.join(symlinkIntoOutside, "Secret.txt");
+    assert.strictEqual(resolveSourceFileName(throughSymlink, workspaceRoot), undefined);
   });
 });
