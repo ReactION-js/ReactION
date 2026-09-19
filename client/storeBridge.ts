@@ -66,6 +66,17 @@ export class StoreConnection {
     this.teardownStore();
   }
 
+  // Exposes the current bridge/store so ElementInspector can send/listen for
+  // inspectElement traffic and look up renderer ids. Read-only use only --
+  // never call bridge.shutdown() through this (see teardownStore below).
+  public getBridge(): FrontendBridge | undefined {
+    return this.bridge;
+  }
+
+  public getStore(): DevtoolsStore | undefined {
+    return this.store;
+  }
+
   private createStoreForNewBackend(): void {
     this.teardownStore();
 

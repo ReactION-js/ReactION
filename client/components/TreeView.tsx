@@ -7,17 +7,28 @@ import {
   ReactFlowProvider,
   useEdgesState,
   useNodesState,
+  type NodeMouseHandler,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import styled from "styled-components";
 import type { ComponentNode } from "../types";
 import { layoutTree, type FlowNode as FlowNodeType } from "../flowLayout";
 import FlowNode from "./FlowNode";
+import InspectorPanel from "./InspectorPanel";
+import type { InspectableCategory, InspectorState } from "../elementInspection";
 import "./flow.css";
+
+export interface InspectorController {
+  state: InspectorState;
+  selectElement: (id: number) => void;
+  deselectElement: () => void;
+  requestExpand: (category: InspectableCategory, path: Array<string | number>) => void;
+}
 
 interface TreeChartProps {
   data: ComponentNode;
   theme: "light" | "dark";
+  inspector: InspectorController;
 }
 
 const Container = styled.div<{ $theme: "light" | "dark" }>`
@@ -50,10 +61,11 @@ const nodeTypes = { component: FlowNode };
 
 // Renders the live component tree as a React Flow graph, laid out with dagre.
 // Nodes can be collapsed to hide a subtree, and the search box dims non-matches.
-function FlowGraph({ data, theme }: TreeChartProps) {
+function FlowGraph({ data, theme, inspector }: TreeChartProps) {
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
   const [direction, setDirection] = useState<"TB" | "LR">("TB");
+  const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
 
   const toggleCollapse = useCallback((id: string) => {
     setCollapsedIds((current) => {
@@ -73,9 +85,10 @@ function FlowGraph({ data, theme }: TreeChartProps) {
         collapsedIds,
         searchTerm,
         direction,
+        selectedId,
         onToggleCollapse: toggleCollapse,
       }),
-    [data, collapsedIds, searchTerm, direction, toggleCollapse],
+    [data, collapsedIds, searchTerm, direction, selectedId, toggleCollapse],
   );
 
   const [nodes, setNodes, onNodesChange] =
@@ -90,6 +103,47 @@ function FlowGraph({ data, theme }: TreeChartProps) {
     setDirection((current) => (current === "TB" ? "LR" : "TB"));
   }, []);
 
+  const { deselectElement, selectElement } = inspector;
+  const handleDeselect = useCallback(() => {
+    setSelectedId(undefined);
+    deselectElement();
+  }, [deselectElement]);
+
+  const handleNodeClick = useCallback<NodeMouseHandler<FlowNodeType>>(
+    (_event, node) => {
+      const numericId = Number(node.id);
+      if (Number.isNaN(numericId)) {
+        return; // The synthetic multi-root "Roots" node isn't inspectable.
+      }
+      if (selectedId === node.id) {
+        handleDeselect();
+      } else {
+        setSelectedId(node.id);
+        selectElement(numericId);
+      }
+    },
+    [selectedId, selectElement, handleDeselect],
+  );
+
+  const handlePaneClick = useCallback(() => {
+    if (selectedId !== undefined) {
+      handleDeselect();
+    }
+  }, [selectedId, handleDeselect]);
+
+  // The inspector can clear itself independently of a click (e.g. the element
+  // unmounted -> "not-found", or the backend disconnected); keep the graph's
+  // own selection in sync so a stale highlight/panel doesn't linger.
+  useEffect(() => {
+    if (inspector.state.elementId === null && selectedId !== undefined) {
+      setSelectedId(undefined);
+    }
+  }, [inspector.state.elementId, selectedId]);
+
+  const selectedNode = selectedId
+    ? layoutNodes.find((node) => node.id === selectedId)
+    : undefined;
+
   return (
     <Container $theme={theme} className={`treeChart reaction-theme-${theme}`}>
       <Toolbar>
@@ -101,21 +155,35 @@ function FlowGraph({ data, theme }: TreeChartProps) {
           onChange={(event) => setSearchTerm(event.target.value)}
         />
       </Toolbar>
-      <div style={{ flex: 1 }}>
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          nodeTypes={nodeTypes}
-          colorMode={theme}
-          minZoom={0.05}
-          fitView
-        >
-          <Background />
-          <Controls />
-          <MiniMap pannable zoomable />
-        </ReactFlow>
+      <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onNodeClick={handleNodeClick}
+            onPaneClick={handlePaneClick}
+            nodeTypes={nodeTypes}
+            colorMode={theme}
+            minZoom={0.05}
+            fitView
+          >
+            <Background />
+            <Controls />
+            <MiniMap pannable zoomable />
+          </ReactFlow>
+        </div>
+        {selectedNode && (
+          <InspectorPanel
+            theme={theme}
+            label={selectedNode.data.label}
+            typeLabel={selectedNode.data.typeLabel}
+            state={inspector.state}
+            onExpand={inspector.requestExpand}
+            onClose={handleDeselect}
+          />
+        )}
       </div>
     </Container>
   );
