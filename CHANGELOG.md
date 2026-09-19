@@ -7,6 +7,8 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-19
+
 ### Changed
 
 - Modernized the toolchain: TypeScript 5.9, webpack 5, and the ESLint flat config.
