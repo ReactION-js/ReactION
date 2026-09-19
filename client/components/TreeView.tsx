@@ -78,7 +78,8 @@ function FlowGraph({ data, theme }: TreeChartProps) {
     [data, collapsedIds, searchTerm, direction, toggleCollapse],
   );
 
-  const [nodes, setNodes, onNodesChange] = useNodesState<FlowNodeType>(layoutNodes);
+  const [nodes, setNodes, onNodesChange] =
+    useNodesState<FlowNodeType>(layoutNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(layoutEdges);
 
   // The Store can mutate at any time; re-sync whenever a fresh layout is computed.
