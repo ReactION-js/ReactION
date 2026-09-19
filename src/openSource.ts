@@ -16,6 +16,19 @@ function isRealFile(candidate: string): boolean {
   }
 }
 
+// `fileName` is untrusted: it comes from the INSPECTED PAGE's own JS runtime
+// (react-devtools-core parses the page's live stack trace), so a malicious
+// or compromised dev app can make it report anything, e.g.
+// "../../../../etc/hosts" or an absolute "/etc/hosts". Without this check,
+// resolveSourceFileName would happily hand back a real path outside the
+// workspace and wireSourceOpening would open it -- an arbitrary local file
+// disclosure via a single button click. Confine every result to the
+// workspace root regardless of which branch produced it.
+function isInsideWorkspace(candidate: string, workspaceRoot: string): boolean {
+  const rel = path.relative(workspaceRoot, candidate);
+  return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
+}
+
 // A bundler-emitted sourceURL like "webpack://<pkg>/./src/Foo.tsx" (or the
 // scheme://host/ variant of any other bundler) -- everything after the first
 // "/" past the scheme+host is a path relative to the project root.
@@ -26,17 +39,22 @@ const BUNDLER_URL = /^[a-z][a-z0-9+.-]*:\/\/[^/]*\/(.*)$/i;
 // attempt sourcemap symbolication: a minified/production bundle's fileName
 // (e.g. a served bundle URL with no matching workspace file) is expected to
 // fail here, and the caller shows an informational message rather than
-// treating that as an error.
+// treating that as an error. Every branch is gated on isInsideWorkspace, not
+// just the resolved-relative-path one -- see that function's comment.
 export function resolveSourceFileName(
   fileName: string,
   workspaceRoot: string,
 ): string | undefined {
   if (path.isAbsolute(fileName)) {
-    return isRealFile(fileName) ? fileName : undefined;
+    return isInsideWorkspace(fileName, workspaceRoot) && isRealFile(fileName)
+      ? fileName
+      : undefined;
   }
 
   const bundlerMatch = BUNDLER_URL.exec(fileName);
   const relativePath = (bundlerMatch ? bundlerMatch[1] : fileName).replace(/^\.\//, "");
   const resolved = path.resolve(workspaceRoot, relativePath);
-  return isRealFile(resolved) ? resolved : undefined;
+  return isInsideWorkspace(resolved, workspaceRoot) && isRealFile(resolved)
+    ? resolved
+    : undefined;
 }

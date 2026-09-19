@@ -24,17 +24,25 @@ export function wireSourceOpening(
       msg?.type !== "openSource" ||
       typeof msg.fileName !== "string" ||
       typeof msg.lineNumber !== "number" ||
-      typeof msg.columnNumber !== "number"
+      typeof msg.columnNumber !== "number" ||
+      !Number.isInteger(msg.lineNumber) ||
+      !Number.isInteger(msg.columnNumber)
     ) {
+      // Number.isInteger also rejects NaN/Infinity, which a compromised page
+      // could otherwise send straight through to `new vscode.Position(...)`.
       return;
     }
 
-    const resolved = resolveSourceFileName(msg.fileName, workspaceRoot);
-    if (!resolved) {
+    const showNotFoundMessage = () => {
       void vscode.window.showInformationMessage(
         `ReactION: could not locate "${msg.fileName}" on disk to jump to its source. ` +
           "This can happen for a production build or an unrecognized bundler path format.",
       );
+    };
+
+    const resolved = resolveSourceFileName(msg.fileName, workspaceRoot);
+    if (!resolved) {
+      showNotFoundMessage();
       return;
     }
 
@@ -42,8 +50,12 @@ export function wireSourceOpening(
       Math.max(0, msg.lineNumber - 1),
       Math.max(0, msg.columnNumber - 1),
     );
-    void vscode.window.showTextDocument(vscode.Uri.file(resolved), {
-      selection: new vscode.Range(position, position),
-    });
+    // Guards a TOCTOU race (the file can vanish between resolveSourceFileName's
+    // existsSync and this open) rather than leaving an unhandled rejection.
+    vscode.window
+      .showTextDocument(vscode.Uri.file(resolved), {
+        selection: new vscode.Range(position, position),
+      })
+      .then(undefined, showNotFoundMessage);
   });
 }
