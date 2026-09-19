@@ -108,7 +108,9 @@ function serveWebviewSimulator(bridge, onStartApp) {
     }
   };
   bridge.onBackendConnected(() => broadcast({ type: "backend-connected" }));
-  bridge.onBackendDisconnected(() => broadcast({ type: "backend-disconnected" }));
+  bridge.onBackendDisconnected(() =>
+    broadcast({ type: "backend-disconnected" }),
+  );
   bridge.onPageMessage((message) => broadcast({ type: "wall", message }));
 
   const server = http.createServer((req, res) => {

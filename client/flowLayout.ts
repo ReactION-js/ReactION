@@ -55,7 +55,8 @@ export function layoutTree(
         typeLabel: node.attributes?.[0] ?? "",
         hasChildren,
         collapsed,
-        matchesSearch: query.length === 0 || node.name.toLowerCase().includes(query),
+        matchesSearch:
+          query.length === 0 || node.name.toLowerCase().includes(query),
         onToggleCollapse,
       },
     });
