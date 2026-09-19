@@ -9,6 +9,7 @@ module.exports = tseslint.config(
       "out/**",
       "node_modules/**",
       "resources/**",
+      "spike/**",
       "**/*.config.js",
       ".vscode-test.mjs",
       "*.vsix",
