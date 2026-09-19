@@ -153,7 +153,7 @@ Legend — **Source:** RT = runtime DevTools engine, ST = static AST, HY = hybri
 | Live props / state / hooks | Debugging staple | RT | S | Free from `inspectElement` |
 | **Re-render reasons** ("prop X changed") | Top perf pain point | RT | M | Needs profiler "changeDescriptions" capture |
 | **Wasted re-render flags** (memo candidates) | High ROI | RT | M | Compare commit output/props |
-| **Render-count heatmap** on graph | Visually differentiating, cheap | RT | S | Derive counts from commits/operations |
+| **Render-count heatmap** on graph | Visually differentiating, cheap | RT | M | Needs profiler per-commit data, not just tree operations (see §6 Phase 2 note) |
 | State-change **timeline / time-travel** | Original roadmap item | RT | L | Buffer commits; scrub UI |
 | **Context provider/consumer map** | Unique; refactor aid | RT | M | Correlate context objects across elements |
 | Search / filter tree (by name/type/"has state") | DX baseline | RT | S | — |
@@ -250,7 +250,51 @@ Original spec for this phase:
   `startTreeSync`.
 - **Verify:** Store populates for CRA (16.13), React 17, Vite (18), Next (19).
 
-### Phase 2 — Visualization on the Store
+### Phase 2 — Visualization on the Store — ✅ DONE
+
+**Status:** complete and verified. `react-d3-tree` is gone; the webview renders
+the live Store as a **React Flow** graph.
+- `client/flowLayout.ts` — flattens the `ComponentNode` tree into React Flow
+  nodes/edges and lays them out with `@dagrejs/dagre` (`TB`/`LR` toggle);
+  collapsed nodes omit their descendants from the graph.
+- `client/components/FlowNode.tsx` — custom node: name, a type badge colored by
+  `ElementType` (Function/Class/Memo/ForwardRef/Context/…), and a collapse
+  toggle when it has children. `client/components/NodeLabel.tsx` deleted
+  (superseded).
+- `client/components/TreeView.tsx` — rewritten on `@xyflow/react`
+  (`ReactFlow` + `Background`/`Controls`/`MiniMap`), with a search box that dims
+  non-matching nodes (kept the "Change orientation" button, now toggling dagre's
+  `rankdir`). Same `{data, theme}` props, so `App.tsx` is unchanged.
+- `webpack.config.js` — added a `style-loader`/`css-loader` rule so the webview
+  bundle can import `@xyflow/react/dist/style.css` and `client/components/flow.css`.
+  No CSP change was needed: React Flow's stylesheet has no `url()`/`@font-face`,
+  and the existing `style-src 'unsafe-inline'` already covers injected `<style>`
+  tags and inline `style=""` attributes.
+- Added missing transitive dep `react-is` (required by `react-devtools-inline`'s
+  bundle but not declared by it) — `build:webview` failed with `Can't resolve
+  'react-is'` until added.
+
+**Render-count heatmap — deferred to Phase 3 (plan correction).** Investigating
+the actual bundled protocol (`node_modules/react-devtools-core/dist/backend.js`)
+showed the base (non-profiling) commit protocol has no operation for "this
+component re-rendered with the same props/children" — `Store`'s `'mutated'`
+event only reports structurally added/removed element IDs, not per-node commit
+counts. A true render-count signal requires the **profiler** (`startProfiling`
++ per-commit fiber duration/updater data), which is exactly Phase 3's
+dependency for re-render reasons and wasted-render flags. Building the heatmap
+now would have meant either a fake (always-empty) counter or reinventing
+operations parsing against an unstable internal protocol. Moved to Phase 3
+where it can share the real profiler capture.
+
+**Verification:** `npm run compile`, `lint`, `build:webview` (bundle ~1.02 MiB,
+no warnings), and `npm test` are all green. Additionally verified **visually**:
+a throwaway harness (`spike/run-phase2-visual.js`) drives the real compiled
+`devtoolsBridge.js` + `puppeteer.js` against the sample app and serves the real
+`out/build/bundle.js` to a page opened in a live browser — screenshots confirm
+the graph renders all component types with correct labels/colors, search dims
+non-matches, and collapse/expand hides/shows subtrees correctly.
+
+Original spec for this phase:
 - `client/App.tsx`: build `createBridge(customWall)` + `createStore`; subscribe
   to Store mutations; map Store elements → graph nodes (covers all types).
 - Replace `client/components/TreeView.tsx` (react-d3-tree) with **React Flow** +
@@ -263,7 +307,9 @@ Original spec for this phase:
 
 ### Phase 3 — Inspection, re-render insight & jump-to-source
 - Details panel via `bridge.send('inspectElement', id)` → props/state/hooks.
-- Enable profiler capture → **re-render reasons** + **wasted-render** flags.
+- Enable profiler capture → **re-render reasons** + **wasted-render** flags +
+  **render-count heatmap** (moved from Phase 2 — all three need the same
+  `startProfiling`/per-commit fiber data; see the Phase 2 note above).
 - **Context provider/consumer map** from element context data.
 - **Jump to source:** relay `_debugSource` → host →
   `vscode.window.showTextDocument`.
@@ -293,9 +339,10 @@ Original spec for this phase:
 
 ## 7. Feature → phase mapping
 
-- **Phase 2:** component graph, search/filter, render-count heatmap.
-- **Phase 3:** props/state/hooks, re-render reasons, wasted renders, context map,
-  jump-to-source, snapshot diff (if time).
+- **Phase 2:** component graph, search/filter. ✅ done (heatmap moved to Phase 3
+  — see the Phase 2 note in §6).
+- **Phase 3:** props/state/hooks, re-render reasons, wasted renders,
+  render-count heatmap, context map, jump-to-source, snapshot diff (if time).
 - **Phase 4:** diagnostics/empty-state, reconnect, tests.
 - **Phase 5:** unused/"not-rendered", coverage, dead props, prop drilling,
   dependency graph.
