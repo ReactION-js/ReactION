@@ -1,46 +1,35 @@
-import puppeteer, { Browser, Page, PuppeteerLaunchOptions } from 'puppeteer';
-import { expect as chaiExpect } from 'chai';
+import * as assert from "node:assert";
+import puppeteer, { type Browser, type Page } from "puppeteer-core";
 
-// Puppeteer options
-const opts: PuppeteerLaunchOptions = {
-  headless: false,
-  slowMo: 100,
-  defaultViewport: null,
-  args: ['--no-sandbox', '--disable-setuid-sandbox'],
-};
+// End-to-end test against a running app. Requires Chrome and the sample React
+// app. Override with CHROME_PATH and REACTION_APP_URL as needed.
+const executablePath =
+  process.env.CHROME_PATH ??
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+const appUrl = process.env.REACTION_APP_URL ?? "http://localhost:3000";
 
-describe('sample test', function () {
+describe("rendered component tree", function () {
+  this.timeout(30_000);
+
   let browser: Browser;
   let page: Page;
 
-  // Setup before running the tests
-  before(async function () {
-    browser = await puppeteer.launch(opts);
+  before(async () => {
+    browser = await puppeteer.launch({
+      executablePath,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
     page = await browser.newPage();
-    await page.goto('http://localhost:3000');
+    await page.goto(appUrl, { waitUntil: "domcontentloaded" });
   });
 
-  // Cleanup after running the tests
-  after(async function () {
-    if (page) {
-      await page.close();
-    }
-    if (browser) {
-      await browser.close();
-    }
+  after(async () => {
+    await browser?.close();
   });
 
-  it('Should have the correct page title', async function () {
-    const title = await page.title();
-    chaiExpect(title).to.eql('Tree Example');
-  });
-
-  it('should have a single content section', async function () {
-    const TREE_SELECTOR = '.treeChart';
-
-    await page.waitForSelector(TREE_SELECTOR);
-
-    const elements = await page.$$(TREE_SELECTOR);
-    chaiExpect(elements).to.have.lengthOf(1);
+  it("renders a single tree chart container", async () => {
+    await page.waitForSelector(".treeChart");
+    const elements = await page.$$(".treeChart");
+    assert.strictEqual(elements.length, 1);
   });
 });

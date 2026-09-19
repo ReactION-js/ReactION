@@ -1,23 +1,15 @@
 {
-	// Use IntelliSense to learn about possible attributes.
-	// Hover to view descriptions of existing attributes.
-	// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
-	"version": "0.2.0",
-	"configurations": [
-		{
-			"name": "Run Extension - ReactION",
-			"type": "extensionHost",
-			"request": "launch",
-			"runtimeExecutable": "${execPath}",
-			"args": [
-				"--extensionDevelopmentPath=${workspaceRoot}"
-			],
-			"outFiles": [
-				"${workspaceFolder}/src"
-			],
-			"preLaunchTask": "npm: watch",
-			"stopOnEntry": false,
-			"sourceMaps": true,
-		},
-	]
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run Extension - ReactION",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": ["--extensionDevelopmentPath=${workspaceFolder}"],
+      "outFiles": ["${workspaceFolder}/out/**/*.js"],
+      "preLaunchTask": "build-and-watch",
+      "sourceMaps": true
+    }
+  ]
 }

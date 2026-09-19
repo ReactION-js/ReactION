@@ -1,36 +1,41 @@
-const path = require('path')
+"use strict";
 
+const path = require("path");
+
+/**
+ * Webpack build for the webview client bundle.
+ * Runs inside a VS Code webview (browser context), so the target is `web`.
+ * The mode is supplied on the CLI (`--mode production` / `--mode development`).
+ *
+ * @type {import('webpack').Configuration}
+ */
 module.exports = {
-  mode: 'development',
-  entry: './client/index.js',
+  target: "web",
+  entry: "./client/index.tsx",
   output: {
-    path: path.resolve(__dirname, 'out', 'build'),
-    filename: 'bundle.js'
+    path: path.resolve(__dirname, "out", "build"),
+    filename: "bundle.js",
+  },
+  resolve: {
+    extensions: [".tsx", ".ts", ".jsx", ".js"],
   },
   module: {
     rules: [
       {
-        test: /.(js|jsx)$/,
+        test: /\.[jt]sx?$/,
         exclude: /node_modules/,
         use: {
-          loader: 'babel-loader',
+          loader: "ts-loader",
           options: {
-            presets:
-              [
-                '@babel/preset-react',
-                '@babel/preset-env'
-              ]
-          }
-        }
+            configFile: "tsconfig.client.json",
+          },
+        },
       },
-      {
-        test: /.css$/,
-        exclude: /node_modules/,
-        use: ['style-loader', 'css-loader']
-      }
-    ]
+    ],
   },
-  resolve: {
-    extensions: ['*', '.js', '.jsx']
-  }
-}
+  devtool: "source-map",
+  performance: {
+    // This bundle runs in a local VS Code webview, not over the network.
+    hints: false,
+  },
+};

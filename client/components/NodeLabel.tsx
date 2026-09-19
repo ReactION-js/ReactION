@@ -1,45 +1,35 @@
-import React, { useState, CSSProperties } from 'react';
+import { useState } from "react";
+import type { CSSProperties } from "react";
 
 interface NodeLabelProps {
-  className: string;
-  nodeData: {
-    name: string;
-    attributes: string[];
-  };
+  name: string;
+  attributes: string[];
 }
 
-const NodeLabel: React.FC<NodeLabelProps> = ({ className, nodeData }) => {
-  const [divStyle, setDivStyle] = useState<CSSProperties>({
-    display: "none",
-    flexDirection: 'column'
-  });
-
-  const mouseEnter = () => {
-    setDivStyle({
-      display: "flex",
-      flexDirection: 'column'
-    });
-  };
-
-  const mouseOut = () => {
-    setDivStyle({
-      display: "none",
-      flexDirection: 'column'
-    });
-  };
-
-  const elArr = nodeData.attributes.map((el, index) => (
-    <p key={index}>{el}</p>
-  ));
-
-  return (
-    <div className={className} onMouseEnter={mouseEnter} onMouseOut={mouseOut}>
-      <h2>{nodeData.name}</h2>
-      <div style={divStyle}>
-        {elArr}
-      </div>
-    </div>
-  );
+const boxStyle: CSSProperties = {
+  fontFamily: "system-ui, sans-serif",
+  fontSize: 12,
+  lineHeight: 1.3,
 };
 
-export default NodeLabel;
+// Shows a component's name, revealing its prop list on hover.
+export default function NodeLabel({ name, attributes }: NodeLabelProps) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div
+      style={boxStyle}
+      onMouseEnter={() => setExpanded(true)}
+      onMouseLeave={() => setExpanded(false)}
+    >
+      <strong>{name}</strong>
+      {expanded && attributes.length > 0 && (
+        <ul style={{ margin: "4px 0 0", paddingLeft: 16 }}>
+          {attributes.map((attr) => (
+            <li key={attr}>{attr}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}

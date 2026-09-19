@@ -1,26 +1,23 @@
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
 
-export default class StartExtensionProvider implements vscode.TreeDataProvider<object> {
-  private _onDidChangeTreeData: vscode.EventEmitter<object | undefined> = new vscode.EventEmitter<object | undefined>();
-  readonly onDidChangeTreeData: vscode.Event<object | undefined> = this._onDidChangeTreeData.event;
-
-  constructor() {}
-
-  refresh(): void {
-    this._onDidChangeTreeData.fire()
-    this._onDidChangeTreeData.dispose();
-  }
-
-  getTreeItem(element: object): vscode.TreeItem {
+// Provides the single actionable item shown in the activity-bar view.
+// Selecting it runs the ReactION.openTree command.
+export default class StartExtensionProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
+  public getTreeItem(element: vscode.TreeItem): vscode.TreeItem {
     return element;
   }
 
-  getChildren(element?: object): Thenable<object[]> {
-    vscode.commands.executeCommand('ReactION.openTree');
-    vscode.commands.executeCommand('workbench.view.explorer');
-
-    this._onDidChangeTreeData.fire();
-    this._onDidChangeTreeData.dispose();
-    return Promise.reject([]);
+  public getChildren(): vscode.TreeItem[] {
+    const launch = new vscode.TreeItem(
+      "Launch ReactION",
+      vscode.TreeItemCollapsibleState.None,
+    );
+    launch.command = {
+      command: "ReactION.openTree",
+      title: "ReactION: Launch",
+    };
+    launch.iconPath = new vscode.ThemeIcon("play");
+    launch.tooltip = "Open the React component tree";
+    return [launch];
   }
 }

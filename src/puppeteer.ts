@@ -1,130 +1,181 @@
-const puppeteer = require('puppeteer-core');
+import puppeteer, { type Browser, type Page } from "puppeteer-core";
+import type { RawReactNode } from "./TreeNode";
+import { type ReactionConfig, toUrl } from "./config";
 
 export default class Puppeteer {
+  private browser: Browser | undefined;
+  private page: Page | undefined;
+  private readonly headless: boolean;
+  private readonly executablePath: string;
+  private readonly url: string;
 
-	public _headless: boolean;
-	private _executablePath: string;
-	private _pipe: boolean;
-	public _url: string;
-	private _page: any;
-	private _browser: any;
+  public constructor(config: ReactionConfig) {
+    this.headless = config.headless_browser;
+    this.executablePath = config.executablePath;
+    this.url = toUrl(config.localhost);
+  }
 
-	// Default properties for the Puppeteer class.
-	public constructor(parseInfo: any) {
-		this._headless = false;
-		this._executablePath = parseInfo.executablePath;
-		this._pipe = true;
-		this._url = parseInfo.localhost;
-		this._page = '';
-		this._browser = '';
-	}
+  // Launches Chrome and navigates to the target React app, reusing the first
+  // open tab so the user sees a single window. Throws if Chrome cannot launch.
+  public async start(): Promise<void> {
+    this.browser = await puppeteer.launch({
+      headless: this.headless,
+      executablePath: this.executablePath,
+      pipe: true,
+    });
 
-	// Creates an instance of puppeteer browser and page,
-	// opens to _url, defaults to localhost:3000
-	public async start() {
-		this._browser = await puppeteer.launch(
-			{
-				headless: this._headless,
-				executablePath: this._executablePath,
-				pipe: this._pipe,
-			}
-		).catch((err: any) => console.log(err));
+    const pages = await this.browser.pages();
+    this.page = pages[0] ?? (await this.browser.newPage());
+    await this.page.goto(this.url, { waitUntil: "domcontentloaded" });
+  }
 
-		this._page = await this._browser.pages()
-			.then((pageArr: any) => {
-				return pageArr[0];
-			});
-		this._page.goto(this._url);
+  public async close(): Promise<void> {
+    await this.browser?.close();
+    this.browser = undefined;
+    this.page = undefined;
+  }
 
-		return await this._page;
-	}
+  // Walks the React fiber tree in the page and returns a flat, pre-ordered list
+  // of components. Returns an empty array when the page has no React app yet.
+  public async scrape(): Promise<RawReactNode[]> {
+    if (!this.page) {
+      return [];
+    }
 
-	// Recursive React component scraping algorithm
-	public scrape() {
+    return this.page.evaluate(() => {
+      /* Everything below runs in the page (browser) context. */
 
-		// All code inside .evaluate is executed in the pages context
-		const reactData = this._page.evaluate(
-			async (): Promise<Array<object>> => {
+      interface Fiber {
+        tag: number;
+        type: unknown;
+        child: Fiber | null;
+        sibling: Fiber | null;
+        return: Fiber | null;
+        memoizedProps: Record<string, unknown> | null;
+      }
 
-				// Access the React Dom
-				// & create entry point for fiber node through DOM element
-				const _entry = ((): any => {
+      // Safely reads a nested property path off an untyped object.
+      const readPath = (obj: unknown, keys: string[]): unknown => {
+        let current: unknown = obj;
+        for (const key of keys) {
+          if (current && typeof current === "object" && key in current) {
+            current = (current as Record<string, unknown>)[key];
+          } else {
+            return undefined;
+          }
+        }
+        return current;
+      };
 
-					// @ts-ignore
-					const domElements = document.querySelector('body').children;
-					for (let el of domElements) {
+      // Finds the root fiber for legacy ReactDOM.render (React 16/17) or
+      // createRoot (React 18/19).
+      const findRootFiber = (): Fiber | null => {
+        const elements: Element[] = [
+          document.body,
+          ...Array.from(document.querySelectorAll("body *")),
+        ];
 
-						// @ts-ignore
-						if (el._reactRootContainer) {
+        for (const el of elements) {
+          const node = el as unknown as Record<string, unknown>;
 
-							// @ts-ignore
-							return el._reactRootContainer._internalRoot.current;
-						}
-					}
-				})();
+          // Legacy roots (React 16/17).
+          const legacy = readPath(node, [
+            "_reactRootContainer",
+            "_internalRoot",
+            "current",
+          ]);
+          if (legacy) {
+            return legacy as Fiber;
+          }
 
-				// Define function that traverses the fiber tree, starting from the entry point
-				function fiberWalk(entry: any) {
-					let dataArr: any = [], globalId = 1;
+          // Concurrent roots (React 18/19) expose the host-root fiber through a
+          // "__reactContainer$<hash>" property on the container element.
+          const containerKey = Object.keys(node).find((key) =>
+            key.startsWith("__reactContainer$"),
+          );
+          if (containerKey) {
+            return node[containerKey] as Fiber;
+          }
+        }
 
-					// Recursively traversing through the fiber tree, pushing the node object into the dataArr array
-					function traverse(root: any, level: number, parentId: number) {
-						if (root.sibling !== null) {
-							globalId += 1;
-							dataArr.push(
-								{
-									"name": root.sibling,
-									"level": `${level}`,
-									"id": `${globalId}`,
-									"parentId": `${parentId}`,
-									"props": Object.keys(root.sibling.memoizedProps)
-								}
-							);
-							traverse(root.sibling, level, parentId);
-						}
-						if (root.child !== null) {
-							parentId += 1;
-							globalId += 1;
-							dataArr.push(
-								{
-									"name": root.child,
-									"level": `${level}`,
-									"id": `${globalId}`,
-									"parentId": `${parentId}`,
-									"display": "none",
-									"props": Object.keys(root.child.memoizedProps)
-								}
-							);
-							traverse(root.child, level + 1, parentId);
-						}
-					}
+        // Fallback: any host node carries a "__reactFiber$<hash>" pointer we can
+        // walk up to the root.
+        for (const el of elements) {
+          const node = el as unknown as Record<string, unknown>;
+          const fiberKey = Object.keys(node).find((key) =>
+            key.startsWith("__reactFiber$"),
+          );
+          if (fiberKey) {
+            let fiber = node[fiberKey] as Fiber;
+            while (fiber.return) {
+              fiber = fiber.return;
+            }
+            return fiber;
+          }
+        }
 
-					traverse(entry, 0, 0);
+        return null;
+      };
 
-					// Extracts the type name of each fiber node
-					dataArr.forEach((el: any) => {
-						if (typeof el.name.type === null) {
-							el.name = '';
-						} else if (typeof el.name.type === 'function' && el.name.type.name) {
-							el.name = el.name.type.name;
-						} else if (typeof el.name.type === 'function') {
-							el.name = 'function';
-						} else if (typeof el.name.type === 'object') {
-							el.name = 'function';
-						} else if (typeof el.name.type === 'string') {
-							el.name = el.name.type;
-						}
-					});
+      // Resolves a readable component name for a fiber's type.
+      const displayNameOf = (fiber: Fiber): string => {
+        const type = fiber.type;
+        if (type == null) {
+          return fiber.tag === 3 ? "Root" : "";
+        }
+        if (typeof type === "string") {
+          return type;
+        }
+        if (typeof type === "function") {
+          const fn = type as { displayName?: string; name?: string };
+          return fn.displayName || fn.name || "Anonymous";
+        }
+        if (typeof type === "object") {
+          // forwardRef / memo / context wrappers.
+          const wrapper = type as {
+            displayName?: string;
+            type?: { displayName?: string; name?: string };
+            render?: { name?: string };
+          };
+          return (
+            wrapper.displayName ||
+            wrapper.type?.displayName ||
+            wrapper.type?.name ||
+            wrapper.render?.name ||
+            "Component"
+          );
+        }
+        return String(type);
+      };
 
-					// Setting root parent to an empty string
-					dataArr[0].parentId = '';
+      const root = findRootFiber();
+      if (!root) {
+        return [];
+      }
 
-					return dataArr;
-				}
-				return fiberWalk(_entry);
-			}).catch((err: any) => { console.log(err); });
+      const nodes: RawReactNode[] = [];
+      let nextId = 1;
 
-		return reactData;
-	}
+      // Pre-order walk: a fiber's children are its `child` plus that child's
+      // `sibling` chain, all sharing the same parent id.
+      const visit = (fiber: Fiber, parentId: string): void => {
+        const id = String(nextId++);
+        nodes.push({
+          id,
+          parentId,
+          name: displayNameOf(fiber),
+          props: fiber.memoizedProps ? Object.keys(fiber.memoizedProps) : [],
+        });
+
+        let child = fiber.child;
+        while (child) {
+          visit(child, id);
+          child = child.sibling;
+        }
+      };
+
+      visit(root, "");
+      return nodes;
+    });
+  }
 }
-
