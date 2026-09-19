@@ -35,8 +35,23 @@ export class ElementInspector {
   private rendererID: number | null = null;
   private pollHandle: ReturnType<typeof setInterval> | undefined;
   private nextRequestID = 0;
+  // One-shot inspectOnce() requests in flight, keyed by their own requestID
+  // (shared counter with the select/poll flow below, so ids never collide).
+  // Checked first in onInspectedElement so a background probe never leaks
+  // into -- or gets confused with -- the single-selection state machine.
+  private readonly pendingOnce = new Map<
+    number,
+    { resolve: (response: InspectedElementResponse) => void; reject: (reason: Error) => void }
+  >();
   private readonly onInspectedElement = (payload: unknown): void => {
-    this.handleResponse(payload as InspectedElementResponse);
+    const response = payload as InspectedElementResponse;
+    const pending = this.pendingOnce.get(response.responseID);
+    if (pending) {
+      this.pendingOnce.delete(response.responseID);
+      pending.resolve(response);
+      return;
+    }
+    this.handleResponse(response);
   };
 
   public constructor(
@@ -91,9 +106,34 @@ export class ElementInspector {
     );
   }
 
+  // Fire-and-await inspectElement request that bypasses the select/poll
+  // state machine entirely: it doesn't touch `state`/`rendererID`/the poll
+  // timer, so it can run concurrently with (and without disturbing) whatever
+  // the user has selected in the panel -- or nothing at all. Intended for
+  // callers (useContextMap.ts) that need to probe many candidate elements'
+  // hooks in the background. Always uses forceFullData: true since there's
+  // no prior cached value to diff against for a one-shot probe.
+  public inspectOnce(id: number): Promise<InspectedElementResponse> {
+    const rendererID = this.store.getRendererIDForElement(id);
+    if (rendererID === null) {
+      return Promise.resolve({ id, responseID: -1, type: "not-found" });
+    }
+    return new Promise((resolve, reject) => {
+      const requestID = this.sendInspect(id, rendererID, null, true);
+      this.pendingOnce.set(requestID, { resolve, reject });
+    });
+  }
+
   public dispose(): void {
     this.stopPolling();
     this.bridge.removeListener("inspectedElement", this.onInspectedElement);
+    // Unblock any inspectOnce() callers still awaiting a response (e.g. a
+    // useContextMap build in flight when the backend disconnects) instead of
+    // leaving their promises pending forever.
+    for (const { reject } of this.pendingOnce.values()) {
+      reject(new Error("ElementInspector disposed before inspectOnce resolved."));
+    }
+    this.pendingOnce.clear();
   }
 
   private sendInspect(
@@ -101,15 +141,17 @@ export class ElementInspector {
     rendererID: number,
     path: Array<string | number> | null,
     forceFullData: boolean,
-  ): void {
+  ): number {
+    const requestID = this.nextRequestID++;
     const payload: InspectElementRequest = {
       id,
       rendererID,
       path,
       forceFullData,
-      requestID: this.nextRequestID++,
+      requestID,
     };
     this.bridge.send("inspectElement", payload);
+    return requestID;
   }
 
   private stopPolling(): void {
