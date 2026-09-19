@@ -55,6 +55,7 @@
     "watch:webview": "webpack --mode development --watch",
     "lint": "eslint .",
     "spike": "node spike/run-spike.js",
+    "spike:phase1": "node spike/run-phase1.js",
     "pretest": "npm run compile && npm run lint",
     "test": "vscode-test",
     "test:e2e": "mocha out/test/puppeteer.test.js out/test/TreeView.test.js",

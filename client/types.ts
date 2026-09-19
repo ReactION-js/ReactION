@@ -1,4 +1,4 @@
-// Shape of a scraped React component as delivered to the webview.
+// Shape of a React component node as rendered by the webview tree view.
 export interface ComponentNode {
   name: string;
   id?: string;
@@ -7,6 +7,3 @@ export interface ComponentNode {
   display?: string;
   children?: ComponentNode[];
 }
-
-// Messages posted from the extension host to the webview.
-export type ReactionMessage = { type: "treeData"; data: ComponentNode };

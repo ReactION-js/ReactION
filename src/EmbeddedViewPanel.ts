@@ -2,10 +2,9 @@ import * as vscode from "vscode";
 import { generateTreeViewHtml } from "./TreeViewPanel";
 import { generateHtmlPreview } from "./htmlViewPanel";
 import Puppeteer from "./puppeteer";
-import { startTreeSync } from "./treeSync";
+import DevtoolsBridge from "./devtoolsBridge";
+import { wireBridgeToWebview } from "./bridgeWiring";
 import { type ReactionConfig, toUrl } from "./config";
-
-const REFRESH_INTERVAL_MS = 1000;
 
 // Shows the running app (iframe preview) alongside its component tree.
 export default class EmbeddedViewPanel {
@@ -15,6 +14,7 @@ export default class EmbeddedViewPanel {
   private readonly htmlPanel: vscode.WebviewPanel;
   private readonly treePanel: vscode.WebviewPanel;
   private readonly page: Puppeteer;
+  private readonly bridge: DevtoolsBridge;
   private readonly disposables: vscode.Disposable[] = [];
   private disposed = false;
 
@@ -35,6 +35,7 @@ export default class EmbeddedViewPanel {
     );
 
     this.page = new Puppeteer(config);
+    this.bridge = new DevtoolsBridge();
     void this.start();
 
     this.htmlPanel.onDidDispose(() => this.dispose(), null, this.disposables);
@@ -82,8 +83,13 @@ export default class EmbeddedViewPanel {
   }
 
   private async start(): Promise<void> {
+    const relayPort = await this.bridge.start();
+    this.disposables.push(
+      wireBridgeToWebview(this.bridge, this.treePanel.webview),
+    );
+
     try {
-      await this.page.start();
+      await this.page.start(relayPort);
     } catch (error) {
       void vscode.window.showErrorMessage(
         `ReactION: could not launch Chrome. Check "executablePath" in reactION-config.json. ${String(error)}`,
@@ -94,12 +100,7 @@ export default class EmbeddedViewPanel {
     if (this.disposed) {
       // Panel was closed while Chrome was launching; tear down the browser.
       void this.page.close();
-      return;
     }
-
-    this.disposables.push(
-      startTreeSync(this.page, this.treePanel.webview, REFRESH_INTERVAL_MS),
-    );
   }
 
   public dispose(): void {
@@ -110,6 +111,7 @@ export default class EmbeddedViewPanel {
     EmbeddedViewPanel.currentPanel = undefined;
 
     void this.page.close();
+    this.bridge.dispose();
     this.htmlPanel.dispose();
     this.treePanel.dispose();
     while (this.disposables.length) {

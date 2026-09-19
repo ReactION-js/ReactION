@@ -1,10 +1,9 @@
 import * as vscode from "vscode";
 import { generateTreeViewHtml } from "./TreeViewPanel";
 import Puppeteer from "./puppeteer";
-import { startTreeSync } from "./treeSync";
+import DevtoolsBridge from "./devtoolsBridge";
+import { wireBridgeToWebview } from "./bridgeWiring";
 import type { ReactionConfig } from "./config";
-
-const REFRESH_INTERVAL_MS = 1000;
 
 // Shows the React component tree in a single webview panel.
 export default class ViewPanel {
@@ -13,6 +12,7 @@ export default class ViewPanel {
 
   private readonly treePanel: vscode.WebviewPanel;
   private readonly page: Puppeteer;
+  private readonly bridge: DevtoolsBridge;
   private readonly disposables: vscode.Disposable[] = [];
   private disposed = false;
 
@@ -29,6 +29,7 @@ export default class ViewPanel {
     );
 
     this.page = new Puppeteer(config);
+    this.bridge = new DevtoolsBridge();
     void this.start();
 
     this.treePanel.onDidDispose(() => this.dispose(), null, this.disposables);
@@ -60,8 +61,13 @@ export default class ViewPanel {
   }
 
   private async start(): Promise<void> {
+    const relayPort = await this.bridge.start();
+    this.disposables.push(
+      wireBridgeToWebview(this.bridge, this.treePanel.webview),
+    );
+
     try {
-      await this.page.start();
+      await this.page.start(relayPort);
     } catch (error) {
       void vscode.window.showErrorMessage(
         `ReactION: could not launch Chrome. Check "executablePath" in reactION-config.json. ${String(error)}`,
@@ -72,12 +78,7 @@ export default class ViewPanel {
     if (this.disposed) {
       // Panel was closed while Chrome was launching; tear down the browser.
       void this.page.close();
-      return;
     }
-
-    this.disposables.push(
-      startTreeSync(this.page, this.treePanel.webview, REFRESH_INTERVAL_MS),
-    );
   }
 
   public dispose(): void {
@@ -88,6 +89,7 @@ export default class ViewPanel {
     ViewPanel.currentPanel = undefined;
 
     void this.page.close();
+    this.bridge.dispose();
     this.treePanel.dispose();
     while (this.disposables.length) {
       this.disposables.pop()?.dispose();

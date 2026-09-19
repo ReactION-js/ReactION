@@ -211,7 +211,35 @@ Validate the protocol path before committing to the rewrite.
 - **Exit criteria:** protocol round-trips reliably; if core+inline mixing fails,
   switch to inline-for-both and re-validate.
 
-### Phase 1 — Reliable runtime pipeline (replaces fiber scraper)
+### Phase 1 — Reliable runtime pipeline (replaces fiber scraper) — ✅ DONE
+
+**Status:** complete and verified. The hand-rolled fiber scraper is gone; the
+pipeline now runs the official DevTools protocol end-to-end.
+- `src/devtoolsBridge.ts` — `ws` relay (host ↔ page ↔ webview), deliberately
+  `vscode`-free so it is unit-testable in Node; a fresh socket per connection
+  (page reload = reconnect).
+- `src/bridgeWiring.ts` — `wireBridgeToWebview()` bridges host postMessage ↔ the
+  page socket, plus `backend-connected` / `backend-disconnected` notifications.
+- `src/puppeteer.ts` — `start(relayPort)` injects the backend via
+  `evaluateOnNewDocument` (`initialize()` → `connectToDevTools`) then
+  `gotoWithRetry` (waits for a booting dev server); `scrape()` / `findRootFiber`
+  deleted.
+- `client/storeBridge.ts` — builds `createBridge` + `createStore` over a
+  postMessage wall and projects the Store into the tree; resets on reconnect
+  **without** `bridge.shutdown()` (which would post a `shutdown` wall message and
+  kill the freshly-reconnected backend — the key bug the harness caught).
+- Deleted `src/treeSync.ts` (polling) and `src/TreeNode.ts` (host tree model);
+  panels wire the bridge instead of `startTreeSync`.
+
+**Verification** (`npm run spike:phase1`, a harness over the *real* compiled
+modules): the Store populates (9 elements) on initial load via the real
+`Puppeteer` + `DevtoolsBridge`, and again after a full reload. `compile`, `lint`,
+`build:webview`, and `npm test` are all green. (Also fixed two latent repo issues
+surfaced along the way: eslint now ignores `.vscode-test/`, and the extension test
+opens a workspace folder and activates the extension.) Full F5 against live
+CRA/React17/Vite/Next apps is deferred to Phase 4's matrix (no VS Code UI here).
+
+Original spec for this phase:
 - New `src/devtoolsBridge.ts`: `ws` server + wall relay (host ↔ page ↔ webview);
   lifecycle (start/stop, reconnect, port allocation).
 - Rework `src/puppeteer.ts`: keep launch/attach; **delete** `scrape()` /
