@@ -11,12 +11,14 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import styled from "styled-components";
-import type { DevtoolsStore } from "react-devtools-inline/frontend";
+import type { DevtoolsStore, InspectedElementResponse } from "react-devtools-inline/frontend";
 import type { ComponentNode } from "../types";
 import { layoutTree, type FlowNode as FlowNodeType } from "../flowLayout";
 import { useProfiler } from "../useProfiler";
+import { useContextMap } from "../useContextMap";
 import FlowNode from "./FlowNode";
 import InspectorPanel from "./InspectorPanel";
+import ContextMapPanel from "./ContextMapPanel";
 import type { InspectableCategory, InspectorState } from "../elementInspection";
 import "./flow.css";
 
@@ -26,6 +28,7 @@ export interface InspectorController {
   deselectElement: () => void;
   requestExpand: (category: InspectableCategory, path: Array<string | number>) => void;
   openSource: (fileName: string, lineNumber: number, columnNumber: number) => void;
+  inspectOnce: (id: number) => Promise<InspectedElementResponse>;
 }
 
 interface TreeChartProps {
@@ -84,6 +87,7 @@ function FlowGraph({ data, theme, inspector, store }: TreeChartProps) {
   }, []);
 
   const profiler = useProfiler(store, inspector.state.elementId);
+  const contextMap = useContextMap(store, inspector.inspectOnce);
 
   const { nodes: layoutNodes, edges: layoutEdges } = useMemo(
     () =>
@@ -158,6 +162,7 @@ function FlowGraph({ data, theme, inspector, store }: TreeChartProps) {
         <button onClick={profiler.toggleProfiling} disabled={profiler.toggleDisabled}>
           {profiler.isProfiling ? "Stop Profiling" : "Start Profiling"}
         </button>
+        <ContextMapPanel theme={theme} controller={contextMap} />
         <SearchInput
           type="search"
           placeholder="Search components…"

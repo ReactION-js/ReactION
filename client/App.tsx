@@ -8,7 +8,7 @@ import {
   type InspectorState,
 } from "./elementInspection";
 import type { ComponentNode } from "./types";
-import type { DevtoolsStore } from "react-devtools-inline/frontend";
+import type { DevtoolsStore, InspectedElementResponse } from "react-devtools-inline/frontend";
 
 const theme: "light" | "dark" =
   window.__REACTION_THEME__ === "light" ? "light" : "dark";
@@ -75,6 +75,16 @@ export default function App() {
     },
     [],
   );
+  // Background, one-shot probe used by useContextMap.ts -- deliberately
+  // routed through the same ElementInspector instance as select/requestExpand
+  // above (rather than a second bridge listener) so it shares one requestID
+  // sequence and is torn down for free on disconnect/reconnect.
+  const inspectOnce = useCallback((id: number): Promise<InspectedElementResponse> => {
+    if (!inspectorRef.current) {
+      return Promise.resolve({ id, responseID: -1, type: "not-found" });
+    }
+    return inspectorRef.current.inspectOnce(id);
+  }, []);
   // Host-only channel (not the wall/bridge to the page): the raw, 1-based
   // fileName/lineNumber/columnNumber straight off the protocol's `source`
   // tuple. The 1-based -> 0-based vscode.Position adjustment happens on the
@@ -107,6 +117,7 @@ export default function App() {
         deselectElement,
         requestExpand,
         openSource,
+        inspectOnce,
       }}
     />
   );
