@@ -1,27 +1,22 @@
-import * as assert from 'assert';
-import puppeteer from 'puppeteer';
-const { describe, it, before } = require('mocha');
+import * as assert from "node:assert";
+import puppeteer from "puppeteer-core";
 
-describe('on page load', () => {
-  it('h1 loads correctly', async () => {
-    let browser = await puppeteer.launch({});
-    let page = await browser.newPage();
-    assert.ok(browser);
+// Integration smoke test. Requires Chrome; set CHROME_PATH to override the path.
+const executablePath =
+  process.env.CHROME_PATH ??
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 
-    await page.emulate({
-      viewport: {
-        width: 500,
-        height: 2400,
-      },
-      userAgent: ''
-    });
+describe("puppeteer smoke test", function () {
+  this.timeout(30_000);
 
-    await browser.close(); // Don't forget to close the browser after tests
-  });
-});
-
-describe('Simple test suite:', function () {
-  it('1 === 1 should be true', function () {
-    assert.strictEqual(1, 1);
+  it("launches Chrome and opens a page", async () => {
+    const browser = await puppeteer.launch({ executablePath });
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 800, height: 600 });
+      assert.ok(page);
+    } finally {
+      await browser.close();
+    }
   });
 });

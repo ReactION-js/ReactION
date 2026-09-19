@@ -1,97 +1,82 @@
-import React, { useState, useCallback } from 'react';
-import Tree from 'react-d3-tree';
-import NodeLabel from './NodeLabel';
-import styled from 'styled-components';
+import { useCallback, useState } from "react";
+import Tree, {
+  type CustomNodeElementProps,
+  type RawNodeDatum,
+} from "react-d3-tree";
+import styled from "styled-components";
+import type { ComponentNode } from "../types";
+import NodeLabel from "./NodeLabel";
 
-const TreeStyled = styled.div`
-  .linkBase {
+interface TreeChartProps {
+  data: ComponentNode;
+  theme: "light" | "dark";
+}
+
+const Container = styled.div<{ $theme: "light" | "dark" }>`
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: ${(props) =>
+    props.$theme === "light" ? "#ffffff" : "#1e1e1e"};
+  color: ${(props) => (props.$theme === "light" ? "#181818" : "#f8f8f8")};
+  font-family: "Segoe UI", system-ui, sans-serif;
+
+  .rd3t-link {
+    stroke: #888;
+    stroke-width: 1.5px;
     fill: none;
-    stroke: #d3d3d3;
-    stroke-width: 2px;
-  }
-  font-family: 'Crimson Text', serif;
-`;
-
-const Name = styled.g<{ theme: string }>`
-  .nodenamebase {
-    stroke: ${(props) => (props.theme === 'light' ? '#181818' : '#f8f8f8')};
-    font-size: large;
-    fill: ${(props) => (props.theme === 'light' ? '#181818' : '#f8f8f8')};
-  }
-  .nodeAttributesBase {
-    stroke: ${(props) => (props.theme === 'light' ? '#181818' : '#f8f8f8')};
   }
 `;
 
-const myTreeData = (window as any)._TREE_DATA;
+const Toolbar = styled.div`
+  padding: 8px;
+`;
 
-const D3TreeChart: React.FC = () => {
-  const [orientation, setOrientation] = useState<'vertical' | 'horizontal'>('vertical');
-  const [x, setX] = useState<number>(200);
-  const [y, setY] = useState<number>(100);
-  const [nodeSvgShape, setNodeSvgShape] = useState({
-    shape: 'circle',
-    shapeProps: {
-      r: 10,
-      fill: '#1e1e1e',
-      stroke: '#181818',
-      strokeWidth: '0px',
-      nodenamebase: '#1e1e1e',
-    },
-    theme: 'light',
-    background: 'rgb(255,255,255)',
-  });
+function renderNode({ nodeDatum, toggleNode }: CustomNodeElementProps) {
+  const node = nodeDatum as unknown as ComponentNode;
+  return (
+    <g>
+      <circle
+        r={10}
+        fill="#61dafb"
+        stroke="#282c34"
+        strokeWidth={1}
+        onClick={toggleNode}
+      />
+      <foreignObject x={14} y={-14} width={220} height={200}>
+        <NodeLabel name={node.name} attributes={node.attributes ?? []} />
+      </foreignObject>
+    </g>
+  );
+}
 
-  const changeOrientation = useCallback(() => {
-    if (orientation === 'vertical') {
-      setOrientation('horizontal');
-      setX(100);
-      setY(100);
-    } else {
-      setOrientation('vertical');
-      setX(200);
-      setY(100);
-    }
-  }, [orientation]);
+// Renders the scraped component hierarchy as an interactive D3 tree.
+export default function TreeChart({ data, theme }: TreeChartProps) {
+  const [orientation, setOrientation] = useState<"vertical" | "horizontal">(
+    "vertical",
+  );
+
+  const toggleOrientation = useCallback(() => {
+    setOrientation((current) =>
+      current === "vertical" ? "horizontal" : "vertical",
+    );
+  }, []);
 
   return (
-    <div
-      className="treeChart"
-      style={{
-        width: '100%',
-        height: '100em',
-        display: 'flex',
-        flexDirection: 'column',
-        backgroundColor: nodeSvgShape.background,
-      }}
-    >
-      <button onClick={changeOrientation}>
-        Click to change orientation
-      </button>
-      {/* <button
-        onClick={this.changeTheme}
-        counter='Background'
-      >click to change Theme</button>
-      <br></br> */}
-      <div style={{ width: '100%', height: '98em' }}>
-        <TreeStyled>
-          <Name theme={nodeSvgShape.theme}>
-            <Tree
-              translate={{ x, y }}
-              data={myTreeData}
-              orientation={orientation}
-              nodeSvgShape={nodeSvgShape}
-              allowForeignObjects
-              nodeLabelComponent={{
-                render: <NodeLabel className="myLabelComponentInSvg" nodeData={{ name: 'Node Name', attributes: [] }} />,
-              }}
-              textLayout={{ textAnchor: 'start', x: 13, y: 0, transform: undefined }}
-            />
-          </Name>
-        </TreeStyled>
+    <Container $theme={theme} className="treeChart">
+      <Toolbar>
+        <button onClick={toggleOrientation}>Change orientation</button>
+      </Toolbar>
+      <div style={{ flex: 1 }}>
+        <Tree
+          data={data as unknown as RawNodeDatum}
+          orientation={orientation}
+          translate={{ x: 200, y: 100 }}
+          renderCustomNodeElement={renderNode}
+          collapsible
+        />
       </div>
-    </div>
+    </Container>
   );
-};
-
-export default D3TreeChart;
+}
