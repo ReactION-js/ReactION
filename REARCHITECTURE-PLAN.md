@@ -319,7 +319,95 @@ Original spec for this phase:
 - **Verify:** large trees render smoothly; every component type labeled
   correctly; search works.
 
-### Phase 3 — Inspection, re-render insight & jump-to-source
+### Phase 3 — Inspection, re-render insight & jump-to-source — ✅ DONE
+
+**Status:** complete and verified. Built as four independently-committed,
+independently-reviewed sub-phases (3a–3d) rather than one commit, since the
+plan bundled four fairly separable features; each sub-phase landed only after
+a spec-compliance pass and a code-quality pass both came back clean.
+
+- **3a — element inspection panel.** `client/elementInspection.ts`
+  (`ElementInspector`) sends `inspectElement`/listens for `inspectedElement`
+  over the Store's existing bridge; click a graph node to select it, poll
+  ~1s while selected (`forceFullData:false`, matching the stock DevTools
+  panel's own behavior), render Props/State/Hooks in a new
+  `client/components/InspectorPanel.tsx` (`ValueTree.tsx` holds the
+  recursive value renderer, extracted once the panel grew). Handles the
+  protocol's dehydration wrapper (`{data, cleaned, unserializable}`) and
+  `hydrated-path` expansion for nested/placeholder values.
+- **3b — jump to source.** **Plan correction:** the field is `source`, a
+  `[functionName, fileName, lineNumber, columnNumber]` **tuple** — `_debugSource`
+  does not exist in this protocol version. Line/column are 1-based (V8
+  `CallSite` convention); the host subtracts 1 for `vscode.Position`. New
+  `src/openSource.ts` (pure path resolution: absolute / `webpack://`-style /
+  relative / unresolvable) + `src/sourceOpeningWiring.ts`
+  (`vscode.window.showTextDocument`, graceful failure message otherwise).
+  **Security note:** review caught that the raw `fileName` — which
+  originates from the *inspected page's own JS runtime* and is therefore
+  untrusted — could escape the workspace via `../` traversal, an absolute
+  path, or a symlink; closed with a `path.relative`-based containment check
+  plus a `fs.realpathSync`-on-both-sides check (realpathing only the
+  candidate would false-negative on macOS, where `/var` itself symlinks to
+  `/private/var`).
+- **3c — profiler capture** (re-render reasons, wasted-render flags,
+  render-count heatmap). Uses `store.profilerStore` /
+  `store.recordChangeDescriptions` — properties of the `Store` object
+  `createStore()` returns, **not** exports of `react-devtools-inline/frontend`
+  (that package only exports `createBridge`/`createStore`/`initialize`).
+  `recordChangeDescriptions` must be set **before** calling
+  `profilerStore.startProfiling()`. Data-ready signal is the
+  `'isProcessingData'` event transitioning back to `false` — **not** a
+  `'profilingData'` event, which only fires on import/export, never a normal
+  live capture. New pure `client/renderStats.ts`
+  (`isWastedRender`/`computeRenderCounts`/`describeChange`) + orchestration
+  hook `client/useProfiler.ts`. A fiber that fully bails out never appears in
+  a commit's `changeDescriptions` at all (same base-protocol gap the Phase 2
+  note above already found — the profiler closes it only for fibers that
+  actually ran). **Bug caught in review:** `stopProfiling()` relabels the
+  toggle synchronously, before the backend's async stop confirmation lands,
+  so a plain double-click on "Stop" could re-enter `startProfiling()` and
+  silently destroy the just-captured session; closed with a
+  `stopConfirmationPending` guard cleared only by the real confirmation
+  event.
+- **3d — context provider/consumer map.** No context identity exists on the
+  wire; correlation is a **documented heuristic**: strip the
+  `.Provider`/`.Consumer` suffix from an ancestor's `displayName` and match
+  it against a consumer's `useContext` hook name, walking to the *nearest*
+  matching ancestor (shadowing). Two distinct `Context` objects sharing a
+  displayName (including the common case of an anonymous `createContext()`
+  with no `.displayName`, which reports as bare `"Context"`) are
+  indistinguishable from Store data alone — out of scope to solve. Only
+  function/`memo`/`forwardRef` consumers are covered; class-component legacy
+  `contextType`/`this.context` is not. New pure `client/contextMap.ts` +
+  `client/useContextMap.ts`, reusing 3a's inspection plumbing via a new
+  one-shot `ElementInspector.inspectOnce(id)` (bypasses the selection/poll
+  state machine). User-triggered ("Build context map" button), not automatic
+  — an eager per-node `inspectElement` fan-out on every Store mutation would
+  not scale.
+
+**Verification:** every sub-phase met the existing `compile`+`lint`+
+`build:webview`+`test` bar plus a throwaway `spike/run-phase3-*.js` harness
+(real Puppeteer + real compiled host modules, following the Phase 1/2
+pattern) proving the specific protocol behavior against the shared sample
+app (`spike/sample-app.jsx`, unmodified — its existing `Counter`/`Header`/
+`ThemeContext` already covered every fixture these sub-phases needed) —
+several also cross-checked findings against the real installed
+`node_modules/react-devtools-core`/`react-devtools-inline` v8.0.0 source
+directly rather than trusting general React DevTools knowledge, since this
+plan's own Phase 2 note already showed that knowledge can be
+version-specific and wrong.
+
+**Follow-ups for Phase 4, not defects in this work:** `client/useContextMap.ts`'s
+`inspectOnce` fan-out has no concurrency cap (fine for a user-triggered
+one-off click on the sample-sized trees tested here, but worth throttling
+before a real production-sized tree); `client/` logic is still verified only
+via ad hoc spike harnesses, never a CI-enforced test runner (`src/` has real
+`vscode-test`/mocha coverage, `client/` does not) — the strongest of these
+harnesses (e.g. the pure-function fixture suites for `renderStats.ts`/
+`contextMap.ts`) would be worth promoting into a real suite as part of
+Phase 4's own testing work.
+
+Original spec for this phase:
 
 - Details panel via `bridge.send('inspectElement', id)` → props/state/hooks.
 - Enable profiler capture → **re-render reasons** + **wasted-render** flags +
