@@ -3,6 +3,10 @@ import * as vscode from "vscode";
 
 suite("ReactION extension", () => {
   test("contributes its commands", async () => {
+    const extension = vscode.extensions.getExtension("ReactION-JS.ReactION");
+    assert.ok(extension, "ReactION extension should be present");
+    await extension.activate();
+
     const commands = await vscode.commands.getCommands(true);
     assert.ok(
       commands.includes("ReactION.openTree"),
