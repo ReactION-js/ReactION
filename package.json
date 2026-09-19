@@ -54,25 +54,33 @@
     "build:webview": "webpack --mode production",
     "watch:webview": "webpack --mode development --watch",
     "lint": "eslint .",
+    "spike": "node spike/run-spike.js",
     "pretest": "npm run compile && npm run lint",
     "test": "vscode-test",
     "test:e2e": "mocha out/test/puppeteer.test.js out/test/TreeView.test.js",
     "package": "vsce package"
   },
   "devDependencies": {
+    "@dagrejs/dagre": "^3.1.1",
+    "@types/jsdom": "^30.0.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "^22.20.4",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@types/vscode": "^1.90.0",
+    "@types/ws": "^8.18.1",
     "@vscode/test-cli": "^0.0.15",
     "@vscode/test-electron": "^3.1.0",
     "@vscode/vsce": "^4.0.0",
+    "@xyflow/react": "^12.11.6",
+    "esbuild": "^0.28.2",
     "eslint": "^10.11.0",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "jsdom": "^29.1.1",
     "mocha": "^12.0.2",
     "react": "^19.3.0",
     "react-d3-tree": "^3.6.6",
+    "react-devtools-inline": "8.0.0",
     "react-dom": "^19.3.0",
     "styled-components": "^6.5.3",
     "ts-loader": "^9.6.2",
@@ -82,6 +90,8 @@
     "webpack-cli": "^7.2.3"
   },
   "dependencies": {
-    "puppeteer-core": "^25.11.0"
+    "puppeteer-core": "^25.11.0",
+    "react-devtools-core": "8.0.0",
+    "ws": "^8.21.3"
   }
 }
