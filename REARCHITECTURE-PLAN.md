@@ -14,6 +14,7 @@ ReactION is a published VS Code extension (`ReactION-js.ReactION`) that
 visualizes a running React app's component tree.
 
 **Current pipeline (the part we are replacing):**
+
 1. `src/puppeteer.ts` launches Chrome via `puppeteer-core` at a configured
    `localhost` and **hand-walks React fiber internals** inside `page.evaluate`
    (`_reactRootContainer`, `__reactContainer$`, `__reactFiber$`) to produce a
@@ -30,6 +31,7 @@ and #73 (large app → empty tree, wants verbose logs) are both "empty tree"
 symptoms of this.
 
 **Constraints:**
+
 - Must remain a valid **VS Code / Cursor** extension (Cursor consumes the same
   VSIX; publish to Open VSX later).
 - Keep the current "no setup required" selling point (no code changes in the
@@ -49,6 +51,7 @@ scrape) · `treeSync.ts` (polling) · `TreeNode.ts` (tree model) · `config.ts`
 ## 2. Goals & non-goals
 
 **Goals**
+
 - Reliable component tree for **all** React component types (function, class,
   `memo`, `forwardRef`, `lazy`, `Suspense`, context, fragments, portals, hooks)
   across **React 16–19**, including concurrent roots and multiple roots.
@@ -57,6 +60,7 @@ scrape) · `treeSync.ts` (polling) · `TreeNode.ts` (tree model) · `config.ts`
   we drive a real browser at a URL).
 
 **Non-goals (for now)**
+
 - Browser-extension / standalone-app form factor.
 - Deep production-build introspection beyond what DevTools exposes.
 - Full static dead-code tool (we do a focused subset in Phase 5).
@@ -91,28 +95,30 @@ flowchart LR
 ```
 
 **Data flow**
+
 1. Host launches/attaches Chrome (`puppeteer-core`) and uses CDP
    `Page.addScriptToEvaluateOnNewDocument` to inject the DevTools **backend**
-   *before any app script runs*, then navigates/reloads.
+   _before any app script runs_, then navigates/reloads.
 2. The injected backend installs `__REACT_DEVTOOLS_GLOBAL_HOOK__` (so it must
    run before React initializes) and calls `connectToDevTools({ host, port })`
    to reach our `ws` relay in the host.
 3. The host relay forwards the raw "wall" messages to the webview via
    `webview.postMessage`, and forwards webview→host messages back to the socket.
 4. The webview builds `react-devtools-inline/frontend` `createBridge(customWall)`
-   + `createStore(bridge)` → a **live Store** (the battle-tested element tree).
+   - `createStore(bridge)` → a **live Store** (the battle-tested element tree).
 5. We render our **React Flow** graph from the Store and drive a details panel
    via `bridge.send('inspectElement', id)`.
 6. "Jump to source" relays the element's source location to the host →
    `vscode.window.showTextDocument(file, { selection: line })`.
 
 **Critical constraints / gotchas**
+
 - **Hook before React:** inject at new-document time (CDP), then reload. If the
   hook isn't present before React loads, nothing is captured.
 - **Version lockstep:** `react-devtools-core` and `react-devtools-inline` share
   the wall/operations protocol — **pin them to identical versions**. Phase 0
   validates protocol compatibility; fallback is to use `react-devtools-inline`
-  for *both* sides (bundle its backend into the injected script).
+  for _both_ sides (bundle its backend into the injected script).
 - **CSP:** the webview shell (`TreeViewPanel.ts`) uses a strict nonce CSP; React
   Flow injects styles — allow `style-src` and bundle its CSS.
 - **Chrome discovery:** replace the hardcoded `executablePath` reliance with
@@ -123,18 +129,18 @@ flowchart LR
 
 ## 4. Libraries
 
-| Package | Role | Notes / gotchas |
-|---|---|---|
-| `react-devtools-core` | DevTools **backend** injected into the page; `connectToDevTools()` over WS | Officially supports "backend connects to a server." **Pin to same version as inline.** |
-| `react-devtools-inline` | DevTools **frontend** in the webview: `createBridge`, `createStore`, optional `initialize` UI | Supply a **custom wall** to bridge over postMessage. Store gives the full element tree + profiling. |
-| `ws` | Host WebSocket relay server (`devtoolsBridge.ts`) | Node-side only; not bundled into the webview. |
-| `puppeteer-core` (existing) | Launch/attach Chrome + CDP injection | Keep. Add `Page.addScriptToEvaluateOnNewDocument`. |
-| `@puppeteer/browsers` **or** `chrome-launcher` | Robust Chrome discovery / optional download | Removes the biggest config-fragility. |
-| `@xyflow/react` (React Flow v12) | Graph visualization (replaces react-d3-tree) | No built-in layout — pair with a layout lib. Bundle its CSS under the CSP. |
-| `@dagrejs/dagre` **or** `elkjs` | Hierarchical/tree layout for React Flow | Dagre = simpler; ELK = nicer for large graphs. |
-| `ts-morph` | Static analysis (Phase 5): component/import graph, dead props | Ergonomic TS AST over the compiler API. |
-| `react-docgen` | Component + prop metadata for static features | Complements ts-morph; handles common component patterns. |
-| `@vscode/test-cli`, `mocha` (existing) | Unit + e2e tests | Add recorded-operations fixtures + sample apps. |
+| Package                                        | Role                                                                                          | Notes / gotchas                                                                                     |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `react-devtools-core`                          | DevTools **backend** injected into the page; `connectToDevTools()` over WS                    | Officially supports "backend connects to a server." **Pin to same version as inline.**              |
+| `react-devtools-inline`                        | DevTools **frontend** in the webview: `createBridge`, `createStore`, optional `initialize` UI | Supply a **custom wall** to bridge over postMessage. Store gives the full element tree + profiling. |
+| `ws`                                           | Host WebSocket relay server (`devtoolsBridge.ts`)                                             | Node-side only; not bundled into the webview.                                                       |
+| `puppeteer-core` (existing)                    | Launch/attach Chrome + CDP injection                                                          | Keep. Add `Page.addScriptToEvaluateOnNewDocument`.                                                  |
+| `@puppeteer/browsers` **or** `chrome-launcher` | Robust Chrome discovery / optional download                                                   | Removes the biggest config-fragility.                                                               |
+| `@xyflow/react` (React Flow v12)               | Graph visualization (replaces react-d3-tree)                                                  | No built-in layout — pair with a layout lib. Bundle its CSS under the CSP.                          |
+| `@dagrejs/dagre` **or** `elkjs`                | Hierarchical/tree layout for React Flow                                                       | Dagre = simpler; ELK = nicer for large graphs.                                                      |
+| `ts-morph`                                     | Static analysis (Phase 5): component/import graph, dead props                                 | Ergonomic TS AST over the compiler API.                                                             |
+| `react-docgen`                                 | Component + prop metadata for static features                                                 | Complements ts-morph; handles common component patterns.                                            |
+| `@vscode/test-cli`, `mocha` (existing)         | Unit + e2e tests                                                                              | Add recorded-operations fixtures + sample apps.                                                     |
 
 **Removed:** `react-d3-tree` (replaced by React Flow). The bespoke fiber walk in
 `puppeteer.ts` and the flat `RawReactNode`/`TreeNode` model are superseded by the
@@ -147,26 +153,27 @@ DevTools Store.
 Legend — **Source:** RT = runtime DevTools engine, ST = static AST, HY = hybrid.
 **Effort:** S/M/L.
 
-| Feature | Value | Source | Effort | Caveats |
-|---|---|---|---|---|
-| **Component graph (all types)** | Core; reliable tree | RT | M | Foundation for everything else |
-| Live props / state / hooks | Debugging staple | RT | S | Free from `inspectElement` |
-| **Re-render reasons** ("prop X changed") | Top perf pain point | RT | M | Needs profiler "changeDescriptions" capture |
-| **Wasted re-render flags** (memo candidates) | High ROI | RT | M | Compare commit output/props |
-| **Render-count heatmap** on graph | Visually differentiating, cheap | RT | M | Needs profiler per-commit data, not just tree operations (see §6 Phase 2 note) |
-| State-change **timeline / time-travel** | Original roadmap item | RT | L | Buffer commits; scrub UI |
-| **Context provider/consumer map** | Unique; refactor aid | RT | M | Correlate context objects across elements |
-| Search / filter tree (by name/type/"has state") | DX baseline | RT | S | — |
-| Snapshot **diff** (mounted/updated/unmounted) | Interaction insight | RT | M | Diff two Store snapshots |
-| **"Not rendered this session"** components | The IDE moat | HY | M | Frame as coverage, not absolute dead code |
-| Session **coverage** (components/routes hit) | UI coverage | HY | M | Depends on what the dev exercised |
-| **Bidirectional source ↔ live instance** | IDE moat | HY | M | Uses fiber `_debugSource` (dev builds) |
-| **Unused components** (defined, never referenced) | Cleanup | ST | M | Fuzzy: dynamic import, barrels, conditional render |
-| **Dead props** (declared, never used) | Cleanup | ST | M | AST per component |
-| **Prop drilling → "use context"** | Actionable refactor | ST | L | Thread a prop through N unused layers |
-| Dependency graph / "god components" | Architecture insight | ST | M | Fan-in/out metrics |
+| Feature                                           | Value                           | Source | Effort | Caveats                                                                        |
+| ------------------------------------------------- | ------------------------------- | ------ | ------ | ------------------------------------------------------------------------------ |
+| **Component graph (all types)**                   | Core; reliable tree             | RT     | M      | Foundation for everything else                                                 |
+| Live props / state / hooks                        | Debugging staple                | RT     | S      | Free from `inspectElement`                                                     |
+| **Re-render reasons** ("prop X changed")          | Top perf pain point             | RT     | M      | Needs profiler "changeDescriptions" capture                                    |
+| **Wasted re-render flags** (memo candidates)      | High ROI                        | RT     | M      | Compare commit output/props                                                    |
+| **Render-count heatmap** on graph                 | Visually differentiating, cheap | RT     | M      | Needs profiler per-commit data, not just tree operations (see §6 Phase 2 note) |
+| State-change **timeline / time-travel**           | Original roadmap item           | RT     | L      | Buffer commits; scrub UI                                                       |
+| **Context provider/consumer map**                 | Unique; refactor aid            | RT     | M      | Correlate context objects across elements                                      |
+| Search / filter tree (by name/type/"has state")   | DX baseline                     | RT     | S      | —                                                                              |
+| Snapshot **diff** (mounted/updated/unmounted)     | Interaction insight             | RT     | M      | Diff two Store snapshots                                                       |
+| **"Not rendered this session"** components        | The IDE moat                    | HY     | M      | Frame as coverage, not absolute dead code                                      |
+| Session **coverage** (components/routes hit)      | UI coverage                     | HY     | M      | Depends on what the dev exercised                                              |
+| **Bidirectional source ↔ live instance**          | IDE moat                        | HY     | M      | Uses fiber `_debugSource` (dev builds)                                         |
+| **Unused components** (defined, never referenced) | Cleanup                         | ST     | M      | Fuzzy: dynamic import, barrels, conditional render                             |
+| **Dead props** (declared, never used)             | Cleanup                         | ST     | M      | AST per component                                                              |
+| **Prop drilling → "use context"**                 | Actionable refactor             | ST     | L      | Thread a prop through N unused layers                                          |
+| Dependency graph / "god components"               | Architecture insight            | ST     | M      | Fan-in/out metrics                                                             |
 
 **Agreed shortlist (build these first, ordered by ROI):**
+
 1. Re-render reasons + wasted-render flags (RT)
 2. Render-count heatmap (RT)
 3. Context provider/consumer map (RT)
@@ -188,6 +195,7 @@ filters). **Core + inline `8.0.0` mix cleanly — the inline-for-both fallback i
 not needed.**
 
 Two implementation notes carried into Phase 1:
+
 - Inject with puppeteer's **`page.evaluateOnNewDocument`** (a manually-created
   `createCDPSession` + `Page.addScriptToEvaluateOnNewDocument` did **not** take
   effect in this setup).
@@ -196,11 +204,12 @@ Two implementation notes carried into Phase 1:
   `connectToDevTools({ host, port })` — both before React runs.
 - `react-devtools-core/dist/backend.js` is a **browser UMD** (bare `self`) that
   defines `window.ReactDevToolsBackend`; read it from `node_modules` and inject —
-  never `require()` it in Node. `react-devtools-inline/frontend` *does* load in
+  never `require()` it in Node. `react-devtools-inline/frontend` _does_ load in
   Node once JSDOM globals exist (Node 22's `navigator`/`localStorage` are
   getter-only → `Object.defineProperty` / reuse jsdom's).
 
 Validate the protocol path before committing to the rewrite.
+
 - Add deps: `react-devtools-core`, `react-devtools-inline`, `ws`, `@xyflow/react`,
   a layout lib. Pin core & inline to identical versions.
 - Script a throwaway: launch Chrome (puppeteer-core), inject the backend via
@@ -215,6 +224,7 @@ Validate the protocol path before committing to the rewrite.
 
 **Status:** complete and verified. The hand-rolled fiber scraper is gone; the
 pipeline now runs the official DevTools protocol end-to-end.
+
 - `src/devtoolsBridge.ts` — `ws` relay (host ↔ page ↔ webview), deliberately
   `vscode`-free so it is unit-testable in Node; a fresh socket per connection
   (page reload = reconnect).
@@ -231,7 +241,7 @@ pipeline now runs the official DevTools protocol end-to-end.
 - Deleted `src/treeSync.ts` (polling) and `src/TreeNode.ts` (host tree model);
   panels wire the bridge instead of `startTreeSync`.
 
-**Verification** (`npm run spike:phase1`, a harness over the *real* compiled
+**Verification** (`npm run spike:phase1`, a harness over the _real_ compiled
 modules): the Store populates (9 elements) on initial load via the real
 `Puppeteer` + `DevtoolsBridge`, and again after a full reload. `compile`, `lint`,
 `build:webview`, and `npm test` are all green. (Also fixed two latent repo issues
@@ -240,6 +250,7 @@ opens a workspace folder and activates the extension.) Full F5 against live
 CRA/React17/Vite/Next apps is deferred to Phase 4's matrix (no VS Code UI here).
 
 Original spec for this phase:
+
 - New `src/devtoolsBridge.ts`: `ws` server + wall relay (host ↔ page ↔ webview);
   lifecycle (start/stop, reconnect, port allocation).
 - Rework `src/puppeteer.ts`: keep launch/attach; **delete** `scrape()` /
@@ -254,6 +265,7 @@ Original spec for this phase:
 
 **Status:** complete and verified. `react-d3-tree` is gone; the webview renders
 the live Store as a **React Flow** graph.
+
 - `client/flowLayout.ts` — flattens the `ComponentNode` tree into React Flow
   nodes/edges and lays them out with `@dagrejs/dagre` (`TB`/`LR` toggle);
   collapsed nodes omit their descendants from the graph.
@@ -272,7 +284,7 @@ the live Store as a **React Flow** graph.
   tags and inline `style=""` attributes.
 - Added missing transitive dep `react-is` (required by `react-devtools-inline`'s
   bundle but not declared by it) — `build:webview` failed with `Can't resolve
-  'react-is'` until added.
+'react-is'` until added.
 
 **Render-count heatmap — deferred to Phase 3 (plan correction).** Investigating
 the actual bundled protocol (`node_modules/react-devtools-core/dist/backend.js`)
@@ -280,11 +292,12 @@ showed the base (non-profiling) commit protocol has no operation for "this
 component re-rendered with the same props/children" — `Store`'s `'mutated'`
 event only reports structurally added/removed element IDs, not per-node commit
 counts. A true render-count signal requires the **profiler** (`startProfiling`
-+ per-commit fiber duration/updater data), which is exactly Phase 3's
-dependency for re-render reasons and wasted-render flags. Building the heatmap
-now would have meant either a fake (always-empty) counter or reinventing
-operations parsing against an unstable internal protocol. Moved to Phase 3
-where it can share the real profiler capture.
+
+- per-commit fiber duration/updater data), which is exactly Phase 3's
+  dependency for re-render reasons and wasted-render flags. Building the heatmap
+  now would have meant either a fake (always-empty) counter or reinventing
+  operations parsing against an unstable internal protocol. Moved to Phase 3
+  where it can share the real profiler capture.
 
 **Verification:** `npm run compile`, `lint`, `build:webview` (bundle ~1.02 MiB,
 no warnings), and `npm test` are all green. Additionally verified **visually**:
@@ -295,6 +308,7 @@ the graph renders all component types with correct labels/colors, search dims
 non-matches, and collapse/expand hides/shows subtrees correctly.
 
 Original spec for this phase:
+
 - `client/App.tsx`: build `createBridge(customWall)` + `createStore`; subscribe
   to Store mutations; map Store elements → graph nodes (covers all types).
 - Replace `client/components/TreeView.tsx` (react-d3-tree) with **React Flow** +
@@ -306,6 +320,7 @@ Original spec for this phase:
   correctly; search works.
 
 ### Phase 3 — Inspection, re-render insight & jump-to-source
+
 - Details panel via `bridge.send('inspectElement', id)` → props/state/hooks.
 - Enable profiler capture → **re-render reasons** + **wasted-render** flags +
   **render-count heatmap** (moved from Phase 2 — all three need the same
@@ -317,6 +332,7 @@ Original spec for this phase:
   clicking a node opens the right file/line.
 
 ### Phase 4 — Stability, diagnostics, tests, docs
+
 - Clear "No React detected" empty state + an **Output channel** log (closes #73).
 - Reconnect on navigation/HMR; handle multiple roots; auto dev-server URL
   detection (config + scan 3000/5173/8080 + wait).
@@ -326,6 +342,7 @@ Original spec for this phase:
 - Update `README.md` / roadmap; refresh screenshots.
 
 ### Phase 5 — Static hybrid (source-aware features)
+
 - `src/staticAnalysis.ts` (ts-morph + react-docgen): build the component/import
   graph; compute **unused components**, **dead props**, **prop drilling**,
   dependency metrics.
@@ -352,6 +369,7 @@ Original spec for this phase:
 ## 8. Testing strategy
 
 **Sample-app matrix** (keep tiny, commit under `samples/` or reference repos):
+
 - CRA React 16.13 · React 17 · Vite React 18 · Next 15 React 19
 - **react-router v5 + React 16.9** (issue #72) · react-router v6
 - A "kitchen-sink" app exercising memo/forwardRef/lazy/Suspense/context/portals
@@ -369,15 +387,15 @@ source, and the empty state when no React is found.
 
 ## 9. Risks & mitigations
 
-| Risk | Mitigation |
-|---|---|
-| Backend/frontend protocol version mismatch | Pin core+inline identical; Phase 0 validates; fallback inline-for-both |
-| Hook not installed before React | CDP `addScriptToEvaluateOnNewDocument` + reload |
-| React Flow perf on huge trees | Virtualize; collapse by default; layout off the main thread if needed |
-| Chrome path fragility | `@puppeteer/browsers` discovery + attach-to-existing |
-| Static "unused" false positives | Frame as coverage; combine with runtime; respect dynamic imports/barrels |
-| CSP blocks webview libs | Bundle CSS; extend `style-src`; keep nonce for scripts |
-| Production builds strip names/source | Detect + message; recommend dev build for full detail |
+| Risk                                       | Mitigation                                                               |
+| ------------------------------------------ | ------------------------------------------------------------------------ |
+| Backend/frontend protocol version mismatch | Pin core+inline identical; Phase 0 validates; fallback inline-for-both   |
+| Hook not installed before React            | CDP `addScriptToEvaluateOnNewDocument` + reload                          |
+| React Flow perf on huge trees              | Virtualize; collapse by default; layout off the main thread if needed    |
+| Chrome path fragility                      | `@puppeteer/browsers` discovery + attach-to-existing                     |
+| Static "unused" false positives            | Frame as coverage; combine with runtime; respect dynamic imports/barrels |
+| CSP blocks webview libs                    | Bundle CSS; extend `style-src`; keep nonce for scripts                   |
+| Production builds strip names/source       | Detect + message; recommend dev build for full detail                    |
 
 ---
 
