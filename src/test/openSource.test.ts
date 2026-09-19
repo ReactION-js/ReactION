@@ -10,15 +10,24 @@ import { resolveSourceFileName } from "../openSource";
 // than mocking fs, per the task brief.
 describe("resolveSourceFileName", () => {
   let workspaceRoot: string;
+  let outsideFile: string;
 
   before(() => {
     workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "reaction-opensource-"));
     fs.mkdirSync(path.join(workspaceRoot, "src"), { recursive: true });
     fs.writeFileSync(path.join(workspaceRoot, "src", "Foo.tsx"), "// fixture\n");
+
+    // A real file OUTSIDE workspaceRoot (a sibling temp dir), used to prove
+    // the containment check actually rejects a real, existing file rather
+    // than merely exercising the not-found path.
+    const outsideDir = fs.mkdtempSync(path.join(os.tmpdir(), "reaction-opensource-outside-"));
+    outsideFile = path.join(outsideDir, "Secret.txt");
+    fs.writeFileSync(outsideFile, "secret\n");
   });
 
   after(() => {
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    fs.rmSync(path.dirname(outsideFile), { recursive: true, force: true });
   });
 
   it("returns an already-absolute path that exists on disk", () => {
@@ -64,5 +73,34 @@ describe("resolveSourceFileName", () => {
 
   it("returns undefined for a directory rather than a real file", () => {
     assert.strictEqual(resolveSourceFileName("src", workspaceRoot), undefined);
+  });
+
+  // Regression: resolveSourceFileName used to hand back any real file on
+  // disk, including ones outside the workspace -- a page-controlled fileName
+  // could exploit that for arbitrary local file disclosure via "Open in
+  // editor". Both cases below point at a real, existing file outside
+  // workspaceRoot, so a passing test proves the containment check, not just
+  // fs.existsSync failing.
+  it("returns undefined for an absolute path to a real file outside the workspace", () => {
+    assert.strictEqual(resolveSourceFileName(outsideFile, workspaceRoot), undefined);
+  });
+
+  it("returns undefined for a ../ traversal that resolves to a real file outside the workspace", () => {
+    const traversal = path.relative(workspaceRoot, outsideFile);
+    assert.strictEqual(resolveSourceFileName(traversal, workspaceRoot), undefined);
+  });
+
+  it("returns undefined for a deep ../ traversal chain reaching a real file outside the workspace", () => {
+    const withoutLeadingSlash = outsideFile.replace(/^[/\\]/, "");
+    const deepTraversal = "../".repeat(10) + withoutLeadingSlash;
+    assert.strictEqual(resolveSourceFileName(deepTraversal, workspaceRoot), undefined);
+  });
+
+  it("returns undefined for a webpack:// URL whose path traverses outside the workspace", () => {
+    const traversal = path.relative(workspaceRoot, outsideFile);
+    assert.strictEqual(
+      resolveSourceFileName(`webpack://my-app/./${traversal}`, workspaceRoot),
+      undefined,
+    );
   });
 });
