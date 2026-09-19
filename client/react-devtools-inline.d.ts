@@ -109,8 +109,20 @@ declare module "react-devtools-inline/frontend" {
     key: number | string | null;
   }
 
-  // Only the fields Task 3a renders or expects to hand to a later phase;
-  // renderer metadata and `source` (Task 3b) are intentionally left out.
+  // [functionName, fileName, lineNumber, columnNumber] -- NOT an object (the
+  // plan's `_debugSource` doesn't exist in this protocol version). Confirmed
+  // against react-devtools-core/dist/backend.js's extractLocationFromComponentStack
+  // / extractLocationFromOwnerStack, which build this exact tuple from a
+  // parsed V8 stack trace. lineNumber/columnNumber are 1-based (V8's
+  // CallSite.getLineNumber()/getColumnNumber() convention; confirmed
+  // empirically in spike/run-phase3b-source.js by cross-checking against the
+  // real sample-app.jsx source via its esbuild sourcemap).
+  export type InspectedElementSource =
+    | [functionName: string, fileName: string, lineNumber: number, columnNumber: number]
+    | null;
+
+  // Only the fields Task 3a/3b render or expect to hand to a later phase;
+  // renderer metadata is intentionally left out.
   export interface InspectedElement {
     id: number;
     key: number | string | null;
@@ -121,6 +133,7 @@ declare module "react-devtools-inline/frontend" {
     context: DehydratedData | null;
     hooks: DehydratedData | null;
     owners: InspectedElementOwner[] | null;
+    source: InspectedElementSource;
   }
 
   export type InspectedElementResponse =

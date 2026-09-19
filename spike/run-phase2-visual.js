@@ -32,6 +32,7 @@ Module._resolveFilename = function (request, ...rest) {
 
 const DevtoolsBridge = require("../out/devtoolsBridge.js").default;
 const Puppeteer = require("../out/puppeteer.js").default;
+const { resolveSourceFileName } = require("../out/openSource.js");
 
 const CHROME_PATH =
   process.env.CHROME_PATH ||
@@ -144,6 +145,21 @@ function serveWebviewSimulator(bridge, onStartApp) {
           const message = JSON.parse(body);
           if (message && message.type === "wall" && message.message) {
             bridge.sendToPage(message.message);
+          } else if (message && message.type === "openSource") {
+            // Task 3b's "Open in editor" button posts this directly (NOT
+            // through the wall/bridge -- it's host-only, see client/App.tsx).
+            // There's no real VS Code window here to actually open a file
+            // in, so just log what would happen, mirroring what
+            // src/sourceOpeningWiring.ts's wireSourceOpening would do.
+            log(
+              `openSource message: fileName=${message.fileName} lineNumber=${message.lineNumber} columnNumber=${message.columnNumber}`,
+            );
+            const resolved = resolveSourceFileName(message.fileName, path.join(__dirname));
+            log(
+              resolved
+                ? `openSource would open: ${resolved}:${message.lineNumber - 1}:${message.columnNumber - 1} (0-based)`
+                : `openSource could not resolve "${message.fileName}" against ${__dirname} (expected for a bundle URL -- would show an information message instead)`,
+            );
           }
         } catch {
           /* ignore malformed messages */

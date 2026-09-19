@@ -23,6 +23,7 @@ export interface InspectorController {
   selectElement: (id: number) => void;
   deselectElement: () => void;
   requestExpand: (category: InspectableCategory, path: Array<string | number>) => void;
+  openSource: (fileName: string, lineNumber: number, columnNumber: number) => void;
 }
 
 interface TreeChartProps {
@@ -182,6 +183,7 @@ function FlowGraph({ data, theme, inspector }: TreeChartProps) {
             state={inspector.state}
             onExpand={inspector.requestExpand}
             onClose={handleDeselect}
+            onOpenSource={inspector.openSource}
           />
         )}
       </div>

@@ -13,14 +13,15 @@ export function activate(context: vscode.ExtensionContext): void {
     return;
   }
 
-  const config = loadConfig(workspaceFolder.uri.fsPath);
+  const workspaceRoot = workspaceFolder.uri.fsPath;
+  const config = loadConfig(workspaceRoot);
 
   context.subscriptions.push(
     vscode.commands.registerCommand("ReactION.openTree", () => {
-      ViewPanel.createOrShow(context.extensionUri, config);
+      ViewPanel.createOrShow(context.extensionUri, config, workspaceRoot);
     }),
     vscode.commands.registerCommand("ReactION.openWeb", () => {
-      EmbeddedViewPanel.createOrShow(context.extensionUri, config);
+      EmbeddedViewPanel.createOrShow(context.extensionUri, config, workspaceRoot);
     }),
     vscode.window.registerTreeDataProvider(
       "startExtension",
