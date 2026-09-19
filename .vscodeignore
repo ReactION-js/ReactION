@@ -1,3 +1,27 @@
+# Source — shipped compiled in out/ instead
+src/**
+client/**
 **/*.ts
-**/tsconfig.json
-!file.ts
+**/*.tsx
+**/*.map
+
+# Tests
+out/test/**
+.vscode-test.mjs
+.vscode-test/**
+
+# Editor & tooling config
+.vscode/**
+.github/**
+webpack.config.js
+eslint.config.js
+tsconfig.json
+tsconfig.client.json
+
+# Repo/dev files not needed at runtime
+.gitignore
+.vscodeignore
+reactION-config.json
+package-lock.json
+**/*.vsix
+.DS_Store

@@ -3,7 +3,7 @@
   "displayName": "ReactION-BETA",
   "publisher": "ReactION-JS",
   "description": "React Component Visualizer for VS Code",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "icon": "resources/color.png",
   "engines": {
     "vscode": "^1.90.0"
