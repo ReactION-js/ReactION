@@ -1,12 +1,9 @@
-import React from 'react';
-import { createRoot } from 'react-dom/client';
-import App from './App';
+import { createRoot } from "react-dom/client";
+import App from "./App";
 
-const rootElement = document.getElementById('root');
-
-if (rootElement) {
-  const root = createRoot(rootElement);
-  root.render(<App />);
+const container = document.getElementById("root");
+if (container) {
+  createRoot(container).render(<App />);
 } else {
-  console.error('Root element not found');
+  console.error("ReactION: #root element not found");
 }

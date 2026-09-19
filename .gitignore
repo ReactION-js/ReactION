@@ -1,8 +1,12 @@
 /node_modules
+# build output
+/out
+/build
 # testing
 /coverage
-# production
-/build
+.vscode-test
+# packaged extension
+*.vsix
 # misc
 .DS_Store
 .env.local
