@@ -4,6 +4,7 @@ import { generateHtmlPreview } from "./htmlViewPanel";
 import Puppeteer from "./puppeteer";
 import DevtoolsBridge from "./devtoolsBridge";
 import { wireBridgeToWebview } from "./bridgeWiring";
+import { wireSourceOpening } from "./sourceOpeningWiring";
 import { type ReactionConfig, toUrl } from "./config";
 
 // Shows the running app (iframe preview) alongside its component tree.
@@ -23,6 +24,7 @@ export default class EmbeddedViewPanel {
     treePanel: vscode.WebviewPanel,
     extensionUri: vscode.Uri,
     config: ReactionConfig,
+    workspaceRoot: string,
   ) {
     this.htmlPanel = htmlPanel;
     this.treePanel = treePanel;
@@ -36,7 +38,7 @@ export default class EmbeddedViewPanel {
 
     this.page = new Puppeteer(config);
     this.bridge = new DevtoolsBridge();
-    void this.start();
+    void this.start(workspaceRoot);
 
     this.htmlPanel.onDidDispose(() => this.dispose(), null, this.disposables);
     this.treePanel.onDidDispose(() => this.dispose(), null, this.disposables);
@@ -45,6 +47,7 @@ export default class EmbeddedViewPanel {
   public static createOrShow(
     extensionUri: vscode.Uri,
     config: ReactionConfig,
+    workspaceRoot: string,
   ): void {
     const htmlColumn = vscode.ViewColumn.Two;
     const treeColumn = vscode.ViewColumn.Three;
@@ -79,13 +82,15 @@ export default class EmbeddedViewPanel {
       treePanel,
       extensionUri,
       config,
+      workspaceRoot,
     );
   }
 
-  private async start(): Promise<void> {
+  private async start(workspaceRoot: string): Promise<void> {
     const relayPort = await this.bridge.start();
     this.disposables.push(
       wireBridgeToWebview(this.bridge, this.treePanel.webview),
+      wireSourceOpening(this.treePanel.webview, workspaceRoot),
     );
 
     try {

@@ -3,6 +3,7 @@ import { generateTreeViewHtml } from "./TreeViewPanel";
 import Puppeteer from "./puppeteer";
 import DevtoolsBridge from "./devtoolsBridge";
 import { wireBridgeToWebview } from "./bridgeWiring";
+import { wireSourceOpening } from "./sourceOpeningWiring";
 import type { ReactionConfig } from "./config";
 
 // Shows the React component tree in a single webview panel.
@@ -20,6 +21,7 @@ export default class ViewPanel {
     treePanel: vscode.WebviewPanel,
     extensionUri: vscode.Uri,
     config: ReactionConfig,
+    workspaceRoot: string,
   ) {
     this.treePanel = treePanel;
     this.treePanel.webview.html = generateTreeViewHtml(
@@ -30,7 +32,7 @@ export default class ViewPanel {
 
     this.page = new Puppeteer(config);
     this.bridge = new DevtoolsBridge();
-    void this.start();
+    void this.start(workspaceRoot);
 
     this.treePanel.onDidDispose(() => this.dispose(), null, this.disposables);
   }
@@ -38,6 +40,7 @@ export default class ViewPanel {
   public static createOrShow(
     extensionUri: vscode.Uri,
     config: ReactionConfig,
+    workspaceRoot: string,
   ): void {
     const treeColumn = vscode.ViewColumn.Two;
 
@@ -57,13 +60,14 @@ export default class ViewPanel {
       },
     );
 
-    ViewPanel.currentPanel = new ViewPanel(treePanel, extensionUri, config);
+    ViewPanel.currentPanel = new ViewPanel(treePanel, extensionUri, config, workspaceRoot);
   }
 
-  private async start(): Promise<void> {
+  private async start(workspaceRoot: string): Promise<void> {
     const relayPort = await this.bridge.start();
     this.disposables.push(
       wireBridgeToWebview(this.bridge, this.treePanel.webview),
+      wireSourceOpening(this.treePanel.webview, workspaceRoot),
     );
 
     try {
