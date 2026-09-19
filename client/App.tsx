@@ -64,6 +64,16 @@ export default function App() {
     },
     [],
   );
+  // Host-only channel (not the wall/bridge to the page): the raw, 1-based
+  // fileName/lineNumber/columnNumber straight off the protocol's `source`
+  // tuple. The 1-based -> 0-based vscode.Position adjustment happens on the
+  // host side (src/openSource.ts), which is where vscode.Position is built.
+  const openSource = useCallback(
+    (fileName: string, lineNumber: number, columnNumber: number) => {
+      vscodeApi.postMessage({ type: "openSource", fileName, lineNumber, columnNumber });
+    },
+    [],
+  );
 
   if (!tree) {
     return (
@@ -84,6 +94,7 @@ export default function App() {
         selectElement,
         deselectElement,
         requestExpand,
+        openSource,
       }}
     />
   );

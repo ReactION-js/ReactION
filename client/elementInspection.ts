@@ -2,7 +2,6 @@ import type {
   DehydratedData,
   DevtoolsStore,
   FrontendBridge,
-  HooksNode,
   InspectedElement,
   InspectedElementResponse,
   InspectElementRequest,
@@ -292,5 +291,3 @@ export function formatSentinel(type: string): string | undefined {
       return undefined;
   }
 }
-
-export type { HooksNode };
