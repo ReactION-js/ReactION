@@ -57,12 +57,28 @@ export function layoutTree(
   const edges: Edge[] = [];
   const query = searchTerm.trim().toLowerCase();
 
+  // A manual loop rather than Math.min(...counts)/Math.max(...counts):
+  // spreading into a function call is limited by the JS engine's max
+  // argument count, which a large enough component tree could theoretically
+  // exceed.
   let minRenderCount = 0;
   let maxRenderCount = 0;
   if (renderCounts && renderCounts.size > 0) {
-    const counts = Array.from(renderCounts.values());
-    minRenderCount = Math.min(...counts);
-    maxRenderCount = Math.max(...counts);
+    let first = true;
+    for (const count of renderCounts.values()) {
+      if (first) {
+        minRenderCount = count;
+        maxRenderCount = count;
+        first = false;
+      } else {
+        if (count < minRenderCount) {
+          minRenderCount = count;
+        }
+        if (count > maxRenderCount) {
+          maxRenderCount = count;
+        }
+      }
+    }
   }
 
   const visit = (node: ComponentNode, parentId: string | undefined): void => {
