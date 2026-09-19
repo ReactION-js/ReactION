@@ -8,6 +8,11 @@ import {
 } from "../elementInspection";
 import { HookRow, ValueRow } from "./ValueTree";
 
+export interface RenderReason {
+  description: string;
+  wasted: boolean;
+}
+
 export interface InspectorPanelProps {
   theme: "light" | "dark";
   label: string;
@@ -16,6 +21,12 @@ export interface InspectorPanelProps {
   onExpand: (category: InspectableCategory, path: Array<string | number>) => void;
   onClose: () => void;
   onOpenSource: (fileName: string, lineNumber: number, columnNumber: number) => void;
+  // Only set when the latest profiling run's most recent commit actually
+  // recorded this element running. Absent otherwise -- never profiled and
+  // "profiled but this element bailed out every commit" both render nothing
+  // here, deliberately, so the panel never implies "this never re-renders"
+  // when the real state is just "not observed".
+  renderReason?: RenderReason;
 }
 
 const Panel = styled.div<{ $theme: "light" | "dark" }>`
@@ -61,6 +72,25 @@ const CloseButton = styled.button`
   &:hover {
     opacity: 1;
   }
+`;
+
+const RenderReasonLine = styled.div`
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+`;
+
+const WastedBadge = styled.span`
+  border: 1px solid #ff8a4c;
+  color: #ff8a4c;
+  border-radius: 3px;
+  padding: 0 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 `;
 
 const OpenSourceButton = styled.button`
@@ -202,6 +232,7 @@ export default function InspectorPanel({
   onExpand,
   onClose,
   onOpenSource,
+  renderReason,
 }: InspectorPanelProps) {
   const { element, loading, error } = state;
   const source = element?.source ?? null;
@@ -215,6 +246,12 @@ export default function InspectorPanel({
             {typeLabel}
             {element?.key != null ? ` · key: ${String(element.key)}` : ""}
           </TypeLine>
+          {renderReason && (
+            <RenderReasonLine>
+              <span>{renderReason.description}</span>
+              {renderReason.wasted && <WastedBadge>Wasted render</WastedBadge>}
+            </RenderReasonLine>
+          )}
           {source && (
             <div>
               <OpenSourceButton

@@ -14,6 +14,16 @@ export interface FlowNodeData extends Record<string, unknown> {
   matchesSearch: boolean;
   selected: boolean;
   onToggleCollapse: (id: string) => void;
+  // Number of commits (in the most recent profiling run) this element's
+  // fiber actually ran in. Undefined when there's no profiling data at all,
+  // OR when profiling data exists but this fiber never appeared in any
+  // commit (a fully-bailed-out fiber) -- FlowNode must not conflate the two.
+  renderCount?: number;
+  // Shared across every node in the current layout, so FlowNode can scale a
+  // single node's intensity relative to the whole graph. Both 0 when there's
+  // no profiling data yet.
+  minRenderCount: number;
+  maxRenderCount: number;
 }
 
 export type FlowNode = Node<FlowNodeData, "component">;
@@ -24,6 +34,10 @@ interface LayoutOptions {
   direction: "TB" | "LR";
   selectedId?: string;
   onToggleCollapse: (id: string) => void;
+  // Fiber/element id -> render count for the current profiling run, from
+  // renderStats.computeRenderCounts. Omitted (never profiled) or empty
+  // (profiled, but zero commits recorded) both mean "no heatmap to show".
+  renderCounts?: ReadonlyMap<number, number>;
 }
 
 // Flattens the ComponentNode tree into React Flow nodes/edges and lays them out
@@ -33,7 +47,8 @@ export function layoutTree(
   root: ComponentNode,
   options: LayoutOptions,
 ): { nodes: FlowNode[]; edges: Edge[] } {
-  const { collapsedIds, searchTerm, direction, selectedId, onToggleCollapse } = options;
+  const { collapsedIds, searchTerm, direction, selectedId, onToggleCollapse, renderCounts } =
+    options;
   const graph = new dagre.graphlib.Graph();
   graph.setDefaultEdgeLabel(() => ({}));
   graph.setGraph({ rankdir: direction, nodesep: 24, ranksep: 64 });
@@ -42,10 +57,20 @@ export function layoutTree(
   const edges: Edge[] = [];
   const query = searchTerm.trim().toLowerCase();
 
+  let minRenderCount = 0;
+  let maxRenderCount = 0;
+  if (renderCounts && renderCounts.size > 0) {
+    const counts = Array.from(renderCounts.values());
+    minRenderCount = Math.min(...counts);
+    maxRenderCount = Math.max(...counts);
+  }
+
   const visit = (node: ComponentNode, parentId: string | undefined): void => {
     const id = node.id ?? node.name;
     const hasChildren = (node.children?.length ?? 0) > 0;
     const collapsed = collapsedIds.has(id);
+    const numericId = Number(id);
+    const renderCount = renderCounts?.get(numericId);
 
     graph.setNode(id, { width: NODE_WIDTH, height: NODE_HEIGHT });
     nodes.push({
@@ -61,6 +86,9 @@ export function layoutTree(
           query.length === 0 || node.name.toLowerCase().includes(query),
         selected: id === selectedId,
         onToggleCollapse,
+        renderCount,
+        minRenderCount,
+        maxRenderCount,
       },
     });
 

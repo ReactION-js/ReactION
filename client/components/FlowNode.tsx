@@ -17,10 +17,25 @@ const TYPE_COLORS: Record<string, string> = {
   Other: "#8b949e",
 };
 
+// Render-count heatmap tint color. Kept separate from TYPE_COLORS (the
+// border-accent system) so the two don't visually compete -- this is a
+// background wash, not another border color.
+const HEAT_COLOR = "255, 138, 76";
+
 // Renders one component in the graph: name, type badge, and a collapse toggle
 // when it has children. Dimmed when a search is active and it doesn't match.
+// When profiling data exists and this node's fiber actually ran, also shows a
+// small render-count badge and a background tint scaled by that count
+// relative to the rest of the graph.
 function FlowNode({ id, data }: NodeProps<FlowNodeType>) {
   const color = TYPE_COLORS[data.typeLabel] ?? "#8b949e";
+  const { renderCount, minRenderCount, maxRenderCount } = data;
+  const hasHeatData = renderCount !== undefined && renderCount > 0;
+  const intensity = hasHeatData
+    ? maxRenderCount > minRenderCount
+      ? (renderCount - minRenderCount) / (maxRenderCount - minRenderCount)
+      : 1
+    : 0;
 
   return (
     <div
@@ -29,6 +44,9 @@ function FlowNode({ id, data }: NodeProps<FlowNodeType>) {
         borderColor: color,
         opacity: data.matchesSearch ? 1 : 0.25,
         boxShadow: data.selected ? `0 0 0 2px ${color}` : "none",
+        backgroundImage: hasHeatData
+          ? `linear-gradient(rgba(${HEAT_COLOR}, ${0.12 + intensity * 0.28}), rgba(${HEAT_COLOR}, ${0.12 + intensity * 0.28}))`
+          : undefined,
       }}
     >
       <Handle type="target" position={Position.Top} />
@@ -36,6 +54,14 @@ function FlowNode({ id, data }: NodeProps<FlowNodeType>) {
       {data.typeLabel && (
         <div className="reaction-flow-node__type" style={{ color }}>
           {data.typeLabel}
+        </div>
+      )}
+      {hasHeatData && (
+        <div
+          className="reaction-flow-node__heat-badge"
+          title={`Rendered in ${renderCount} commit${renderCount === 1 ? "" : "s"} (latest profiling run)`}
+        >
+          {renderCount}
         </div>
       )}
       {data.hasChildren && (

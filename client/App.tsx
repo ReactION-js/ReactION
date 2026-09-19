@@ -8,6 +8,7 @@ import {
   type InspectorState,
 } from "./elementInspection";
 import type { ComponentNode } from "./types";
+import type { DevtoolsStore } from "react-devtools-inline/frontend";
 
 const theme: "light" | "dark" =
   window.__REACTION_THEME__ === "light" ? "light" : "dark";
@@ -20,6 +21,7 @@ export default function App() {
   const [inspectorState, setInspectorState] = useState<InspectorState>(
     INITIAL_INSPECTOR_STATE,
   );
+  const [store, setStore] = useState<DevtoolsStore | undefined>(undefined);
   const inspectorRef = useRef<ElementInspector | undefined>(undefined);
 
   useEffect(() => {
@@ -33,15 +35,24 @@ export default function App() {
         setConnected(true);
         inspectorRef.current?.dispose();
         const bridge = connection.getBridge();
-        const store = connection.getStore();
+        const newStore = connection.getStore();
         inspectorRef.current =
-          bridge && store ? new ElementInspector(bridge, store, setInspectorState) : undefined;
+          bridge && newStore
+            ? new ElementInspector(bridge, newStore, setInspectorState)
+            : undefined;
         setInspectorState(INITIAL_INSPECTOR_STATE);
+        // A reconnect builds an entirely fresh Store (storeBridge.ts), so
+        // any profiling/heatmap state TreeView derived from the previous
+        // Store's fiber ids must not linger against this one -- swapping the
+        // `store` reference unmounts/remounts TreeChart below (it only
+        // renders once `tree` is populated again), which discards it.
+        setStore(newStore);
       } else if (data?.type === "backend-disconnected") {
         setConnected(false);
         inspectorRef.current?.dispose();
         inspectorRef.current = undefined;
         setInspectorState(INITIAL_INSPECTOR_STATE);
+        setStore(undefined);
       }
     };
     window.addEventListener("message", onMessage);
@@ -89,6 +100,7 @@ export default function App() {
     <TreeChart
       data={tree}
       theme={theme}
+      store={store}
       inspector={{
         state: inspectorState,
         selectElement,

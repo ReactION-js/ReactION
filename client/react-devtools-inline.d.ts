@@ -20,8 +20,114 @@ declare module "react-devtools-inline/frontend" {
     // Required before sending `inspectElement`, which needs the element's
     // renderer id alongside its own id.
     getRendererIDForElement(id: number): number | null;
+    // Walks up to the nearest ancestor with parentID===0 and returns its id
+    // (the root's own element id, i.e. a key into `roots` / profiler
+    // per-root commit data). Confirmed in the real Store class
+    // (react-devtools-inline/dist/frontend.js) alongside the structurally
+    // identical getRendererIDForElement above; not in the original 3a/3b
+    // ambient surface because nothing needed it before the profiler.
+    getRootIDForElement(id: number): number | null;
     addListener(event: string, handler: () => void): void;
     removeListener(event: string, handler: () => void): void;
+    // --- profiler surface (Task 3c) -----------------------------------------
+    //
+    // Real getter/setter and a real property on the Store object createStore()
+    // returns (react-devtools-inline/dist/frontend.js) -- NOT part of the
+    // react-devtools-inline/frontend module's own exports (createBridge/
+    // createStore/initialize are all it exports), which is why the earlier
+    // 3a/3b ambient surface above didn't need to declare them.
+    //
+    // ProfilerStore.startProfiling() reads this at call time to build the
+    // 'startProfiling' bridge payload it sends -- it is not a parameter you
+    // pass to startProfiling() itself, so this MUST be set first.
+    recordChangeDescriptions: boolean;
+    readonly profilerStore: ProfilerStore;
+  }
+
+  // One commit's change-tracking for a single fiber/element. Confirmed
+  // against react-devtools-inline/dist/backend.js's getChangeDescription/
+  // getContextChanged/getChangedKeys/getChangedHooksIndices.
+  export interface ChangeDescription {
+    isFirstMount: boolean;
+    // The installed backend's getContextChanged() only ever returns a plain
+    // boolean (true = a legacy class-component context value changed), but
+    // the frontend's own "why did this render" UI (WhatChanged.js) also
+    // handles a `string[]` shape (a changed-key list, evidently produced by
+    // some other renderer/protocol version), so both are typed here
+    // defensively -- render logic should handle both.
+    context: boolean | string[] | null;
+    didHooksChange: boolean;
+    props: string[] | null;
+    // Class components only; always null for function/ForwardRef/Memo fibers
+    // (their per-hook changes are reported via `hooks` instead).
+    state: string[] | null;
+    // Indices (in hook-call order, flattened through custom hooks) of
+    // stateful hooks whose value changed. Absent entirely (not just null) on
+    // a ChangeDescription for a class component -- only function-like fibers
+    // (Function/ForwardRef/Memo/SimpleMemo) produce this field at all.
+    hooks?: number[] | null;
+  }
+
+  // One commit's profiling data for a single root, already hydrated by
+  // ProfilerStore into Maps (the wire format is [id, value][] pairs -- see
+  // ProfilerStore's own prepareProfilingDataFrontendFromBackendAndStore).
+  // Only the fields Task 3c reads are typed; effectDuration/
+  // passiveEffectDuration/priorityLevel/updaters also exist on the real
+  // object.
+  export interface CommitDataFrontend {
+    duration: number;
+    timestamp: number;
+    changeDescriptions: Map<number, ChangeDescription> | null;
+    fiberActualDurations: Map<number, number>;
+    fiberSelfDurations: Map<number, number>;
+  }
+
+  export interface ProfilingDataForRootFrontend {
+    rootID: number;
+    commitData: CommitDataFrontend[];
+  }
+
+  // The live pub/sub surface over a profiling session (store.profilerStore).
+  // Confirmed against the real `class ProfilerStore extends EventEmitter` in
+  // react-devtools-inline/dist/frontend.js. Two corrections to this task's
+  // own protocol notes, found only by reading that real source:
+  //
+  //   - There is no readable `isProfiling` boolean on ProfilerStore. The
+  //     closest equivalent is `isProfilingBasedOnUserInput`, which the store
+  //     updates OPTIMISTICALLY the instant startProfiling()/stopProfiling()
+  //     is called (before the backend confirms anything), and which the
+  //     'isProfiling' event corresponds to -- good for driving a toggle
+  //     button's label immediately.
+  //   - Commit data does NOT become available via a 'profilingData' event
+  //     for a normal start/stop capture. That event is only emitted by the
+  //     `profilingData` setter and by `clear()` (the profile import/export
+  //     path this task doesn't use). The real signal for "the backend has
+  //     finished sending this run's commits" is 'isProcessingData': it fires
+  //     once when stopProfiling() causes the frontend to start
+  //     re-requesting data from each renderer (isProcessingData true), and
+  //     again once every renderer has reported back and the frontend-shaped
+  //     data has been rebuilt (isProcessingData false) -- that SECOND firing
+  //     is the one to act on, by checking the getter's value in the handler
+  //     rather than trusting the event name alone.
+  export interface ProfilerStore {
+    readonly isProfilingBasedOnUserInput: boolean;
+    readonly isProcessingData: boolean;
+    readonly didRecordCommits: boolean;
+    startProfiling(): void;
+    stopProfiling(): void;
+    getCommitData(rootID: number, commitIndex: number): CommitDataFrontend;
+    // Throws (does not return null/undefined) if no commit data was ever
+    // recorded for this root -- e.g. a root that produced zero commits
+    // during the profiling session. Callers must try/catch per root.
+    getDataForRoot(rootID: number): ProfilingDataForRootFrontend;
+    addListener(
+      event: "isProfiling" | "isProcessingData" | "profilingData",
+      handler: () => void,
+    ): void;
+    removeListener(
+      event: "isProfiling" | "isProcessingData" | "profilingData",
+      handler: () => void,
+    ): void;
   }
 
   // The generic pub/sub surface the backend also uses (confirmed in
