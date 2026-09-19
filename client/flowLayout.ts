@@ -12,6 +12,7 @@ export interface FlowNodeData extends Record<string, unknown> {
   hasChildren: boolean;
   collapsed: boolean;
   matchesSearch: boolean;
+  selected: boolean;
   onToggleCollapse: (id: string) => void;
 }
 
@@ -21,6 +22,7 @@ interface LayoutOptions {
   collapsedIds: ReadonlySet<string>;
   searchTerm: string;
   direction: "TB" | "LR";
+  selectedId?: string;
   onToggleCollapse: (id: string) => void;
 }
 
@@ -31,7 +33,7 @@ export function layoutTree(
   root: ComponentNode,
   options: LayoutOptions,
 ): { nodes: FlowNode[]; edges: Edge[] } {
-  const { collapsedIds, searchTerm, direction, onToggleCollapse } = options;
+  const { collapsedIds, searchTerm, direction, selectedId, onToggleCollapse } = options;
   const graph = new dagre.graphlib.Graph();
   graph.setDefaultEdgeLabel(() => ({}));
   graph.setGraph({ rankdir: direction, nodesep: 24, ranksep: 64 });
@@ -57,6 +59,7 @@ export function layoutTree(
         collapsed,
         matchesSearch:
           query.length === 0 || node.name.toLowerCase().includes(query),
+        selected: id === selectedId,
         onToggleCollapse,
       },
     });

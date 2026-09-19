@@ -25,7 +25,11 @@ function FlowNode({ id, data }: NodeProps<FlowNodeType>) {
   return (
     <div
       className="reaction-flow-node"
-      style={{ borderColor: color, opacity: data.matchesSearch ? 1 : 0.25 }}
+      style={{
+        borderColor: color,
+        opacity: data.matchesSearch ? 1 : 0.25,
+        boxShadow: data.selected ? `0 0 0 2px ${color}` : "none",
+      }}
     >
       <Handle type="target" position={Position.Top} />
       <div className="reaction-flow-node__name">{data.label}</div>

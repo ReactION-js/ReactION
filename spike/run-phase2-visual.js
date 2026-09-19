@@ -84,7 +84,24 @@ function serveWebviewSimulator(bridge, onStartApp) {
   <script>
     window.__REACTION_THEME__ = "dark";
     window.acquireVsCodeApi = function () {
-      return { postMessage: function () {}, getState: function () { return undefined; }, setState: function () {} };
+      return {
+        // Phase 2 only ever needed the backend -> webview direction (the
+        // Store never sends anything to build the tree). Phase 3a's
+        // inspectElement/inspectedElement protocol is the first thing that
+        // needs webview -> host traffic too, so this now forwards to the
+        // /webview-message endpoint below instead of being a no-op, mirroring
+        // what src/bridgeWiring.ts's real onDidReceiveMessage handler does
+        // (webview message -> bridge.sendToPage).
+        postMessage: function (message) {
+          fetch("/webview-message", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(message),
+          });
+        },
+        getState: function () { return undefined; },
+        setState: function () {},
+      };
     };
   </script>
   <script src="/bundle.js"></script>
@@ -117,6 +134,21 @@ function serveWebviewSimulator(bridge, onStartApp) {
     if (req.url === "/bundle.js") {
       res.writeHead(200, { "Content-Type": "text/javascript" });
       res.end(bundleJs);
+    } else if (req.url === "/webview-message" && req.method === "POST") {
+      let body = "";
+      req.on("data", (chunk) => (body += chunk));
+      req.on("end", () => {
+        res.writeHead(200, { "Content-Type": "text/plain" });
+        res.end("ok");
+        try {
+          const message = JSON.parse(body);
+          if (message && message.type === "wall" && message.message) {
+            bridge.sendToPage(message.message);
+          }
+        } catch {
+          /* ignore malformed messages */
+        }
+      });
     } else if (req.url === "/start-app") {
       res.writeHead(200, { "Content-Type": "text/plain" });
       res.end("ok");
