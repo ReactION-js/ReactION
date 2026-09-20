@@ -66,6 +66,11 @@ export interface StaticAnalysisResult {
   externallyReferencedComponentIds: Set<string>;
   dynamicImportTargetFiles: Set<string>;
   fileImportEdges: FileImportEdge[];
+  // The "from" side of a dynamic import() resolution, computed once
+  // alongside dynamicImportTargetFiles and kept here rather than discarded --
+  // a future fan-in/out task needs both directions of the edge, not just the
+  // flat target-file set computeUnusedComponents reads.
+  dynamicImportEdges: FileImportEdge[];
 }
 
 export interface DeadPropsEntry {
@@ -147,8 +152,13 @@ function isPascalCase(name: string): boolean {
   return /^[A-Z]/.test(name);
 }
 
+// resolveComponentFunction only ever succeeds for a FunctionDeclaration or a
+// VariableDeclaration (directly, or unwrapped through memo/forwardRef) --
+// buildComponentHandle already returns early on anything else (a
+// ClassDeclaration included), so decl can never be a class by the time this
+// runs. No isClassDeclaration branch needed here.
 function getDeclaredName(decl: Node): string | undefined {
-  if (Node.isFunctionDeclaration(decl) || Node.isClassDeclaration(decl) || Node.isVariableDeclaration(decl)) {
+  if (Node.isFunctionDeclaration(decl) || Node.isVariableDeclaration(decl)) {
     return decl.getName();
   }
   return undefined;
@@ -262,6 +272,7 @@ interface ReferenceGraph {
   referencedDeclarations: Set<ExportedDeclarations>;
   dynamicImportTargetFiles: Set<string>;
   fileImportEdges: FileImportEdge[];
+  dynamicImportEdges: FileImportEdge[];
 }
 
 // Single pass over every file's imports and dynamic import() calls, building
@@ -285,6 +296,7 @@ function buildReferenceGraph(files: SourceFile[]): ReferenceGraph {
   const referencedDeclarations = new Set<ExportedDeclarations>();
   const dynamicImportTargetFiles = new Set<string>();
   const fileImportEdges: FileImportEdge[] = [];
+  const dynamicImportEdges: FileImportEdge[] = [];
 
   for (const file of files) {
     for (const importDecl of file.getImportDeclarations()) {
@@ -321,11 +333,14 @@ function buildReferenceGraph(files: SourceFile[]): ReferenceGraph {
       const [specifierArg] = call.getArguments();
       if (!specifierArg || !Node.isStringLiteral(specifierArg)) continue;
       const target = resolveRelativeModuleToFile(fileByPath, file, specifierArg.getLiteralText());
-      if (target) dynamicImportTargetFiles.add(target.getFilePath());
+      if (target) {
+        dynamicImportTargetFiles.add(target.getFilePath());
+        dynamicImportEdges.push({ from: file.getFilePath(), to: target.getFilePath() });
+      }
     }
   }
 
-  return { referencedDeclarations, dynamicImportTargetFiles, fileImportEdges };
+  return { referencedDeclarations, dynamicImportTargetFiles, fileImportEdges, dynamicImportEdges };
 }
 
 export function analyzeWorkspace(workspaceRoot: string): StaticAnalysisResult {
@@ -341,7 +356,8 @@ export function analyzeWorkspace(workspaceRoot: string): StaticAnalysisResult {
     }
   }
 
-  const { referencedDeclarations, dynamicImportTargetFiles, fileImportEdges } = buildReferenceGraph(files);
+  const { referencedDeclarations, dynamicImportTargetFiles, fileImportEdges, dynamicImportEdges } =
+    buildReferenceGraph(files);
 
   const externallyReferencedComponentIds = new Set<string>();
   for (const handle of componentHandles.values()) {
@@ -358,6 +374,7 @@ export function analyzeWorkspace(workspaceRoot: string): StaticAnalysisResult {
     externallyReferencedComponentIds,
     dynamicImportTargetFiles,
     fileImportEdges,
+    dynamicImportEdges,
   };
 }
 
@@ -390,13 +407,16 @@ function hasGenuineDestructuredReference(nameNode: Node, body: Node): boolean {
 
     // For a SHORTHAND-destructured prop, the binding's symbol is merged
     // with the interface property's symbol (confirmed empirically), so this
-    // search also returns the JSX ATTRIBUTE NAME half of `prop={prop}`
-    // wherever any component with a same-named, same-shaped prop is
-    // rendered -- that's a use of the prop's NAME at a call site, not a use
-    // of THIS component's own local variable, and it can fall inside this
-    // body's own position range (e.g. this component renders another
-    // instance of itself, or a sibling sharing the same props type). Must
-    // be excluded explicitly; the body-range check alone isn't enough.
+    // search also returns the JSX ATTRIBUTE NAME half of `prop={prop}` (or
+    // even a differently-valued `prop="literal"`) wherever any component
+    // sharing the same props type is rendered -- that's a use of the prop's
+    // NAME at a call site, not a use of THIS component's own local
+    // variable, and it can fall inside this body's own position range (see
+    // ChipGroup in spike/fixtures/static-analysis-app/src/components/
+    // SelfReferencing.tsx and its regression test in staticAnalysis.test.ts
+    // -- confirmed by temporarily deleting this exact filter and rerunning
+    // the suite, per this task's review). Must be excluded explicitly; the
+    // body-range check alone isn't enough.
     const parent = ref.getParent();
     if (parent && Node.isJsxAttribute(parent) && parent.getNameNode() === ref) return false;
     return true;
