@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- **Rearchitected the runtime pipeline around the official React DevTools protocol.** The old hand-rolled fiber walk (`_reactRootContainer` / `__reactContainer$` / `__reactFiber$` traversal, polled every second) is gone. ReactION now injects the real `react-devtools-core` backend into the page before React loads, relays its protocol over a `ws` connection to the extension host, and builds a genuine `react-devtools-inline` DevTools `Store` in the webview — the same engine the standalone React DevTools use. Fixes the "empty tree" reported for react-router v5 + React 16.9 apps (#72).
+- Rearchitected the runtime pipeline around the official React DevTools protocol (`react-devtools-core`/`react-devtools-inline`) instead of a hand-rolled, polling fiber walk. Fixes the empty-tree bug for react-router v5 + React 16.9 apps (#72).
 - Replaced `react-d3-tree` with a [React Flow](https://reactflow.dev/) (`@xyflow/react`) graph, laid out with `@dagrejs/dagre`: pan/zoom, collapsible nodes, search-to-highlight, and orientation toggle.
 - Component updates now stream live from the Store as the app renders, instead of polling and reloading the panel on every tick.
 - Modernized the toolchain: TypeScript 5.9, webpack 5, and the ESLint flat config.

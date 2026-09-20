@@ -21,11 +21,11 @@
 
 _The component graph mid-profiling-session: the number badges are per-component render counts (the heatmap), the selected "Panel" node shows why it re-rendered ("Props changed: children") in the inspector panel on the right, along with its live props and a jump-to-source link._
 
-> The animated demo GIF that used to live here (`src/Demo.gif`) predates this architecture and has been retired. A new one showing a full interaction (selecting nodes, profiling, building a context map) should be re-recorded by hand — a smooth screen capture benefits from human editing more than automation.
+A short demo GIF is on the way — for now, the screenshot above and the feature list below cover what ReactION does.
 
 ## What ReactION does
 
-1. **Works with any React app — no code changes required.** ReactION drives a real (optionally headless) Chrome instance via [Puppeteer](https://pptr.dev/) and injects the official React DevTools protocol backend before your app's own scripts run. Because it's a real browser hitting a real URL, it's bundler-agnostic (CRA, Vite, Next, and others); the underlying DevTools protocol targets React 16 through 19, and this repo's own fixture tests exercise React 19 (the sample app) and, for issue #72, an isolated React 16.9 + react-router v5 app.
+1. **Works with any React app — no code changes required.** ReactION drives a real (optionally headless) Chrome instance via [Puppeteer](https://pptr.dev/) and injects the official React DevTools protocol backend before your app's own scripts run. Because it's a real browser hitting a real URL, it's bundler-agnostic (CRA, Vite, Next, and others); the underlying DevTools protocol targets React 16 through 19, and this repo's own fixture tests exercise React 19 (the sample app) and an isolated React 16.9 + react-router v5 app (the combination originally reported as broken in [#72](https://github.com/ReactION-js/ReactION/issues/72)).
 2. **Live, interactive component graph.** The webview builds a genuine React DevTools `Store` from the live protocol stream and renders it as a pan/zoom/collapsible graph (built on [React Flow](https://reactflow.dev/), laid out with dagre), color-coded by component type (function, class, memo, forwardRef, context, and more). Updates stream in as your app renders — there's no polling, and no "re-render on save" delay.
 3. **Click to inspect.** Select any node to see its live props, state, and hooks in a side panel, sourced from the same `inspectElement` protocol the official React DevTools use.
 4. **Jump to source.** Click "Open in editor" on a selected node to open the exact file and line it's defined at, resolved from the source location React's DevTools hook records for that element (see Limitations below for when this can't resolve).
@@ -37,7 +37,8 @@ _The component graph mid-profiling-session: the number badges are per-component 
 
 ### Limitations
 
-- ReactION is built around **development-mode** React apps. If the graph stays empty, a production build is one likely cause (production builds can strip information the DevTools hook relies on) — ReactION surfaces this as an explicit message rather than staying blank with no explanation. Even when components do show up, "Open in editor" will show an informational message instead of opening a file whenever the build is minified enough that its source location can't be resolved back to a file in your workspace.
+- ReactION is built around **development-mode** React apps. If the graph stays empty, a production build is one likely cause (production builds can strip information the DevTools hook relies on) — ReactION surfaces this as an explicit message rather than staying blank with no explanation.
+- Even when components do show up, "Open in editor" will show an informational message instead of opening a file whenever the build is minified enough that its source location can't be resolved back to a file in your workspace.
 - The context map's provider/consumer matching is a **heuristic** based on `displayName`: two different `Context` objects that happen to share a name (or both leave it unset) can't be told apart from Store data alone.
 - Class-component legacy context (`this.context` / `contextType`) isn't included in the context map — only `useContext` consumers are.
 - There's no state-change timeline / time-travel UI yet (see Roadmap below).
@@ -46,13 +47,6 @@ _The component graph mid-profiling-session: the number badges are per-component 
 
 - Make sure you have [Google Chrome](https://www.google.com/chrome/) installed on your computer. ReactION currently runs as a VS Code extension.
 - You'll need a running React application in development mode. Feel free to fork and clone our sample app [here!](https://github.com/ReactION-js/sample-project-react)
-
-## Roadmap
-
-- [ ] **State-change timeline / time-travel UI.** Profiling data (the heatmap and render reasons above) is already captured live per commit; there's no UI yet to scrub backward through commit history.
-- [ ] **Static analysis:** unused-component detection, dead-prop detection, and prop-drilling suggestions. Not yet started (Phase 5 of the rearchitecture plan).
-
-See `REARCHITECTURE-PLAN.md` for the full phase-by-phase plan, including what's already shipped, the protocol-level gotchas behind each feature, and known follow-ups.
 
 ## How to Use
 
@@ -106,6 +100,13 @@ You can configure ReactION's default settings through the ReactION-config.json f
 - [styled-components](https://styled-components.com/) - Webview styling
 - [Mocha](https://mochajs.org/) / [`@vscode/test-cli`](https://www.npmjs.com/package/@vscode/test-cli) - Testing
 - Love ❤️
+
+## Roadmap
+
+- [ ] **State-change timeline / time-travel UI.** Profiling data (the heatmap and render reasons above) is already captured live per commit; there's no UI yet to scrub backward through commit history.
+- [ ] **Static analysis:** unused-component detection, dead-prop detection, and prop-drilling suggestions. Not yet started (Phase 5 of the rearchitecture plan).
+
+See `REARCHITECTURE-PLAN.md` for the full phase-by-phase plan, including what's already shipped, the protocol-level gotchas behind each feature, and known follow-ups.
 
 ## Contributing
 
