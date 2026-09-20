@@ -459,3 +459,37 @@ describe("analyzeWorkspace without a tsconfig.json (glob fallback)", () => {
     assert.strictEqual(result.components.some((c) => c.displayName === "Ignored"), false);
   });
 });
+
+// Regression guard for a real bug this exact branch had: without allowJs/jsx
+// set, a plain .jsx file's exports never bind to a checker Symbol (found via
+// Phase 5d's spike/fixtures/coverage-app fixture -- a create-react-app/
+// Vite-JS-template shape with no tsconfig.json at all), so analyzeWorkspace
+// silently reported zero components for an entire plain-JS/JSX workspace.
+// The describe block above never caught this because its own glob-fallback
+// fixture uses a .tsx file, which doesn't need allowJs.
+describe("analyzeWorkspace without a tsconfig.json, over plain .jsx (no TypeScript at all)", () => {
+  let workspaceRoot: string;
+  let result: StaticAnalysisResult;
+
+  before(() => {
+    workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "reaction-static-analysis-jsx-fallback-"));
+    fs.writeFileSync(
+      path.join(workspaceRoot, "Widget.jsx"),
+      [
+        "export function Widget({ label, ghost }) {",
+        "  return <div>{label}</div>;",
+        "}",
+        "",
+      ].join("\n"),
+    );
+    result = analyzeWorkspace(workspaceRoot);
+  });
+
+  after(() => {
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  });
+
+  it("discovers the component from a plain .jsx file with no tsconfig.json", () => {
+    findComponent(result, "Widget");
+  });
+});

@@ -5,6 +5,7 @@ import Puppeteer, { describeStartFailure } from "./puppeteer";
 import DevtoolsBridge from "./devtoolsBridge";
 import { wireBridgeToWebview } from "./bridgeWiring";
 import { wireSourceOpening } from "./sourceOpeningWiring";
+import { wireCoverageAnalysis } from "./coverageAnalysisWiring";
 import { wireEmptyStateDiagnostics } from "./diagnosticsWiring";
 import { wireConnectionResilience } from "./connectionResilience";
 import { createModuleLogger } from "./outputChannelLogger";
@@ -99,6 +100,7 @@ export default class EmbeddedViewPanel {
     this.disposables.push(
       wireBridgeToWebview(this.bridge, this.treePanel.webview),
       wireSourceOpening(this.treePanel.webview, workspaceRoot),
+      wireCoverageAnalysis(this.treePanel.webview, workspaceRoot),
       wireEmptyStateDiagnostics(
         this.treePanel.webview,
         createModuleLogger(this.outputChannel, "webview"),
