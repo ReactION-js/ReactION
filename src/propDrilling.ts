@@ -8,26 +8,51 @@ import {
   type StaticAnalysisResult,
 } from "./staticAnalysis";
 
+// How a chain's last confirmed-forwarding layer actually resolves. Three
+// genuinely different situations, kept distinct rather than folded into a
+// single "consumedBy: ComponentInfo | undefined" -- a future task (fan-in/
+// out metrics, runtime fusion, bidirectional source<->instance) needs to
+// tell "we know it dead-ends here" apart from "it keeps going, we just can't
+// see into it":
+//   - "consumed": a known component genuinely uses the prop for something
+//     other than forwarding it. `component` is that consumer.
+//   - "unresolved-target": the last forwarding layer passes the prop to a
+//     JSX tag ts-morph can't resolve to any component this analysis
+//     discovered -- most commonly a third-party/library component (a class
+//     component is the other common case; buildComponentHandle only
+//     understands function/arrow components). The prop demonstrably keeps
+//     flowing onward into something real; we just can't verify what it does
+//     there. `tagName` is the JSX tag's own text (e.g. "Button").
+//   - "unknown": the last forwarding layer forwards into a KNOWN component
+//     whose own use of the prop we can't pin down (the spread-props case --
+//     see computePropDrilling's "SPREAD-PROPS DECISION" comment) or that
+//     doesn't pick the prop up under this name at all. Genuinely "never
+//     consumed, and we know exactly where the trail goes cold." `component`
+//     is that known dead-end.
+export type PropDrillingTerminal =
+  | { kind: "consumed"; component: ComponentInfo }
+  | { kind: "unresolved-target"; tagName: string }
+  | { kind: "unknown"; component: ComponentInfo };
+
 export interface PropDrillingChain {
   propName: string;
-  // Ordered from where the prop is first received through every component
-  // that merely forwards it, ending at whichever component the chain
-  // resolved to -- the real consumer (see consumedBy) if one was found, or
-  // the last component we could still trace to if it wasn't (see
-  // computePropDrilling's "SPREAD-PROPS DECISION" comment for why a chain
-  // can end unresolved).
+  // Every component confirmed to ONLY forward the prop, in order from where
+  // it's first received. Never includes the terminal's own component (or
+  // tag) -- that always lives in `terminal` instead, uniformly across all
+  // three kinds.
   components: ComponentInfo[];
-  consumedBy: ComponentInfo | undefined;
+  terminal: PropDrillingTerminal;
 }
 
 type Classification =
   | { kind: "dead" }
   | { kind: "consumes" }
   | { kind: "indeterminate" }
-  | { kind: "forwards"; attributeName: string; targetHandle: ComponentAstHandle | undefined };
+  | { kind: "forwards"; attributeName: string; targetTagName: string; targetHandle: ComponentAstHandle | undefined };
 
 interface ForwardTarget {
   attributeName: string;
+  targetTagName: string;
   targetHandle: ComponentAstHandle | undefined;
   dedupeKey: string;
 }
@@ -74,6 +99,7 @@ function tryClassifyAsForward(
   if (!Node.isIdentifier(tagNameNode) || !isPascalCase(tagNameNode.getText())) return undefined;
 
   const attributeName = attribute.getNameNode().getText();
+  const targetTagName = tagNameNode.getText();
   // getDefinitionNodes() is ts-morph's "go to definition" -- it follows an
   // imported identifier all the way back to the originating declaration
   // (confirmed empirically: for `<ChipGroup/>` imported from another file it
@@ -81,7 +107,12 @@ function tryClassifyAsForward(
   // already keyed componentHandles by; for a `memo`/`forwardRef` export it
   // returns the same VariableDeclaration node), so a direct Map lookup by
   // node identity against componentHandles' own declarationNode works
-  // without any bespoke alias-resolution here.
+  // without any bespoke alias-resolution here. It resolves just as well for
+  // a class component or a third-party import -- those just aren't in
+  // handleByDeclarationNode (buildComponentHandle only ever produces a
+  // handle for a function/arrow component), so targetHandle comes back
+  // undefined and the caller reports "unresolved-target" using
+  // targetTagName instead of silently losing the distinction.
   const targetHandle = tagNameNode
     .getDefinitionNodes()
     .map((def) => handleByDeclarationNode.get(def))
@@ -89,8 +120,9 @@ function tryClassifyAsForward(
 
   return {
     attributeName,
+    targetTagName,
     targetHandle,
-    dedupeKey: `${attributeName}::${targetHandle?.info.id ?? "<unresolved>"}`,
+    dedupeKey: `${attributeName}::${targetHandle?.info.id ?? `<unresolved:${targetTagName}>`}`,
   };
 }
 
@@ -118,7 +150,12 @@ function classifyReferences(
   if (forwardTargets.size !== 1) return { kind: "indeterminate" };
 
   const [forward] = forwardTargets.values();
-  return { kind: "forwards", attributeName: forward.attributeName, targetHandle: forward.targetHandle };
+  return {
+    kind: "forwards",
+    attributeName: forward.attributeName,
+    targetTagName: forward.targetTagName,
+    targetHandle: forward.targetHandle,
+  };
 }
 
 function classifyPropUsage(
@@ -219,15 +256,27 @@ export function computePropDrilling(result: StaticAnalysisResult): PropDrillingC
     if (rootClassification.kind !== "forwards") continue;
 
     const forwardingLayers: ComponentInfo[] = [handle.info];
-    let terminal: ComponentInfo | undefined;
-    let consumedBy: ComponentInfo | undefined;
+    let terminal: PropDrillingTerminal | undefined;
     let current = rootClassification;
     const visited = new Set<string>([handle.info.id]);
 
     for (;;) {
-      if (current.kind !== "forwards" || !current.targetHandle) break;
+      if (!current.targetHandle) {
+        // The last confirmed forwarder passes the prop to a JSX tag that
+        // doesn't resolve to any component this analysis discovered -- see
+        // PropDrillingTerminal's "unresolved-target" doc comment for why
+        // this must NOT be folded into "unknown"/never-consumed.
+        terminal = { kind: "unresolved-target", tagName: current.targetTagName };
+        break;
+      }
       const targetHandle = current.targetHandle;
-      if (visited.has(targetHandle.info.id)) break; // cycle guard; not expected in practice
+      if (visited.has(targetHandle.info.id)) {
+        // Cycle guard; not expected for a real component tree. Report it as
+        // "unknown" rather than silently dropping the chain -- we DO know a
+        // real, known component is where the walk had to stop.
+        terminal = { kind: "unknown", component: targetHandle.info };
+        break;
+      }
       visited.add(targetHandle.info.id);
 
       const next = classify(targetHandle, current.attributeName);
@@ -237,17 +286,15 @@ export function computePropDrilling(result: StaticAnalysisResult): PropDrillingC
         continue;
       }
 
-      terminal = targetHandle.info;
-      if (next.kind === "consumes") consumedBy = targetHandle.info;
+      terminal =
+        next.kind === "consumes"
+          ? { kind: "consumed", component: targetHandle.info }
+          : { kind: "unknown", component: targetHandle.info };
       break;
     }
 
-    if (forwardingLayers.length >= MIN_FORWARDING_LAYERS) {
-      chains.push({
-        propName,
-        components: terminal ? [...forwardingLayers, terminal] : forwardingLayers,
-        consumedBy,
-      });
+    if (forwardingLayers.length >= MIN_FORWARDING_LAYERS && terminal) {
+      chains.push({ propName, components: forwardingLayers, terminal });
     }
   }
 

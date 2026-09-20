@@ -105,3 +105,31 @@ export function SpreadGrandparent({ theme }: SpreadProps) {
 export function SpreadGreatGrandparent({ theme }: SpreadProps) {
   return <SpreadGrandparent theme={theme} />;
 }
+
+// ---- Forwarding into a target ts-morph can't resolve to any component this
+// analysis discovered. ExternalWidget is a CLASS component -- a real,
+// exported, PascalCase, JSX-taggable component, but buildComponentHandle
+// only ever produces a handle for a function/arrow component
+// (resolveComponentFunction returns undefined for a ClassDeclaration), so
+// it's invisible to componentHandles. This stands in for the most common
+// real-world case of the same gap: a third-party/library component (a UI
+// kit's <Button>, say) that this source-only analysis has no way to see
+// into. The prop demonstrably keeps flowing into something real here --
+// LibParent's only use of `theme` IS forwarding it onward -- so the chain
+// must be reported as "forwarded to <ExternalWidget> (outside this
+// analysis)", not misreported as a dead-end "never consumed" (which would
+// wrongly suggest the prop's thread just stops, rather than continuing on
+// into code this analysis can't follow). ----
+export class ExternalWidget extends React.Component<ThemeProps> {
+  render() {
+    return <div className={this.props.theme}>external</div>;
+  }
+}
+
+export function LibParent({ theme }: ThemeProps) {
+  return <ExternalWidget theme={theme} />;
+}
+
+export function LibGrandparent({ theme }: ThemeProps) {
+  return <LibParent theme={theme} />;
+}
