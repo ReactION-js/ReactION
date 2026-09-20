@@ -1,7 +1,6 @@
 import * as vscode from "vscode";
-import * as util from "util";
 import type DevtoolsBridge from "./devtoolsBridge";
-import { describeStartFailure } from "./puppeteer";
+import { describeStartFailure, errorDetail } from "./puppeteer";
 import { wireBridgeToWebview } from "./bridgeWiring";
 import { wireSourceOpening } from "./sourceOpeningWiring";
 import { wireCoverageAnalysis } from "./coverageAnalysisWiring";
@@ -26,19 +25,11 @@ export interface LiveTreePipelineOptions {
   workspaceRoot: string;
   outputChannel: vscode.OutputChannel;
   pushDisposable: (disposable: vscode.Disposable) => void;
+  // By the time this ever reports true, the caller's own dispose() has
+  // already run synchronously (and so already closed `page`/`bridge` itself)
+  // -- this pipeline's own teardown on that path is defensive, not load-
+  // bearing.
   isDisposed: () => boolean;
-}
-
-// Mirrors puppeteer.ts's own errorDetail(): a relay bind/startup failure can
-// reject with a non-Error value (the same realistic Node-rejection shapes
-// that helper guards against), and String() on those collapses to
-// "[object Object]" or the literal word "undefined" -- the exact bug already
-// fixed twice elsewhere in this codebase for this same class of error text.
-function relayStartFailureDetail(error: unknown): string {
-  if (error instanceof Error) {
-    return error.stack ?? error.message;
-  }
-  return util.inspect(error, { depth: 3 });
 }
 
 // The startup sequence ViewPanel.start()/EmbeddedViewPanel.start() both ran
@@ -55,7 +46,13 @@ export async function startLiveTreePipeline(options: LiveTreePipelineOptions): P
   try {
     relayPort = await bridge.start();
   } catch (error) {
-    const detail = relayStartFailureDetail(error);
+    // Reuses puppeteer.ts's errorDetail() rather than a second copy: a relay
+    // bind/startup failure can reject with a non-Error value (the same
+    // realistic Node-rejection shapes that helper guards against), and
+    // String() on those collapses to "[object Object]" or the literal word
+    // "undefined" -- the exact bug already fixed twice elsewhere in this
+    // codebase for this same class of error text.
+    const detail = errorDetail(error);
     createModuleLogger(outputChannel, "devtools-bridge")(`Relay failed to start: ${detail}`);
     // A panel closed while the relay was still binding can itself surface as
     // a rejection here (dispose() closes the not-yet-listening server); that
