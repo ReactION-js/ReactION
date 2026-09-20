@@ -1,4 +1,7 @@
 import * as assert from "node:assert";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 import * as vscode from "vscode";
 import { SelectInstanceCodeLensProvider } from "../selectInstanceCodeLens";
 
@@ -83,5 +86,31 @@ suite("SelectInstanceCodeLensProvider", () => {
     });
     const provider = new SelectInstanceCodeLensProvider();
     assert.doesNotThrow(() => provider.provideCodeLenses(document));
+  });
+
+  // Every test above opens an UNTITLED document (openTextDocument({content}))
+  // -- document.fileName has no recognized extension there, exercising
+  // analysisPathFor's synthetic-path fallback branch. A real, saved file on
+  // disk exercises the OTHER branch (document.fileName used as-is, since it
+  // already has a recognized .tsx/.ts/.jsx/.js extension) -- the more common
+  // real-world case, and worth covering separately since it's a genuinely
+  // different code path, not just a different fixture.
+  test("provides a lens for a real, saved .tsx file on disk", async () => {
+    const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "reaction-codelens-"));
+    const filePath = path.join(workspaceRoot, "Widget.tsx");
+    fs.writeFileSync(
+      filePath,
+      ["export function Widget() {", "  return <span>widget</span>;", "}", ""].join("\n"),
+    );
+
+    try {
+      const document = await vscode.workspace.openTextDocument(vscode.Uri.file(filePath));
+      const provider = new SelectInstanceCodeLensProvider();
+      const lenses = provider.provideCodeLenses(document);
+      assert.strictEqual(lenses.length, 1);
+      assert.deepStrictEqual(lenses[0].command?.arguments?.[0], { displayName: "Widget" });
+    } finally {
+      fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    }
   });
 });
