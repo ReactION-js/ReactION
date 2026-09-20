@@ -3,6 +3,7 @@ import { defineConfig } from "@vscode/test-cli";
 export default defineConfig({
   files: [
     "out/test/extension.test.js",
+    "out/test/staticAnalysisPanel.test.js",
     "out/test/sourceOpeningWiring.test.js",
     "out/test/devtoolsBridge.test.js",
     "out/test/puppeteerErrors.test.js",
