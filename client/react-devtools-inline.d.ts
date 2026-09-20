@@ -198,7 +198,13 @@ declare module "react-devtools-inline/frontend" {
   }
 
   // `id` is null for a hook that isn't independently stateful (e.g. a bare
-  // useContext). A custom hook's own primitive hooks appear in `subHooks`.
+  // useContext). A custom hook's own primitive hooks appear in `subHooks` --
+  // but a custom hook ALSO gets its own synthesized HooksNode for itself
+  // (id: null, name parsed from the wrapping function's name), so id===null
+  // alone doesn't mean "this is a primitive hook, e.g. Context": a wrapper
+  // node always has subHooks.length >= 1, while every primitive leaf
+  // (Context included) always has an empty subHooks. See contextMap.ts's
+  // isContextHookCandidate, verified against the real backend's buildTree.
   export interface HooksNode {
     id: number | null;
     isStateEditable: boolean;
