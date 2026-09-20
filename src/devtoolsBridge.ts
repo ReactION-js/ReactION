@@ -47,7 +47,29 @@ export default class DevtoolsBridge {
   public async start(): Promise<number> {
     const server = new WebSocketServer({ host: "127.0.0.1", port: 0 });
     this.server = server;
-    await new Promise<void>((resolve) => server.once("listening", resolve));
+
+    // A single persistent listener, not `.once("error", reject)` scoped only to
+    // startup: `ws` re-emits its underlying http.Server's errors onto this same
+    // object for its whole lifetime (bind failures AND later runtime errors,
+    // e.g. accept-time EMFILE), and an EventEmitter with zero "error" listeners
+    // throws on emit (crashing a plain-Node host, or leaving this promise
+    // hanging forever in the VS Code-hosted case, since there'd be no
+    // resolve/reject path at all). While startup is in flight, `onStartupError`
+    // routes the error to `reject`; afterward it's cleared and errors are logged.
+    let onStartupError: ((error: Error) => void) | undefined;
+    server.on("error", (error: Error) => {
+      if (onStartupError) {
+        onStartupError(error);
+      } else {
+        this.log(`Relay server error: ${error.stack ?? error.message}`);
+      }
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      onStartupError = reject;
+      server.once("listening", resolve);
+    });
+    onStartupError = undefined;
 
     const address = server.address();
     this.port = typeof address === "object" && address ? address.port : 0;

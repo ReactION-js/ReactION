@@ -221,6 +221,11 @@ suite("Puppeteer backend-injection failure (previously-uncovered middle section 
       !/executablePath/.test(message),
       "must not blame executablePath when Chrome demonstrably launched",
     );
+    assert.ok(
+      message.includes("EFAKE_PAGES"),
+      `user-facing toast text must include the non-Error cause's detail, not degrade to ` +
+        `"undefined"/"[object Object]" -- got: ${message}`,
+    );
   });
 });
 
