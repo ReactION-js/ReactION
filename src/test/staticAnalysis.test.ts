@@ -68,6 +68,8 @@ describe("analyzeWorkspace / computeUnusedComponents / computeDeadProps", () => 
       "NeverImported",
       "Orchestrator",
       "PropsAccessed",
+      "RestSpreadForwarder",
+      "RestSpreadLeaf",
       "SpreadForwarder",
       "SpreadGrandparent",
       "SpreadGreatGrandparent",
@@ -213,6 +215,26 @@ describe("analyzeWorkspace / computeUnusedComponents / computeDeadProps", () => 
 
       const value = blockArrow.props.find((p) => p.name === "value");
       assert.strictEqual(value?.required, true);
+    });
+
+    it("does NOT flag a prop whose only path to being used is a whole-`props` spread (`{...props}`)", () => {
+      // SpreadForwarder (PropDrilling.tsx) never names `theme` anywhere in
+      // its own body -- it only spreads its whole `props` identifier onto
+      // SpreadLeaf, which genuinely reads `theme`. computePropDrilling
+      // already treats this pattern as "indeterminate" rather than a dead
+      // end (see its own SPREAD-PROPS DECISION test); computeDeadProps must
+      // agree and not report `theme` as dead just because there's no direct
+      // `props.theme` access.
+      assert.strictEqual(deadPropsByName.has("SpreadForwarder"), false);
+    });
+
+    it("does NOT flag a prop whose only path to being used is a destructured `...rest` spread (`{...rest}`)", () => {
+      // RestSpreadForwarder individually destructures `label` (genuinely
+      // used) but never names `theme` -- `theme` only reaches RestSpreadLeaf
+      // (which genuinely reads it) via the `...rest` element being spread
+      // onward. Exercises the OTHER branch of findDeadProps (object binding
+      // pattern), independent of the whole-`props` case above.
+      assert.strictEqual(deadPropsByName.has("RestSpreadForwarder"), false);
     });
   });
 

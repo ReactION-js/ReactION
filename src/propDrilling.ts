@@ -1,6 +1,7 @@
-import { Node, SyntaxKind } from "ts-morph";
+import { Node } from "ts-morph";
 import {
   isPascalCase,
+  bodyHasSpreadOf,
   collectGenuineDestructuredReferenceNodes,
   collectGenuinePropertyAccessNodes,
   type ComponentAstHandle,
@@ -55,24 +56,6 @@ interface ForwardTarget {
   targetTagName: string;
   targetHandle: ComponentAstHandle | undefined;
   dedupeKey: string;
-}
-
-// A prop drilled via `{...props}` (or a destructured `...rest`) leaves no
-// name-level trace of where it goes -- we can't tell whether it reaches a
-// child at all, let alone whether that child merely forwards it further.
-// SPREAD-PROPS DECISION: treat this as "indeterminate" rather than guessing
-// either "dead" (would under-report real drilling) or "forwards" (would
-// risk inventing a chain to a target we can't actually verify). An
-// indeterminate result can never be a chain root and immediately terminates
-// a chain that forwards into it -- see the fixture's SpreadForwarder.
-function bodyHasSpreadOf(body: Node, identifier: Node): boolean {
-  if (!Node.isIdentifier(identifier)) return false;
-  const symbol = identifier.getSymbol();
-  if (!symbol) return false;
-  return body.getDescendantsOfKind(SyntaxKind.JsxSpreadAttribute).some((spread) => {
-    const expr = spread.getExpression();
-    return Node.isIdentifier(expr) && expr.getSymbol() === symbol;
-  });
 }
 
 // A reference "forwards" the prop only when it IS (not merely contains) the
@@ -158,6 +141,15 @@ function classifyReferences(
   };
 }
 
+// SPREAD-PROPS DECISION: when a prop has no other trace (no destructured
+// element with a genuine reference, no direct property access below),
+// bodyHasSpreadOf (staticAnalysis.ts, shared with computeDeadProps) checks
+// whether it's still reachable via a `{...props}`/`{...rest}` spread. Treat
+// that as "indeterminate" rather than guessing either "dead" (would
+// under-report real drilling) or "forwards" (would risk inventing a chain to
+// a target we can't actually verify). An indeterminate result can never be a
+// chain root and immediately terminates a chain that forwards into it -- see
+// the fixture's SpreadForwarder.
 function classifyPropUsage(
   handle: ComponentAstHandle,
   propName: string,

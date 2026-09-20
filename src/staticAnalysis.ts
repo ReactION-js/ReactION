@@ -475,6 +475,24 @@ function hasGenuinePropertyAccess(paramIdentifier: Node, body: Node, propName: s
   return collectGenuinePropertyAccessNodes(paramIdentifier, body, propName).length > 0;
 }
 
+// Exported for src/propDrilling.ts (computePropDrilling's classifyPropUsage),
+// which needs the exact same "is this identifier being spread onto a JSX
+// element" test, and used below by findDeadProps for the identical reason.
+// A prop reachable only through `{...props}` (or a destructured `...rest`)
+// leaves no name-level trace of where it goes from here: neither caller can
+// tell whether it reaches a child at all, let alone whether that child
+// genuinely consumes it, forwards it again, or drops it -- see each caller
+// for how it handles that uncertainty.
+export function bodyHasSpreadOf(body: Node, identifier: Node): boolean {
+  if (!Node.isIdentifier(identifier)) return false;
+  const symbol = identifier.getSymbol();
+  if (!symbol) return false;
+  return body.getDescendantsOfKind(SyntaxKind.JsxSpreadAttribute).some((spread) => {
+    const expr = spread.getExpression();
+    return Node.isIdentifier(expr) && expr.getSymbol() === symbol;
+  });
+}
+
 function findDeadProps(handle: ComponentAstHandle): string[] {
   const { fn, propsParam, info } = handle;
   const body = fn.getBody();
@@ -491,7 +509,16 @@ function findDeadProps(handle: ComponentAstHandle): string[] {
         (el) => (el.getPropertyNameNode()?.getText() ?? el.getName()) === prop.name,
       );
       if (!element) {
-        dead.push(prop.name);
+        // Not individually destructured, but a `...rest` element spread
+        // onward (`{...rest}`) can still forward it to a child that
+        // genuinely consumes it -- bodyHasSpreadOf can't confirm that
+        // actually happens, so don't guess "dead" (matches
+        // computePropDrilling's "indeterminate" treatment of this same
+        // pattern, via the same shared helper).
+        const restNameNode = elements.find((el) => el.getDotDotDotToken() !== undefined)?.getNameNode();
+        if (!restNameNode || !bodyHasSpreadOf(body, restNameNode)) {
+          dead.push(prop.name);
+        }
       } else if (!hasGenuineDestructuredReference(element.getNameNode(), body)) {
         dead.push(prop.name);
       }
@@ -501,7 +528,11 @@ function findDeadProps(handle: ComponentAstHandle): string[] {
 
   if (Node.isIdentifier(nameNode)) {
     for (const prop of info.props) {
-      if (!hasGenuinePropertyAccess(nameNode, body, prop.name)) {
+      // No direct `props.x` access found, but a whole-`props` spread
+      // (`{...props}`) can still forward it to a child that genuinely
+      // consumes it -- same "can't confirm, so don't guess dead" reasoning
+      // as the destructured-`...rest` case above.
+      if (!hasGenuinePropertyAccess(nameNode, body, prop.name) && !bodyHasSpreadOf(body, nameNode)) {
         dead.push(prop.name);
       }
     }
