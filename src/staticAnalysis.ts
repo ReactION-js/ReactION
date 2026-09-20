@@ -4,6 +4,7 @@ import {
   Project,
   Node,
   SyntaxKind,
+  ts,
   type SourceFile,
   type FunctionDeclaration,
   type FunctionExpression,
@@ -91,7 +92,20 @@ function buildProject(workspaceRoot: string): Project {
     return new Project({ tsConfigFilePath });
   }
 
-  const project = new Project({ skipAddingFilesFromTsConfig: true });
+  // Found by this task's own coverage-app fixture (a plain .jsx project with
+  // no tsconfig.json -- a real create-react-app/Vite-JS-template shape):
+  // without allowJs/jsx set, ts-morph's default compiler options leave a
+  // .js/.jsx file's SourceFile.getSymbol() undefined (no checker binding),
+  // so getExportedDeclarations() silently returns nothing and
+  // analyzeWorkspace reports zero components for the entire workspace --
+  // confirmed empirically, and not caught by the existing glob-fallback
+  // regression test in staticAnalysis.test.ts, which only ever used a .tsx
+  // file (natively supported without allowJs). A .ts/.tsx-only project is
+  // unaffected by turning allowJs on here.
+  const project = new Project({
+    skipAddingFilesFromTsConfig: true,
+    compilerOptions: { allowJs: true, jsx: ts.JsxEmit.ReactJSX },
+  });
   project.addSourceFilesAtPaths([
     path.join(workspaceRoot, "**/*.{ts,tsx,js,jsx}"),
     `!${path.join(workspaceRoot, "**/node_modules/**")}`,
