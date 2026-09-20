@@ -16,9 +16,12 @@ import type { ComponentNode } from "../types";
 import { layoutTree, type FlowNode as FlowNodeType } from "../flowLayout";
 import { useProfiler } from "../useProfiler";
 import { useContextMap } from "../useContextMap";
+import { useEverRendered } from "../useEverRendered";
+import { useCoverage } from "../useCoverage";
 import FlowNode from "./FlowNode";
 import InspectorPanel from "./InspectorPanel";
 import ContextMapPanel from "./ContextMapPanel";
+import CoveragePanel from "./CoveragePanel";
 import type { InspectableCategory, InspectorState } from "../elementInspection";
 import "./flow.css";
 
@@ -36,6 +39,7 @@ interface TreeChartProps {
   theme: "light" | "dark";
   inspector: InspectorController;
   store: DevtoolsStore | undefined;
+  vscodeApi: VsCodeApi;
 }
 
 const Container = styled.div<{ $theme: "light" | "dark" }>`
@@ -68,7 +72,7 @@ const nodeTypes = { component: FlowNode };
 
 // Renders the live component tree as a React Flow graph, laid out with dagre.
 // Nodes can be collapsed to hide a subtree, and the search box dims non-matches.
-function FlowGraph({ data, theme, inspector, store }: TreeChartProps) {
+function FlowGraph({ data, theme, inspector, store, vscodeApi }: TreeChartProps) {
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
   const [direction, setDirection] = useState<"TB" | "LR">("TB");
@@ -88,6 +92,8 @@ function FlowGraph({ data, theme, inspector, store }: TreeChartProps) {
 
   const profiler = useProfiler(store, inspector.state.elementId);
   const contextMap = useContextMap(store, inspector.inspectOnce);
+  const everRendered = useEverRendered(store);
+  const coverage = useCoverage(store, vscodeApi, everRendered.getEverRenderedNames);
 
   const { nodes: layoutNodes, edges: layoutEdges } = useMemo(
     () =>
@@ -163,6 +169,7 @@ function FlowGraph({ data, theme, inspector, store }: TreeChartProps) {
           {profiler.isProfiling ? "Stop Profiling" : "Start Profiling"}
         </button>
         <ContextMapPanel theme={theme} controller={contextMap} />
+        <CoveragePanel theme={theme} controller={coverage} onOpenSource={inspector.openSource} />
         <SearchInput
           type="search"
           placeholder="Search components…"

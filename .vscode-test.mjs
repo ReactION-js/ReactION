@@ -5,6 +5,7 @@ export default defineConfig({
     "out/test/extension.test.js",
     "out/test/staticAnalysisPanel.test.js",
     "out/test/sourceOpeningWiring.test.js",
+    "out/test/coverageAnalysisWiring.test.js",
     "out/test/devtoolsBridge.test.js",
     "out/test/puppeteerErrors.test.js",
     "out/test/outputChannelLogger.test.js",

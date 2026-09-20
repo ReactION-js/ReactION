@@ -148,6 +148,7 @@ export default function App() {
       data={tree}
       theme={theme}
       store={store}
+      vscodeApi={vscodeApi}
       inspector={{
         state: inspectorState,
         selectElement,
