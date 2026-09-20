@@ -76,7 +76,15 @@ function FlowGraph({ data, theme, inspector, store, vscodeApi }: TreeChartProps)
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
   const [direction, setDirection] = useState<"TB" | "LR">("TB");
-  const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
+  // Derived, not its own state: inspector.state.elementId is already updated
+  // synchronously by ElementInspector.select()/.deselect() (see
+  // elementInspection.ts), no matter what triggers it -- a node click, the
+  // Task 5e CodeLens flow, or the inspector clearing itself on
+  // disconnect/not-found. Deriving means the ring/panel below are always
+  // correct in the SAME commit as inspector.state changes, instead of
+  // lagging a commit behind a separate sync effect.
+  const selectedId =
+    inspector.state.elementId !== null ? String(inspector.state.elementId) : undefined;
 
   const toggleCollapse = useCallback((id: string) => {
     setCollapsedIds((current) => {
@@ -122,7 +130,6 @@ function FlowGraph({ data, theme, inspector, store, vscodeApi }: TreeChartProps)
 
   const { deselectElement, selectElement } = inspector;
   const handleDeselect = useCallback(() => {
-    setSelectedId(undefined);
     deselectElement();
   }, [deselectElement]);
 
@@ -135,7 +142,6 @@ function FlowGraph({ data, theme, inspector, store, vscodeApi }: TreeChartProps)
       if (selectedId === node.id) {
         handleDeselect();
       } else {
-        setSelectedId(node.id);
         selectElement(numericId);
       }
     },
@@ -147,34 +153,6 @@ function FlowGraph({ data, theme, inspector, store, vscodeApi }: TreeChartProps)
       handleDeselect();
     }
   }, [selectedId, handleDeselect]);
-
-  // The inspector can clear itself independently of a click (e.g. the element
-  // unmounted -> "not-found", or the backend disconnected); keep the graph's
-  // own selection in sync so a stale highlight/panel doesn't linger.
-  //
-  // It can also be SET independently of a click: Task 5e's "Select in
-  // ReactION" CodeLens drives inspector.selectElement (-> ElementInspector.
-  // select) directly from a host-sent message, entirely bypassing
-  // handleNodeClick, which is the only other place `selectedId` gets set. A
-  // plain node click already sets both `selectedId` and the inspector's own
-  // elementId in the same tick, so this is a no-op then; for the CodeLens
-  // path, it's what actually makes the selection ring and InspectorPanel
-  // appear -- both are keyed off `selectedId`, not off inspector.state
-  // directly (see layoutTree's `selected: id === selectedId` and
-  // `selectedNode` below).
-  useEffect(() => {
-    const elementId = inspector.state.elementId;
-    if (elementId === null) {
-      if (selectedId !== undefined) {
-        setSelectedId(undefined);
-      }
-      return;
-    }
-    const idString = String(elementId);
-    if (idString !== selectedId) {
-      setSelectedId(idString);
-    }
-  }, [inspector.state.elementId, selectedId]);
 
   const selectedNode = selectedId
     ? layoutNodes.find((node) => node.id === selectedId)
