@@ -1,10 +1,12 @@
 import * as vscode from "vscode";
 import { generateTreeViewHtml } from "./TreeViewPanel";
 import { generateHtmlPreview } from "./htmlViewPanel";
-import Puppeteer from "./puppeteer";
+import Puppeteer, { describeStartFailure } from "./puppeteer";
 import DevtoolsBridge from "./devtoolsBridge";
 import { wireBridgeToWebview } from "./bridgeWiring";
 import { wireSourceOpening } from "./sourceOpeningWiring";
+import { wireEmptyStateDiagnostics } from "./diagnosticsWiring";
+import { createModuleLogger } from "./outputChannelLogger";
 import { type ReactionConfig, toUrl } from "./config";
 
 // Shows the running app (iframe preview) alongside its component tree.
@@ -16,6 +18,7 @@ export default class EmbeddedViewPanel {
   private readonly treePanel: vscode.WebviewPanel;
   private readonly page: Puppeteer;
   private readonly bridge: DevtoolsBridge;
+  private readonly outputChannel: vscode.OutputChannel;
   private readonly disposables: vscode.Disposable[] = [];
   private disposed = false;
 
@@ -25,9 +28,11 @@ export default class EmbeddedViewPanel {
     extensionUri: vscode.Uri,
     config: ReactionConfig,
     workspaceRoot: string,
+    outputChannel: vscode.OutputChannel,
   ) {
     this.htmlPanel = htmlPanel;
     this.treePanel = treePanel;
+    this.outputChannel = outputChannel;
 
     this.htmlPanel.webview.html = generateHtmlPreview(toUrl(config.localhost));
     this.treePanel.webview.html = generateTreeViewHtml(
@@ -36,9 +41,9 @@ export default class EmbeddedViewPanel {
       config.reactTheme,
     );
 
-    this.page = new Puppeteer(config);
-    this.bridge = new DevtoolsBridge();
-    void this.start(workspaceRoot);
+    this.page = new Puppeteer(config, createModuleLogger(outputChannel, "puppeteer"));
+    this.bridge = new DevtoolsBridge(createModuleLogger(outputChannel, "devtools-bridge"));
+    void this.start(workspaceRoot, toUrl(config.localhost));
 
     this.htmlPanel.onDidDispose(() => this.dispose(), null, this.disposables);
     this.treePanel.onDidDispose(() => this.dispose(), null, this.disposables);
@@ -48,6 +53,7 @@ export default class EmbeddedViewPanel {
     extensionUri: vscode.Uri,
     config: ReactionConfig,
     workspaceRoot: string,
+    outputChannel: vscode.OutputChannel,
   ): void {
     const htmlColumn = vscode.ViewColumn.Two;
     const treeColumn = vscode.ViewColumn.Three;
@@ -83,22 +89,32 @@ export default class EmbeddedViewPanel {
       extensionUri,
       config,
       workspaceRoot,
+      outputChannel,
     );
   }
 
-  private async start(workspaceRoot: string): Promise<void> {
+  private async start(workspaceRoot: string, url: string): Promise<void> {
     const relayPort = await this.bridge.start();
     this.disposables.push(
       wireBridgeToWebview(this.bridge, this.treePanel.webview),
       wireSourceOpening(this.treePanel.webview, workspaceRoot),
+      wireEmptyStateDiagnostics(
+        this.treePanel.webview,
+        createModuleLogger(this.outputChannel, "webview"),
+        url,
+      ),
     );
 
     try {
       await this.page.start(relayPort);
     } catch (error) {
-      void vscode.window.showErrorMessage(
-        `ReactION: could not launch Chrome. Check "executablePath" in reactION-config.json. ${String(error)}`,
-      );
+      void vscode.window
+        .showErrorMessage(describeStartFailure(error), "Show Log")
+        .then((choice) => {
+          if (choice === "Show Log") {
+            this.outputChannel.show();
+          }
+        });
       return;
     }
 
