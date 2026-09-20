@@ -12,6 +12,15 @@ export interface WallMessage {
 // connects over a WebSocket) and the webview (which talks over postMessage).
 // Deliberately free of any `vscode` import so it can also run in the Phase 1
 // verification harness under plain Node.
+//
+// Invariant: callers construct exactly one instance and call start() exactly
+// once per instance (both ViewPanel/EmbeddedViewPanel and the spike harnesses
+// do this: a fresh DevtoolsBridge per panel/run). onBackendConnected/
+// onBackendDisconnected have no matching unsubscribe, so a hypothetical
+// future "restart this connection without recreating the panel" flow that
+// called start() again or re-wired handlers on the same instance would
+// silently accumulate duplicate handlers -- construct a new DevtoolsBridge
+// instead.
 export default class DevtoolsBridge {
   private server: WebSocketServer | undefined;
   private socket: WebSocket | undefined;

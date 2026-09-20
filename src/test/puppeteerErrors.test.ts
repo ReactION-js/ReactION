@@ -1,5 +1,7 @@
 import * as assert from "node:assert";
 import * as fs from "node:fs";
+import * as http from "node:http";
+import type { AddressInfo } from "node:net";
 import Puppeteer, {
   BackendInjectionError,
   ChromeLaunchError,
@@ -22,6 +24,37 @@ function baseConfig(overrides: Partial<ReactionConfig> = {}): ReactionConfig {
     reactTheme: "dark",
     ...overrides,
   };
+}
+
+// A trivial reachable page for the Chrome-gated tests below, which need a
+// real successful start() (unlike the BackendInjectionError suite, which
+// deliberately never reaches navigation).
+function startTrivialServer(): Promise<{ server: http.Server; host: string }> {
+  return new Promise((resolve, reject) => {
+    const server = http.createServer((_req, res) => {
+      res.writeHead(200, { "Content-Type": "text/html" });
+      res.end("<!DOCTYPE html><html><body>ok</body></html>");
+    });
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address() as AddressInfo;
+      resolve({ server, host: `127.0.0.1:${address.port}` });
+    });
+  });
+}
+
+function closeServer(server: http.Server): Promise<void> {
+  return new Promise((resolve) => server.close(() => resolve()));
+}
+
+async function waitUntil(predicate: () => boolean, timeoutMs: number): Promise<void> {
+  const start = Date.now();
+  while (!predicate()) {
+    if (Date.now() - start > timeoutMs) {
+      throw new Error("timed out waiting for condition");
+    }
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
 }
 
 suite("Puppeteer start-failure diagnostics", () => {
@@ -188,5 +221,97 @@ suite("Puppeteer backend-injection failure (previously-uncovered middle section 
       !/executablePath/.test(message),
       "must not blame executablePath when Chrome demonstrably launched",
     );
+  });
+});
+
+// Chrome-gated (same skip-not-fail pattern as the suite above): the real
+// glue code -- browser.on('disconnected') wiring, the `closing`-flag
+// ordering, and reconnect()'s own try/catch -- is genuine concurrency-prone
+// code, not just the extracted connectionResilience.ts state machine (which
+// is covered against fakes in connectionResilience.test.ts). It deserves a
+// standing regression test rather than only the one-time manual verification
+// in spike/run-phase4b-resilience.js.
+suite("Puppeteer.reconnect() / onBrowserDisconnected (Chrome-gated)", () => {
+  test("reconnect() after close() resolves false without throwing", async function () {
+    if (!fs.existsSync(CHROME_PATH)) {
+      this.skip();
+      return;
+    }
+    this.timeout(30_000);
+
+    const { server, host } = await startTrivialServer();
+    try {
+      const page = new Puppeteer(baseConfig({ executablePath: CHROME_PATH, localhost: host }));
+      await page.start(0);
+      await page.close();
+
+      let result: boolean | undefined;
+      let threw: unknown;
+      try {
+        result = await page.reconnect(`http://${host}`);
+      } catch (error) {
+        threw = error;
+      }
+
+      assert.strictEqual(threw, undefined, "reconnect() after close() must not throw");
+      assert.strictEqual(result, false, "reconnect() after close() must resolve false, not true");
+    } finally {
+      await closeServer(server);
+    }
+  });
+
+  test("onBrowserDisconnected fires exactly once on a real crash, and not at all on our own close()", async function () {
+    if (!fs.existsSync(CHROME_PATH)) {
+      this.skip();
+      return;
+    }
+    this.timeout(30_000);
+
+    const { server, host } = await startTrivialServer();
+    try {
+      // Part 1: our own intentional close() must NOT fire the handler.
+      const closingPage = new Puppeteer(
+        baseConfig({ executablePath: CHROME_PATH, localhost: host }),
+      );
+      await closingPage.start(0);
+      let firedOnIntentionalClose = 0;
+      closingPage.onBrowserDisconnected(() => {
+        firedOnIntentionalClose += 1;
+      });
+      await closingPage.close();
+      // Puppeteer's 'disconnected' event fires synchronously with close()
+      // resolving, but give any (incorrect) async delivery a moment to land.
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      assert.strictEqual(
+        firedOnIntentionalClose,
+        0,
+        "must not report our own close() as an unexpected disconnect",
+      );
+
+      // Part 2: a real SIGKILL of the exact launched process must fire the
+      // handler exactly once (not zero, not more than once).
+      const crashingPage = new Puppeteer(
+        baseConfig({ executablePath: CHROME_PATH, localhost: host }),
+      );
+      await crashingPage.start(0);
+
+      let fireCount = 0;
+      crashingPage.onBrowserDisconnected(() => {
+        fireCount += 1;
+      });
+
+      const pid = crashingPage.browserPid;
+      assert.ok(pid, "browserPid should be available for a running browser");
+      process.kill(pid as number, "SIGKILL");
+
+      await waitUntil(() => fireCount > 0, 10_000);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      assert.strictEqual(fireCount, 1, "onBrowserDisconnected should fire exactly once");
+
+      // close() on an already-dead browser must not throw either.
+      await assert.doesNotReject(() => crashingPage.close());
+    } finally {
+      await closeServer(server);
+    }
   });
 });
