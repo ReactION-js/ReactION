@@ -1,13 +1,9 @@
 import * as vscode from "vscode";
 import { generateTreeViewHtml } from "./TreeViewPanel";
 import { generateHtmlPreview } from "./htmlViewPanel";
-import Puppeteer, { describeStartFailure } from "./puppeteer";
+import Puppeteer from "./puppeteer";
 import DevtoolsBridge from "./devtoolsBridge";
-import { wireBridgeToWebview } from "./bridgeWiring";
-import { wireSourceOpening } from "./sourceOpeningWiring";
-import { wireCoverageAnalysis } from "./coverageAnalysisWiring";
-import { wireEmptyStateDiagnostics } from "./diagnosticsWiring";
-import { wireConnectionResilience } from "./connectionResilience";
+import { startLiveTreePipeline } from "./liveTreePipeline";
 import { createModuleLogger } from "./outputChannelLogger";
 import { type ReactionConfig, toUrl } from "./config";
 
@@ -45,7 +41,7 @@ export default class EmbeddedViewPanel {
 
     this.page = new Puppeteer(config, createModuleLogger(outputChannel, "puppeteer"));
     this.bridge = new DevtoolsBridge(createModuleLogger(outputChannel, "devtools-bridge"));
-    void this.start(workspaceRoot, toUrl(config.localhost));
+    void this.start(workspaceRoot);
 
     this.htmlPanel.onDidDispose(() => this.dispose(), null, this.disposables);
     this.treePanel.onDidDispose(() => this.dispose(), null, this.disposables);
@@ -103,59 +99,16 @@ export default class EmbeddedViewPanel {
     );
   }
 
-  private async start(workspaceRoot: string, url: string): Promise<void> {
-    const relayPort = await this.bridge.start();
-    this.disposables.push(
-      wireBridgeToWebview(this.bridge, this.treePanel.webview),
-      wireSourceOpening(this.treePanel.webview, workspaceRoot),
-      wireCoverageAnalysis(this.treePanel.webview, workspaceRoot),
-      wireEmptyStateDiagnostics(
-        this.treePanel.webview,
-        createModuleLogger(this.outputChannel, "webview"),
-        url,
-      ),
-    );
-
-    try {
-      await this.page.start(relayPort);
-    } catch (error) {
-      void vscode.window
-        .showErrorMessage(describeStartFailure(error), "Show Log")
-        .then((choice) => {
-          if (choice === "Show Log") {
-            this.outputChannel.show();
-          }
-        });
-      return;
-    }
-
-    if (this.disposed) {
-      // Panel was closed while Chrome was launching; tear down the browser.
-      void this.page.close();
-      return;
-    }
-
-    this.disposables.push(
-      wireConnectionResilience({
-        bridge: this.bridge,
-        page: this.page,
-        url: this.page.connectedUrl,
-        log: createModuleLogger(this.outputChannel, "resilience"),
-        isTornDown: () => this.disposed,
-        onReconnectExhausted: () => {
-          void vscode.window.showWarningMessage(
-            "ReactION: lost connection to the dev server and could not reconnect. " +
-              "Check that it's running, then close and reopen the panel.",
-          );
-        },
-        onBrowserLost: () => {
-          void vscode.window.showWarningMessage(
-            "ReactION: the Chrome window closed or crashed unexpectedly. " +
-              "Close and reopen the panel to reconnect.",
-          );
-        },
-      }),
-    );
+  private async start(workspaceRoot: string): Promise<void> {
+    await startLiveTreePipeline({
+      bridge: this.bridge,
+      page: this.page,
+      treeWebview: this.treePanel.webview,
+      workspaceRoot,
+      outputChannel: this.outputChannel,
+      pushDisposable: (disposable) => this.disposables.push(disposable),
+      isDisposed: () => this.disposed,
+    });
   }
 
   public dispose(): void {
