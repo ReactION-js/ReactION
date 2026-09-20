@@ -72,11 +72,11 @@ export function describeStartFailure(error: unknown): string {
   if (error instanceof BackendInjectionError) {
     return (
       "ReactION: Chrome launched, but the ReactION DevTools backend could not be injected " +
-      `(a corrupted install or an unexpected internal error). ${String(error.cause)}`
+      `(a corrupted install or an unexpected internal error). ${errorDetail(error.cause)}`
     );
   }
   const detail = error instanceof ChromeLaunchError ? error.cause : error;
-  return `ReactION: could not launch Chrome. Check "executablePath" in reactION-config.json. ${String(detail)}`;
+  return `ReactION: could not launch Chrome. Check "executablePath" in reactION-config.json. ${errorDetail(detail)}`;
 }
 
 // Locates the prebuilt react-devtools-core backend bundle to inject into the page.
