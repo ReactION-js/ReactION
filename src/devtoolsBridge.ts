@@ -1,4 +1,5 @@
 import { WebSocketServer, WebSocket, type RawData } from "ws";
+import type { LogFn } from "./logging";
 
 // A single React DevTools "wall" message: the protocol spoken by the injected
 // react-devtools-core backend and the react-devtools-inline Store.
@@ -15,10 +16,18 @@ export default class DevtoolsBridge {
   private server: WebSocketServer | undefined;
   private socket: WebSocket | undefined;
   private port = 0;
+  private readonly log: LogFn;
 
   private pageMessageHandler: ((message: WallMessage) => void) | undefined;
   private connectHandler: (() => void) | undefined;
   private disconnectHandler: (() => void) | undefined;
+
+  // `log` is optional and defaults to a no-op so every existing call site
+  // (spike/*.js, ViewPanel/EmbeddedViewPanel before this change) keeps working
+  // unmodified.
+  public constructor(log?: LogFn) {
+    this.log = log ?? (() => undefined);
+  }
 
   // Starts the relay on an ephemeral loopback port and returns it. The port is
   // handed to the injected backend so it knows where to connect.
@@ -29,11 +38,13 @@ export default class DevtoolsBridge {
 
     const address = server.address();
     this.port = typeof address === "object" && address ? address.port : 0;
+    this.log(`Relay listening on 127.0.0.1:${this.port}`);
 
     server.on("connection", (socket) => {
       // Each page load (initial or after a reload) yields a fresh backend that
       // supersedes any previous one.
       this.socket = socket;
+      this.log("Backend connected");
       this.connectHandler?.();
 
       socket.on("message", (data: RawData) => {
@@ -48,6 +59,7 @@ export default class DevtoolsBridge {
       socket.on("close", () => {
         if (this.socket === socket) {
           this.socket = undefined;
+          this.log("Backend disconnected");
           this.disconnectHandler?.();
         }
       });
