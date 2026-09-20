@@ -517,16 +517,146 @@ state was suggested (fail-closed on a permanently-hung backend
 confirmation is the current, deliberate trade-off); the demo GIF needs a
 manual re-recording.
 
-### Phase 5 — Static hybrid (source-aware features)
+### Phase 5 — Static hybrid (source-aware features) — ✅ DONE
 
-- `src/staticAnalysis.ts` (ts-morph + react-docgen): build the component/import
-  graph; compute **unused components**, **dead props**, **prop drilling**,
-  dependency metrics.
-- Fuse with runtime: **"not rendered this session" = defined − ever-rendered**;
-  session **coverage**; bidirectional source ↔ instance.
-- Surface in the webview and as optional editor diagnostics/CodeLens.
-- **Verify:** on a sample repo with a deliberately-unused component and a drilled
-  prop, both are flagged; no false "delete" on dynamically-imported components.
+**Status:** complete and verified. Built as six independently-committed,
+independently-reviewed sub-phases (5a–5f), same process as Phases 3–4. Two
+scoping decisions were made explicitly before starting: the full feature set
+was built (not the plan's own §11 Q3 minimal alternative), and the library
+choice deviated from this section's original text — see below.
+
+- **Library correction:** this section originally called for `ts-morph` +
+  `react-docgen`. Empirical research before implementation (installing both
+  against real fixtures, not relying on remembered API knowledge) found
+  `react-docgen` adds a second, independent parse pass per file plus 9+
+  transitive dependencies, for a feature set — prop name/type/required/
+  description/default — fully reproducible from `ts-morph`'s own
+  type-checker and JSDoc APIs in a few lines, with two real footguns
+  (silently mis-parses TypeScript as Flow if the filename extension is
+  wrong; its default resolver throws on any file exporting more than one
+  component, which is common). `react-docgen`'s one genuine unique
+  capability — unwrapping `memo`/`forwardRef` — was hand-rolled instead
+  (~30 lines). **Shipped on `ts-morph` alone.**
+- **5a — static analysis infrastructure + unused components + dead props.**
+  `src/staticAnalysis.ts`: AST-based JSX-in-body detection (not
+  return-type-text matching, which has no single stable string to match
+  against), PascalCase + exported, with `memo`/`forwardRef` unwrapping.
+  Reference graph is a **single efficient pass** over every file's imports —
+  research benchmarked a naive per-component `findReferencesAsNodes()` loop
+  at ~29x slower at 1000 files (4.3s vs 149ms) than walking every file's
+  import/export declarations once. **Two false-positive traps, both real,
+  both closed:** a component reached only via `React.lazy(() => import(...))`
+  has zero references to its named export findable by any per-symbol
+  search (the reference goes through the dynamic `import()` call, not the
+  binding) — closed by tracking, per file, whether it's ever a dynamic-import
+  target. A prop bound via shorthand destructuring returns a reference
+  search result that leaks every same-named identifier sharing the type
+  project-wide (other components' own destructuring, every JSX attribute of
+  that name) — closed by filtering to same-file/same-body-range references
+  that also aren't the *name* half of a JSX attribute. (Barrel re-exports
+  needed **no** special-casing — `ts-morph`'s own reference resolution
+  already follows `export *` chains correctly.) **Review caught a vacuous
+  test**: the fixture proving the shorthand-destructuring filter didn't
+  actually exercise it (the false-positive source happened to live in a
+  different file, already excluded by an unrelated check) — closed with a
+  same-file self-reference fixture, proven by deleting the filter and
+  confirming the specific test fails.
+- **5b — prop drilling.** A prop whose only use, everywhere in a
+  component's body, is forwarding it as a JSX attribute *value* to a child
+  component — chained across ≥2 such layers (a single hop is ordinary
+  prop-passing). **Review caught a real precision gap**: forwarding into a
+  target `ts-morph` can't resolve (a third-party/library component — one of
+  the most common real reasons drilling exists) was originally
+  indistinguishable from "never consumed"; given its own distinct terminal
+  state.
+- **5c — dependency graph (fan-in/fan-out).** File-level, reusing 5a's
+  already-computed import edges (no new AST traversal). Outlier highlighting
+  uses a median/MAD-based modified z-score rather than an arbitrary fixed
+  threshold — a plain mean+stddev was tried first and found to get dragged
+  up by the very hub it's supposed to catch. **A genuinely strange defect
+  was found and fixed**: an early version's map-key construction embedded a
+  literal NUL byte, which made git classify the whole file as binary,
+  permanently defeating line-level diff/review for that file's history at
+  that point — fixed by switching to a `Map<string, Set<string>>` needing
+  no delimiter character at all.
+- **5d — runtime fusion: "not rendered this session" + coverage.** The
+  first Phase 5 task to bridge static analysis with the live pipeline.
+  Correlates 5a's statically-discovered components against a *cumulative*
+  set of every displayName ever seen live (not just currently-mounted —
+  the Store's tree only reflects what's mounted right now), delivered to
+  the **existing live tree webview** via a new on-demand host message (not
+  the separate static-analysis panel). Framed throughout as "coverage, not
+  dead code," per this project's own risk mitigation — a component
+  genuinely used but simply not exercised this session (an unopened modal,
+  an untriggered error state) must not read as "safe to delete." **A real,
+  independently-reproduced pre-existing bug in already-merged 5a code was
+  found while building this task's plain-JS fixture**: `analyzeWorkspace`'s
+  no-tsconfig glob-fallback path was missing `allowJs`/`jsx` compiler
+  options, silently returning zero components for any plain-JS/JSX
+  workspace without a tsconfig (a real CRA/Vite-JS project shape) — the
+  existing fallback test only used `.tsx`, which doesn't need `allowJs`, so
+  this was invisible until now.
+- **5e — bidirectional source ↔ instance, source→instance direction**
+  (instance→source already existed from Phase 3b). A `CodeLensProvider`
+  above each component definition, backed by a **lightweight single-file**
+  analysis — reusing 5a's detection logic but explicitly NOT the full
+  workspace scan, since VS Code calls `provideCodeLenses` on every tab
+  switch and some edits. **Review caught a real functional gap**: no
+  `onLanguage:*` activation event was registered, so the CodeLens would
+  silently never appear for a user who opens a component file before
+  otherwise touching the extension in that VS Code session — closed, with
+  a test pinning the activation-event list against the CodeLens's own
+  document selector so the two can't drift apart silently again.
+  **Self-caught during implementation**: an initial version was ~90ms per
+  CodeLens call (forcing a full `ts.Program` with TypeScript's lib.d.ts on
+  every call) — fixed with `skipLoadingLibFiles`, down to ~1ms. **Also
+  self-caught**: a latent bug in already-shipped Phase 3a code — the tree
+  webview's `selectedId` (driving the selection ring and inspector panel)
+  was only ever set by a direct node click, never by the underlying
+  `ElementInspector` state changing for any other reason, so a
+  CodeLens-driven selection would have silently updated internal state
+  with no visible effect until this task added the missing sync.
+- **5f — kitchen-sink verification (capstone, no new features).** One
+  fixture app combining every pattern above plus two React patterns
+  **never exercised anywhere in this project before, across Phases 0–5**:
+  `React.lazy`/`Suspense` and `ReactDOM.createPortal`. Both worked
+  correctly against the core Phase 0–2 pipeline on the first real test —
+  confirmed via direct `parentID`-chain inspection that a portaled
+  component is parented under its *React* ancestor (not the DOM node it
+  portals into) and that `store.roots` stays a single root — a concrete
+  validation of the whole rearchitecture's founding premise (Phase 0's own
+  rationale: the old hand-rolled fiber walk "misses iframes/shadow
+  DOM/multiple roots"; portals are exactly this class of case, done right
+  this time). Also **concretely reproduced, for the first time**, the
+  bundler-renaming limitation `client/coverage.ts` had only theorized:
+  esbuild renames colliding same-named `memo`/`forwardRef` wrapper
+  components in its bundle output — fixed at the fixture/user-code level
+  (setting `.displayName` explicitly), not in Phase 5's own correlation
+  logic, since there is no principled way to recover a pre-mangling
+  identity after the fact — exactly the documented, deliberately-unsolved
+  limitation this project already committed to.
+
+**Verification:** every sub-phase met the `compile`+`lint`+`build:webview`+
+`test` bar plus, where live behavior was involved, a `spike/run-phase5*.js`
+harness against real Chrome; where the logic was pure static analysis (the
+majority of 5a–5c), real plain-mocha unit tests against on-disk fixture
+files needing **no** Chrome at all — a first for this codebase, and exactly
+the kind of durable, CI-runnable coverage a Phase 3 review had recommended
+promoting spike-script verification toward. By 5f, every regression harness
+from every prior phase (Phases 0 through 5e) was re-run unmodified and
+confirmed still passing — the final integration checkpoint for the whole
+rearchitecture effort to date.
+
+**Follow-ups, not defects in this work:** a narrow, self-correcting
+staleness race in `useCoverage.ts` (a request-ID scheme plus a host-side
+"busy" rejection would close it fully, rather than the current
+generation-counter approach); an untested-but-currently-correct
+divide-by-zero guard in `dependencyMetrics.ts`'s outlier statistics
+(fails safe today); harness boilerplate (`waitForElements`/
+`serveFixtureApp`) duplicated a third time across Phase 5's live harnesses,
+now past this project's own established "extract after three copies"
+threshold; editor diagnostics (as opposed to CodeLens) were not built,
+since CodeLens fully covered the "surface in the editor" requirement.
 
 ---
 
