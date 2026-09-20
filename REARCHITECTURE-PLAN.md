@@ -419,15 +419,103 @@ Original spec for this phase:
 - **Verify:** props/state/hooks show; re-render reasons correct on a counter demo;
   clicking a node opens the right file/line.
 
-### Phase 4 — Stability, diagnostics, tests, docs
+### Phase 4 — Stability, diagnostics, tests, docs — ✅ DONE
 
-- Clear "No React detected" empty state + an **Output channel** log (closes #73).
-- Reconnect on navigation/HMR; handle multiple roots; auto dev-server URL
-  detection (config + scan 3000/5173/8080 + wait).
-- Tests: unit the Store→graph transform with **recorded operations fixtures**;
-  e2e matrix across React 16–19 + **react-router v5 + React 16.9** (closes #72)
-  and v6.
-- Update `README.md` / roadmap; refresh screenshots.
+**Status:** complete and verified. Built as five independently-committed,
+independently-reviewed sub-phases (4a–4e), same process as Phase 3. Two
+scoping calls were made explicitly before starting, rather than assumed:
+the e2e version matrix was scoped to "minimal now" (recorded-fixture unit
+tests + one new fixture closing #72, not the full React 16–19 × router v5/v6
+matrix from §8), and robust Chrome-executable discovery (`@puppeteer/browsers`/
+`chrome-launcher`, originally scoped to Phase 1 but never actually built
+there) was explicitly deferred rather than folded in here.
+
+- **4a — diagnostics** (closes #73). A real `vscode.OutputChannel`, threaded
+  into `Puppeteer`/`DevtoolsBridge` via an **optional plain-function
+  logger** (`src/logging.ts`'s `LogFn`) so both classes keep their existing
+  vscode-free, plain-Node-testable design — this is the load-bearing
+  constraint for the whole task, not a detail. Splits one generic
+  Chrome-launch-failure message into three accurately-worded, distinct
+  errors (`ChromeLaunchError`/`DevServerUnreachableError`/
+  `BackendInjectionError`, the last one added in review after a real
+  uncovered gap between the launch and goto try/catch blocks was found —
+  see `src/puppeteer.ts`), each with a "Show Log" action button. A
+  client-side empty-state timeout in the webview now shows an actionable
+  "No React components detected" message instead of an indefinite
+  "Waiting…", relayed to the Output channel too.
+- **4b — dev-server resilience.** A cheap plain-HTTP probe
+  (`src/devServerProbe.ts`) tries the configured URL first, only falls back
+  to scanning `5173`/`8080` if it doesn't answer quickly, and falls back to
+  the *original* configured URL (not a fallback) if nothing answers — cold
+  start (server still booting) is never made slower. `src/connectionResilience.ts`
+  adds a bounded (5-attempt, backoff) reconnect after the dev server
+  restarts mid-session, and detects an unexpected Chrome/browser crash
+  (`browser.on('disconnected')`) distinctly from an intentional panel
+  close — auto-relaunching a whole new browser after a crash was
+  explicitly left out of scope; a crash surfaces a warning telling the user
+  to reopen the panel instead. This was the highest concurrency-risk task
+  in the phase (retry/backoff loops, a real `SIGKILL`-the-launched-Chrome
+  test); review traced the state machine by hand and found it correct, then
+  still asked for a documented no-throw contract on `reconnect()` plus a
+  real Chrome-gated regression test, since the only prior coverage was a
+  throwaway harness.
+- **4c — recorded-operations-fixture tests + multi-root verification.** The
+  first task to promote a spike-harness-style check into a real, permanent,
+  checked-in mocha test (`spike/storeGraphTransform.test.js`, wired into
+  `test:e2e`) — it replays a captured `sample-app-operations.json` fixture
+  through the real `client/storeBridge.ts`/`client/flowLayout.ts` transform
+  with **zero live Chrome/network**, closing a gap the end of Phase 3 had
+  flagged (`client/` had no CI-runnable tests, only spike scripts). Also
+  verified `buildTree`'s existing-but-previously-untested multi-root
+  wrapper against a new dedicated two-root fixture app (not the shared
+  `sample-app.jsx`). Extracted the esbuild-compile-and-require + JSDOM
+  bootstrap boilerplate — duplicated across every spike harness — into
+  `spike/testHarness.js` once it was clear a permanent test needed the same
+  technique a fourth time.
+- **4d — react-router v5 fixture, closes #72.** An isolated fixture
+  (`spike/fixtures/router-v5-app/`, its own `package.json` + nested
+  `node_modules` pinning the reporter's exact versions —
+  `react@16.9.0`/`react-dom@16.9.0`/`react-router-dom@5.0.1` — with **zero**
+  changes to the root project's dependencies) proves the new
+  DevTools-protocol pipeline populates the Store correctly for the exact
+  combination that produced an empty tree under the old fiber-walking
+  approach. The root `.gitignore`'s `/node_modules` pattern turned out to
+  be root-anchored only and didn't cover this nested one — a real gap,
+  fixed (`/spike/fixtures/**/node_modules`). React-version resolution
+  (16.9, not the root project's 19) was verified two ways: reading the
+  fixture's own installed `package.json` files, and grepping the actual
+  bundled JS for React's baked-in version string.
+- **4e — docs.** `README.md`'s architecture description, feature list,
+  "Built With", and roadmap were all still describing the pre-Phase-0
+  fiber-walking/react-d3-tree pipeline; rewritten against the actual
+  current code rather than this plan's forward-looking language, including
+  an honest Limitations section (production-build detection, the context
+  map's displayName-collision heuristic, no legacy class-component context,
+  no time-travel UI). `CHANGELOG.md`'s unpublished `0.2.0` entry claimed
+  fiber-tree scraping had been extended — it was deleted, not extended;
+  corrected. Screenshot refreshed to the current React Flow UI; the stale
+  demo GIF was unreferenced rather than faked (recording a good interaction
+  GIF was explicitly left as a manual follow-up).
+
+**Verification:** every sub-phase met the same `compile`+`lint`+
+`build:webview`+`test` bar as Phase 3, plus for 4b/4c/4d a live-Puppeteer
+harness against real Chrome proving the specific behavior (dev-server
+kill/revive, a real `SIGKILL` of the launched Chrome PID, a real captured
+protocol fixture, the router-v5 reproduction) — the same "verify against
+real installed behavior, not assumption" discipline Phase 3 established.
+Every regression harness from every prior phase was re-run **unmodified**
+after each sub-phase and confirmed still passing, including through 4c's
+addition of a permanent CI test and 4d's isolated second dependency tree.
+
+**Follow-ups, not defects in this work:** the react-router **v6** half of
+§8's matrix, and the full React 16–19 CRA/Vite/Next matrix, remain
+un-built per the explicit "minimal now" scoping decision; Chrome-executable
+discovery (robust binary discovery + attach-to-existing) remains deferred
+per the explicit decision not to fold it into this phase; a bounded timeout
+for `connectionResilience.ts`'s `stopConfirmationPending`-style pending
+state was suggested (fail-closed on a permanently-hung backend
+confirmation is the current, deliberate trade-off); the demo GIF needs a
+manual re-recording.
 
 ### Phase 5 — Static hybrid (source-aware features)
 
