@@ -19,43 +19,11 @@
 
 const path = require("path");
 const http = require("http");
-const { JSDOM } = require("jsdom");
 const esbuild = require("esbuild");
+const { stubVscodeModule, setupJsdomGlobals, requireCompiled } = require("./testHarness");
 
-const Module = require("module");
-const vscodeStubPath = path.join(__dirname, "vscode-stub.js");
-const originalResolveFilename = Module._resolveFilename;
-Module._resolveFilename = function (request, ...rest) {
-  if (request === "vscode") {
-    return vscodeStubPath;
-  }
-  return originalResolveFilename.call(this, request, ...rest);
-};
-
-const dom = new JSDOM("<!DOCTYPE html><html><body></body></html>", {
-  url: "http://localhost/",
-  pretendToBeVisual: true,
-});
-global.window = dom.window;
-global.self = dom.window;
-global.document = dom.window.document;
-try {
-  Object.defineProperty(global, "navigator", {
-    value: dom.window.navigator,
-    configurable: true,
-  });
-} catch {
-  /* keep Node's built-in navigator */
-}
-global.location = dom.window.location;
-global.HTMLElement = dom.window.HTMLElement;
-global.Element = dom.window.Element;
-global.Node = dom.window.Node;
-try {
-  global.localStorage = dom.window.localStorage;
-} catch {
-  /* ignore */
-}
+stubVscodeModule();
+setupJsdomGlobals();
 
 const DevtoolsBridge = require("../out/devtoolsBridge.js").default;
 const Puppeteer = require("../out/puppeteer.js").default;
@@ -66,26 +34,6 @@ const CHROME_PATH =
 
 const log = (...a) => console.log("[phase4c-multiroot]", ...a);
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
-
-// esbuild-compiles a real client/*.ts module to requirable CJS, same
-// technique as spike/run-phase3-renderstats.js and run-phase3-contextmap.js.
-async function requireCompiled(tsAbsPath) {
-  const built = await esbuild.build({
-    entryPoints: [tsAbsPath],
-    bundle: false,
-    write: false,
-    format: "cjs",
-    platform: "node",
-    target: "node18",
-  });
-  const code = built.outputFiles[0].text;
-  const compiledPath = tsAbsPath.replace(/\.ts$/, ".compiled.js");
-  const mod = new Module(compiledPath, null);
-  mod.filename = compiledPath;
-  mod.paths = Module._nodeModulePaths(path.dirname(tsAbsPath));
-  mod._compile(code, compiledPath);
-  return mod.exports;
-}
 
 // Wires DevtoolsBridge directly into the REAL StoreConnection exactly as the
 // extension host <-> webview protocol does (see client/storeBridge.ts's

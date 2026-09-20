@@ -2,6 +2,13 @@
  * Phase 4c fixture capture script (manual/occasional -- NOT part of npm
  * test/test:e2e).
  *
+ * Regenerate spike/fixtures/sample-app-operations.json by re-running this
+ * script whenever spike/sample-app.jsx's component shape changes, or the
+ * pinned react-devtools-core/react-devtools-inline versions bump (a wire
+ * protocol change could alter the recorded event names/payload shapes) --
+ * the checked-in fixture is a frozen snapshot, not something the shipped
+ * code regenerates or validates against those versions itself.
+ *
  * Drives the REAL pipeline (real Puppeteer + real DevtoolsBridge, same as
  * spike/run-phase1.js's simulateWebview(bridge) pattern) against the
  * unmodified spike/sample-app.jsx, intercepts every raw wall message crossing
@@ -43,44 +50,11 @@
 const fs = require("fs");
 const path = require("path");
 const http = require("http");
-const { JSDOM } = require("jsdom");
 const esbuild = require("esbuild");
-const puppeteer = require("puppeteer-core");
+const { stubVscodeModule, setupJsdomGlobals } = require("./testHarness");
 
-const Module = require("module");
-const vscodeStubPath = path.join(__dirname, "vscode-stub.js");
-const originalResolveFilename = Module._resolveFilename;
-Module._resolveFilename = function (request, ...rest) {
-  if (request === "vscode") {
-    return vscodeStubPath;
-  }
-  return originalResolveFilename.call(this, request, ...rest);
-};
-
-const dom = new JSDOM("<!DOCTYPE html><html><body></body></html>", {
-  url: "http://localhost/",
-  pretendToBeVisual: true,
-});
-global.window = dom.window;
-global.self = dom.window;
-global.document = dom.window.document;
-try {
-  Object.defineProperty(global, "navigator", {
-    value: dom.window.navigator,
-    configurable: true,
-  });
-} catch {
-  /* keep Node's built-in navigator */
-}
-global.location = dom.window.location;
-global.HTMLElement = dom.window.HTMLElement;
-global.Element = dom.window.Element;
-global.Node = dom.window.Node;
-try {
-  global.localStorage = dom.window.localStorage;
-} catch {
-  /* ignore */
-}
+stubVscodeModule();
+setupJsdomGlobals();
 
 // eslint-disable-next-line
 const { createBridge, createStore } = require("react-devtools-inline/frontend");
