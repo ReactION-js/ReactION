@@ -27,6 +27,20 @@ export interface StaticComponentSummary {
 // webview/HTML for unused-component/dead-prop/prop-drilling/dependency
 // findings and is untouched by this task -- this is a different feature
 // living in the live tree webview.
+//
+// COST NOTE (worse here than in StaticAnalysisPanel): analyzeWorkspace's
+// ts-morph parse is synchronous and can take seconds on a large workspace,
+// and it blocks the ENTIRE extension-host event loop while it runs --
+// StaticAnalysisPanel.runAnalysis pays the exact same cost, but that panel
+// is independent of the live pipeline, so nothing else needs the event loop
+// while it blocks. This module is wired into ViewPanel/EmbeddedViewPanel,
+// which is CONCURRENTLY driving DevtoolsBridge's live WebSocket to a running
+// Chrome instance -- while analyzeWorkspace runs, that connection's incoming
+// mutations queue up unprocessed, so the tree view visibly freezes and then
+// catches up in a burst once the analysis finishes. Worker-thread execution
+// (which would avoid this) is explicitly out of scope for this phase; the
+// webview's own "Checking coverage… (tree paused)" button label (see
+// CoveragePanel.tsx) is the only mitigation here, not a fix for it.
 export function wireCoverageAnalysis(
   webview: vscode.Webview,
   workspaceRoot: string,
@@ -46,10 +60,14 @@ export function wireCoverageAnalysis(
     }
     inFlight = true;
 
-    // Yield once so the click that triggered this doesn't block behind the
-    // (potentially slow, synchronous) ts-morph parse below with no chance
-    // for anything else queued on this same event loop tick to run first --
-    // same reasoning as StaticAnalysisPanel.runAnalysis's setImmediate gate.
+    // Yield once so this message handler returning doesn't itself block
+    // whatever's queued immediately behind it on this same event loop tick
+    // (e.g. a just-arrived DevtoolsBridge message) -- same setImmediate gate
+    // StaticAnalysisPanel.runAnalysis uses, though it buys much less here:
+    // once the synchronous analyzeWorkspace call below actually starts, it
+    // still blocks the whole event loop -- including that same live bridge
+    // traffic -- for as long as the parse takes. See this file's top-level
+    // COST NOTE.
     void new Promise<void>((resolve) => setImmediate(resolve)).then(() => {
       if (disposed) {
         return;
