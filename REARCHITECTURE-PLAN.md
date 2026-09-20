@@ -459,7 +459,10 @@ Original spec for this phase:
 **Sample-app matrix** (keep tiny, commit under `samples/` or reference repos):
 
 - CRA React 16.13 · React 17 · Vite React 18 · Next 15 React 19
-- **react-router v5 + React 16.9** (issue #72) · react-router v6
+- **react-router v5 + React 16.9** (issue #72) · react-router v6 — the v5 half
+  is ✅ done: see `spike/run-phase4d-router-v5.js` (isolated fixture pinning
+  the reporter's exact dependency versions; asserts `store.numElements > 0`
+  and that the router-rendered components appear in the tree)
 - A "kitchen-sink" app exercising memo/forwardRef/lazy/Suspense/context/portals
   and one deliberately-unused component + one drilled prop (for Phase 5).
 
