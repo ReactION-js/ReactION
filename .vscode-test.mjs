@@ -8,6 +8,8 @@ export default defineConfig({
     "out/test/puppeteerErrors.test.js",
     "out/test/outputChannelLogger.test.js",
     "out/test/diagnosticsWiring.test.js",
+    "out/test/devServerProbe.test.js",
+    "out/test/connectionResilience.test.js",
   ],
   workspaceFolder: ".",
   mocha: {

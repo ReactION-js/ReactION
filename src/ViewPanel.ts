@@ -5,6 +5,7 @@ import DevtoolsBridge from "./devtoolsBridge";
 import { wireBridgeToWebview } from "./bridgeWiring";
 import { wireSourceOpening } from "./sourceOpeningWiring";
 import { wireEmptyStateDiagnostics } from "./diagnosticsWiring";
+import { wireConnectionResilience } from "./connectionResilience";
 import { createModuleLogger } from "./outputChannelLogger";
 import { type ReactionConfig, toUrl } from "./config";
 
@@ -103,7 +104,30 @@ export default class ViewPanel {
     if (this.disposed) {
       // Panel was closed while Chrome was launching; tear down the browser.
       void this.page.close();
+      return;
     }
+
+    this.disposables.push(
+      wireConnectionResilience({
+        bridge: this.bridge,
+        page: this.page,
+        url: this.page.connectedUrl,
+        log: createModuleLogger(this.outputChannel, "resilience"),
+        isTornDown: () => this.disposed,
+        onReconnectExhausted: () => {
+          void vscode.window.showWarningMessage(
+            "ReactION: lost connection to the dev server and could not reconnect. " +
+              "Check that it's running, then close and reopen the panel.",
+          );
+        },
+        onBrowserLost: () => {
+          void vscode.window.showWarningMessage(
+            "ReactION: the Chrome window closed or crashed unexpectedly. " +
+              "Close and reopen the panel to reconnect.",
+          );
+        },
+      }),
+    );
   }
 
   public dispose(): void {

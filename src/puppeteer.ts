@@ -4,6 +4,7 @@ import * as path from "path";
 import * as util from "util";
 import { type ReactionConfig, toUrl } from "./config";
 import { type LogFn, noopLog } from "./logging";
+import { detectDevServerUrl } from "./devServerProbe";
 
 // Full detail for the log (stack when available), not just String(error) --
 // issue #73 asked for verbose logs, and `String(error)` on a puppeteer launch
@@ -106,6 +107,11 @@ export default class Puppeteer {
   private readonly executablePath: string;
   private readonly url: string;
   private readonly log: LogFn;
+  // Set before our own browser.close() so the 'disconnected' listener can
+  // tell "we did this" apart from an actual crash/user-closed-the-window.
+  private closing = false;
+  private activeUrl = "";
+  private browserDisconnectHandler: (() => void) | undefined;
 
   // `log` is optional and defaults to a no-op so every existing call site
   // (spike/*.js, ViewPanel/EmbeddedViewPanel before this change) keeps working
@@ -115,6 +121,28 @@ export default class Puppeteer {
     this.executablePath = config.executablePath;
     this.url = toUrl(config.localhost);
     this.log = log ?? noopLog;
+  }
+
+  // The URL actually navigated to at startup (after dev-server auto-detection
+  // may have picked a fallback port) -- what reconnect() should keep targeting.
+  public get connectedUrl(): string {
+    return this.activeUrl || this.url;
+  }
+
+  // Fires when puppeteer-core's Browser reports the whole browser process is
+  // gone (crash, or the user closing the Chrome window it launched) -- but
+  // NOT when our own close() causes that same event. Single-subscriber (like
+  // Puppeteer's other lifecycle hooks): only one owner (the panel) ever wires
+  // resilience to a given instance.
+  public onBrowserDisconnected(handler: () => void): void {
+    this.browserDisconnectHandler = handler;
+  }
+
+  // The pid of the exact Chrome process this instance launched, if any.
+  // Exists so verification tooling can simulate a real crash by killing
+  // precisely this process -- never any other Chrome window on the machine.
+  public get browserPid(): number | undefined {
+    return this.browser?.process()?.pid ?? undefined;
   }
 
   // Launches Chrome, injects the React DevTools backend BEFORE any app script so
@@ -135,6 +163,14 @@ export default class Puppeteer {
     }
     this.log("Chrome launched successfully");
 
+    this.browser.on("disconnected", () => {
+      if (this.closing) {
+        return;
+      }
+      this.log("Chrome browser disconnected unexpectedly (not our own close())");
+      this.browserDisconnectHandler?.();
+    });
+
     // Own try/catch: none of this is "launching Chrome" (which just
     // succeeded) -- a failure here (corrupted react-devtools-core install,
     // the page closing itself, an injection error) must not be mislabeled as
@@ -151,11 +187,20 @@ export default class Puppeteer {
       throw new BackendInjectionError(error);
     }
 
+    // Cheap reachability probe before committing to the (much slower)
+    // goto-retry loop below -- see devServerProbe.ts. Always tried first
+    // against the configured URL; only probes fallback ports if that doesn't
+    // answer quickly, and never makes a genuine cold start slower since a
+    // fully-unreachable probe pass just falls back to the configured URL.
+    const detected = await detectDevServerUrl(this.url, this.log);
+    const targetUrl = detected.url;
+
     try {
-      await this.gotoWithRetry(this.url);
+      await this.gotoWithRetry(targetUrl);
     } catch (error) {
-      throw new DevServerUnreachableError(this.url, error);
+      throw new DevServerUnreachableError(targetUrl, error);
     }
+    this.activeUrl = targetUrl;
   }
 
   // Dev servers may still be booting when the panel opens; retry navigation for
@@ -166,6 +211,11 @@ export default class Puppeteer {
     }
     let lastError: unknown;
     for (let attempt = 0; attempt < attempts; attempt += 1) {
+      if (!this.page) {
+        // The page/browser was torn down (panel closed) mid-retry; stop
+        // instead of throwing an opaque TypeError on the next .goto() call.
+        throw lastError ?? new Error("page closed while retrying navigation");
+      }
       try {
         await this.page.goto(url, { waitUntil: "domcontentloaded" });
         this.log(`Reached ${url} on attempt ${attempt + 1}/${attempts}`);
@@ -181,7 +231,27 @@ export default class Puppeteer {
     throw lastError;
   }
 
+  // Single re-navigation attempt to `url` on the existing page, used after the
+  // initial successful start() to recover from a backend disconnect that
+  // didn't self-heal (see connectionResilience.ts, which owns the retry
+  // schedule). Never throws: a failed attempt is just `false`, so the caller's
+  // own bounded backoff loop stays in control.
+  public async reconnect(url: string): Promise<boolean> {
+    if (!this.page || this.closing) {
+      return false;
+    }
+    try {
+      await this.page.goto(url, { waitUntil: "domcontentloaded" });
+      this.log(`Reconnect: reached ${url}`);
+      return true;
+    } catch (error) {
+      this.log(`Reconnect attempt to ${url} failed: ${errorDetail(error)}`);
+      return false;
+    }
+  }
+
   public async close(): Promise<void> {
+    this.closing = true;
     await this.browser?.close();
     this.browser = undefined;
     this.page = undefined;

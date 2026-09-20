@@ -19,8 +19,12 @@ export default class DevtoolsBridge {
   private readonly log: LogFn;
 
   private pageMessageHandler: ((message: WallMessage) => void) | undefined;
-  private connectHandler: (() => void) | undefined;
-  private disconnectHandler: (() => void) | undefined;
+  // Arrays, not single slots: both bridgeWiring.ts (forwards to the webview)
+  // and connectionResilience.ts (drives reconnect-after-restart) subscribe to
+  // the same bridge independently, and one registering must not clobber the
+  // other's handler.
+  private readonly connectHandlers: Array<() => void> = [];
+  private readonly disconnectHandlers: Array<() => void> = [];
 
   // `log` is optional and defaults to a no-op so every existing call site
   // (spike/*.js, ViewPanel/EmbeddedViewPanel before this change) keeps working
@@ -45,7 +49,7 @@ export default class DevtoolsBridge {
       // supersedes any previous one.
       this.socket = socket;
       this.log("Backend connected");
-      this.connectHandler?.();
+      this.connectHandlers.forEach((handler) => handler());
 
       socket.on("message", (data: RawData) => {
         let parsed: WallMessage;
@@ -60,7 +64,7 @@ export default class DevtoolsBridge {
         if (this.socket === socket) {
           this.socket = undefined;
           this.log("Backend disconnected");
-          this.disconnectHandler?.();
+          this.disconnectHandlers.forEach((handler) => handler());
         }
       });
       // A socket error is always followed by a close; nothing to do here.
@@ -79,11 +83,11 @@ export default class DevtoolsBridge {
   }
 
   public onBackendConnected(handler: () => void): void {
-    this.connectHandler = handler;
+    this.connectHandlers.push(handler);
   }
 
   public onBackendDisconnected(handler: () => void): void {
-    this.disconnectHandler = handler;
+    this.disconnectHandlers.push(handler);
   }
 
   // Forwards a webview -> page wall message to the backend socket.
