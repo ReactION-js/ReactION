@@ -2,6 +2,7 @@ import * as assert from "node:assert";
 import { generateStaticAnalysisHtml } from "../staticAnalysisHtml";
 import type { ComponentInfo } from "../staticAnalysis";
 import type { PropDrillingChain } from "../propDrilling";
+import type { DependencyMetricsEntry } from "../dependencyMetrics";
 
 // Plain mocha (describe/it), matching staticAnalysis.test.ts's style --
 // generateStaticAnalysisHtml has no vscode import (it's a pure string
@@ -28,6 +29,7 @@ describe("generateStaticAnalysisHtml -- Prop Drilling section", () => {
       unusedComponents: [],
       deadProps: [],
       propDrilling: [],
+      dependencyMetrics: [],
     });
     assert.ok(html.includes("Prop Drilling"));
     assert.ok(html.includes("No prop drilling detected."));
@@ -44,6 +46,7 @@ describe("generateStaticAnalysisHtml -- Prop Drilling section", () => {
       unusedComponents: [],
       deadProps: [],
       propDrilling: [chain],
+      dependencyMetrics: [],
     });
     assert.ok(html.includes("theme"));
     assert.ok(html.includes("Grandparent"));
@@ -66,6 +69,7 @@ describe("generateStaticAnalysisHtml -- Prop Drilling section", () => {
       unusedComponents: [],
       deadProps: [],
       propDrilling: [chain],
+      dependencyMetrics: [],
     });
     assert.ok(html.includes("never consumed"));
     assert.ok(html.includes("SpreadForwarder"));
@@ -89,9 +93,70 @@ describe("generateStaticAnalysisHtml -- Prop Drilling section", () => {
       unusedComponents: [],
       deadProps: [],
       propDrilling: [chain],
+      dependencyMetrics: [],
     });
     assert.ok(html.includes("ExternalButton"));
     assert.ok(html.includes("outside this analysis"));
     assert.ok(!html.includes("never consumed"));
+  });
+});
+
+// Task 5c: a direct content assertion on the generated HTML, matching this
+// file's own rigor for the Prop Drilling section above -- 5a's own
+// vscode-test panel test only checks "opens without throwing", which would
+// pass just as well against a placeholder string, so this proves the real
+// fan-in/out numbers actually reach the rendered markup.
+describe("generateStaticAnalysisHtml -- Dependency Metrics section", () => {
+  it("shows a 'no components' message when the workspace has no components at all", () => {
+    const html = generateStaticAnalysisHtml("/fake", {
+      status: "done",
+      unusedComponents: [],
+      deadProps: [],
+      propDrilling: [],
+      dependencyMetrics: [],
+    });
+    assert.ok(html.includes("Dependency Metrics"));
+    assert.ok(html.includes("No components found."));
+  });
+
+  it("renders real fan-in/out numbers for each component, not a placeholder", () => {
+    const entries: DependencyMetricsEntry[] = [
+      {
+        component: makeComponent("HubWidget"),
+        fanIn: 4,
+        fanOut: 0,
+        fanInOutlier: true,
+        fanOutOutlier: false,
+      },
+      {
+        component: makeComponent("ModestPage"),
+        fanIn: 1,
+        fanOut: 1,
+        fanInOutlier: false,
+        fanOutOutlier: false,
+      },
+    ];
+    const html = generateStaticAnalysisHtml("/fake", {
+      status: "done",
+      unusedComponents: [],
+      deadProps: [],
+      propDrilling: [],
+      dependencyMetrics: entries,
+    });
+
+    assert.ok(html.includes("HubWidget"));
+    assert.ok(html.includes("ModestPage"));
+
+    // The numbers themselves, not just the component names, must reach the
+    // markup -- and HubWidget's outlier fan-in (4) must render distinctly
+    // (highlighted) from ModestPage's ordinary fan-in/out (1).
+    const hubRow = html.split("\n").find((line) => line.includes("HubWidget"));
+    assert.ok(hubRow, "expected a table row for HubWidget");
+    assert.ok(hubRow?.includes('class="metric-outlier">4<'), "HubWidget's fan-in should render as a highlighted outlier");
+
+    const modestRow = html.split("\n").find((line) => line.includes("ModestPage"));
+    assert.ok(modestRow, "expected a table row for ModestPage");
+    assert.ok(!modestRow?.includes("metric-outlier"), "ModestPage's ordinary counts should not be highlighted");
+    assert.ok(modestRow?.includes(">1<"), "expected ModestPage's fan-in/out of 1 to render literally");
   });
 });
