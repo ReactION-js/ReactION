@@ -9,6 +9,7 @@ import {
   type ComponentInfo,
   type StaticAnalysisResult,
 } from "../staticAnalysis";
+import { computePropDrilling, type PropDrillingChain } from "../propDrilling";
 
 // Plain mocha (describe/it), run via `npm run test:e2e` against compiled
 // output -- NOT vscode-test, since analyzeWorkspace/computeUnusedComponents/
@@ -44,11 +45,25 @@ describe("analyzeWorkspace / computeUnusedComponents / computeDeadProps", () => 
       "BlockArrow",
       "ChipGroup",
       "ConciseArrow",
+      "CountGrandparent",
+      "CountLeaf",
+      "CountMixed",
+      "CountParent",
       "DeadProp",
+      "DirectConsumer",
       "ExternalTypedComponent",
+      "LabelLeaf",
+      "LabelParent",
       "LazyLoaded",
       "NeverImported",
       "PropsAccessed",
+      "SpreadForwarder",
+      "SpreadGrandparent",
+      "SpreadGreatGrandparent",
+      "SpreadLeaf",
+      "ThemeGrandparent",
+      "ThemeLeaf",
+      "ThemeParent",
       "ThemedButton",
       "ThemedCard",
     ]);
@@ -195,6 +210,71 @@ describe("analyzeWorkspace / computeUnusedComponents / computeDeadProps", () => 
       assert.ok(edge?.from.endsWith(path.join("src", "App.tsx")));
       // The flat lookup computeUnusedComponents actually reads is still there.
       assert.ok(result.dynamicImportTargetFiles.has(lazyLoaded.filePath));
+    });
+  });
+
+  describe("computePropDrilling", () => {
+    let chains: PropDrillingChain[];
+
+    before(() => {
+      chains = computePropDrilling(result);
+    });
+
+    function findChainRootedAt(rootDisplayName: string): PropDrillingChain | undefined {
+      return chains.find((chain) => chain.components[0].displayName === rootDisplayName);
+    }
+
+    function names(chain: PropDrillingChain | undefined): string[] {
+      return chain?.components.map((c) => c.displayName) ?? [];
+    }
+
+    it("finds a genuine 2+ layer chain: theme drilled through Grandparent -> Parent, consumed in Leaf", () => {
+      const chain = findChainRootedAt("ThemeGrandparent");
+      assert.ok(chain, "expected a chain rooted at ThemeGrandparent");
+      assert.strictEqual(chain?.propName, "theme");
+      assert.deepStrictEqual(names(chain), ["ThemeGrandparent", "ThemeParent", "ThemeLeaf"]);
+      assert.strictEqual(chain?.consumedBy?.displayName, "ThemeLeaf");
+    });
+
+    it("does NOT flag a single forwarding hop (below the 2-layer threshold) as drilling", () => {
+      assert.strictEqual(findChainRootedAt("LabelParent"), undefined);
+      assert.ok(
+        !chains.some((chain) => chain.components.some((c) => c.displayName === "LabelLeaf")),
+        "LabelLeaf should not appear in any reported chain",
+      );
+    });
+
+    it("does NOT treat a component that also genuinely uses the prop as a pure forwarder", () => {
+      // CountMixed both renders `count` itself AND forwards it to CountLeaf --
+      // a real consumer, so the chain must stop AT CountMixed rather than
+      // continuing through it to CountLeaf.
+      const chain = findChainRootedAt("CountGrandparent");
+      assert.ok(chain, "expected a chain rooted at CountGrandparent");
+      assert.deepStrictEqual(names(chain), ["CountGrandparent", "CountParent", "CountMixed"]);
+      assert.strictEqual(chain?.consumedBy?.displayName, "CountMixed");
+      assert.ok(
+        !names(chain).includes("CountLeaf"),
+        "CountLeaf must not be pulled into the chain past its real consumer, CountMixed",
+      );
+    });
+
+    it("finds no chain at all for a component that genuinely uses its own prop (base case)", () => {
+      assert.ok(!chains.some((chain) => chain.components.some((c) => c.displayName === "DirectConsumer")));
+    });
+
+    it("SPREAD-PROPS DECISION: `{...props}` stops the chain unresolved rather than guessing it reaches the real consumer", () => {
+      const chain = findChainRootedAt("SpreadGreatGrandparent");
+      assert.ok(chain, "expected a chain rooted at SpreadGreatGrandparent");
+      assert.deepStrictEqual(names(chain), [
+        "SpreadGreatGrandparent",
+        "SpreadGrandparent",
+        "SpreadForwarder",
+      ]);
+      assert.strictEqual(chain?.consumedBy, undefined);
+      assert.ok(
+        !names(chain).includes("SpreadLeaf"),
+        "must not guess that the spread carries `theme` through to SpreadLeaf",
+      );
     });
   });
 });
