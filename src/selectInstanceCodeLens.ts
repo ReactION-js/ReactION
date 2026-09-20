@@ -2,13 +2,9 @@ import * as path from "path";
 import * as vscode from "vscode";
 import { findComponentsInFileText } from "./singleFileComponents";
 import type { SelectInstanceArgs } from "./selectInstance";
+import { SUPPORTED_LANGUAGE_IDS } from "./supportedLanguages";
 
-const SELECTOR: vscode.DocumentSelector = [
-  { language: "typescript" },
-  { language: "typescriptreact" },
-  { language: "javascript" },
-  { language: "javascriptreact" },
-];
+const SELECTOR: vscode.DocumentSelector = SUPPORTED_LANGUAGE_IDS.map((language) => ({ language }));
 
 const RECOGNIZED_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx"]);
 

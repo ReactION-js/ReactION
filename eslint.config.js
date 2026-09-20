@@ -9,11 +9,12 @@ module.exports = tseslint.config(
       "out/**",
       "node_modules/**",
       "resources/**",
-      // spike/storeGraphTransform.test.js and spike/coverage.test.js are
-      // permanent, CI-wired regression tests (see package.json's test:e2e),
-      // not throwaway harnesses -- unlike the rest of spike/, they should get
-      // the same static-analysis coverage src/test/*.ts already gets (this is
-      // how a dead import slipped in undetected during Phase 4c review).
+      // spike/storeGraphTransform.test.js, spike/coverage.test.js, and
+      // spike/selectByComponent.test.js are permanent, CI-wired regression
+      // tests (see package.json's test:e2e), not throwaway harnesses --
+      // unlike the rest of spike/, they should get the same static-analysis
+      // coverage src/test/*.ts already gets (this is how a dead import
+      // slipped in undetected during Phase 4c review).
       // ESLint's flat-config negation can't re-include a file matched by a
       // "**" glob on the same prefix (confirmed empirically), so this is a
       // single-level "spike/*" plus a separate recursive ignore for the
@@ -22,6 +23,7 @@ module.exports = tseslint.config(
       "spike/fixtures/**",
       "!spike/storeGraphTransform.test.js",
       "!spike/coverage.test.js",
+      "!spike/selectByComponent.test.js",
       "**/*.config.js",
       ".vscode-test/**",
       ".vscode-test.mjs",
@@ -53,7 +55,11 @@ module.exports = tseslint.config(
     // no-require-imports, confirmed empirically), so turn that one rule off
     // rather than rewrite this file's module system to satisfy a lint rule
     // meant for the compiled src/ and client/ TypeScript.
-    files: ["spike/storeGraphTransform.test.js", "spike/coverage.test.js"],
+    files: [
+      "spike/storeGraphTransform.test.js",
+      "spike/coverage.test.js",
+      "spike/selectByComponent.test.js",
+    ],
     languageOptions: {
       sourceType: "commonjs",
     },
