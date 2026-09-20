@@ -40,6 +40,10 @@
       {
         "command": "ReactION.openWeb",
         "title": "ReactION: Embedded Webview"
+      },
+      {
+        "command": "ReactION.analyzeSource",
+        "title": "ReactION: Analyze Source"
       }
     ]
   },
@@ -58,7 +62,7 @@
     "spike:phase1": "node spike/run-phase1.js",
     "pretest": "npm run compile && npm run lint",
     "test": "vscode-test",
-    "test:e2e": "mocha out/test/puppeteer.test.js out/test/TreeView.test.js out/test/openSource.test.js spike/storeGraphTransform.test.js",
+    "test:e2e": "mocha out/test/puppeteer.test.js out/test/TreeView.test.js out/test/openSource.test.js out/test/staticAnalysis.test.js spike/storeGraphTransform.test.js",
     "package": "vsce package"
   },
   "devDependencies": {
@@ -96,6 +100,7 @@
   "dependencies": {
     "puppeteer-core": "^25.11.0",
     "react-devtools-core": "8.0.0",
+    "ts-morph": "^28.0.0",
     "ws": "^8.21.3"
   }
 }

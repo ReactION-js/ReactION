@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import StartExtensionProvider from "./startExtensionProvider";
 import EmbeddedViewPanel from "./EmbeddedViewPanel";
 import ViewPanel from "./ViewPanel";
+import StaticAnalysisPanel from "./StaticAnalysisPanel";
 import { loadConfig } from "./config";
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -34,6 +35,9 @@ export function activate(context: vscode.ExtensionContext): void {
         outputChannel,
       );
     }),
+    vscode.commands.registerCommand("ReactION.analyzeSource", () => {
+      StaticAnalysisPanel.createOrShow(workspaceRoot);
+    }),
     vscode.window.registerTreeDataProvider(
       "startExtension",
       new StartExtensionProvider(),
@@ -44,4 +48,5 @@ export function activate(context: vscode.ExtensionContext): void {
 export function deactivate(): void {
   ViewPanel.currentPanel?.dispose();
   EmbeddedViewPanel.currentPanel?.dispose();
+  StaticAnalysisPanel.currentPanel?.dispose();
 }
