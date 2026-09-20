@@ -26,10 +26,17 @@ import { discoverComponentsInFile, type ComponentInfo } from "./staticAnalysis";
 // `skipLoadingLibFiles: true` below is what actually makes this fast
 // (measured ~1ms/call with it, ~90ms/call without): we don't need
 // lib.d.ts's ambient types at all -- containsJsx/isPascalCase are pure
-// syntax checks, and the only place this module's output touches a type
-// (ComponentInfo.props, via extractProps) is fine degrading to a widened
-// `any`, since a CodeLens only ever reads displayName + location from it.
-//
+// syntax checks. What we DO give up: any prop type touching an imported
+// type (including React's own ambient types) resolves to a degraded/
+// incomplete type via the checker on this single-file path, unlike
+// analyzeWorkspace's whole-workspace one. Fine today, since a CodeLens only
+// ever reads displayName + location -- but ComponentInfo's own `props` field
+// would silently carry that degraded data if it leaked out. Omitted below
+// (SingleFileComponentInfo) for exactly that reason: a future caller that
+// tries to read `.props` off THIS function's result gets a compile error
+// instead of quietly-wrong data.
+export type SingleFileComponentInfo = Omit<ComponentInfo, "props">;
+
 // LIMITATION (accepted, not a bug): resolveComponentFunction's
 // Identifier-following branch resolves symbols via THIS file's own binder
 // only -- a component wrapped as `memo(SomeImportedComponent)` where
@@ -37,7 +44,10 @@ import { discoverComponentsInFile, type ComponentInfo } from "./staticAnalysis";
 // unlike analyzeWorkspace's whole-workspace Project. Accepted trade-off for
 // the single-file performance requirement above: no CodeLens simply means no
 // CodeLens for that one shape, not a crash or a wrong one.
-export function findComponentsInFileText(filePath: string, fileText: string): ComponentInfo[] {
+export function findComponentsInFileText(
+  filePath: string,
+  fileText: string,
+): SingleFileComponentInfo[] {
   try {
     const project = new Project({
       useInMemoryFileSystem: true,
@@ -46,7 +56,10 @@ export function findComponentsInFileText(filePath: string, fileText: string): Co
       compilerOptions: { allowJs: true, jsx: ts.JsxEmit.ReactJSX },
     });
     const sourceFile = project.createSourceFile(filePath, fileText, { overwrite: true });
-    return discoverComponentsInFile(sourceFile).map((handle) => handle.info);
+    return discoverComponentsInFile(sourceFile).map(({ info }) => {
+      const { props: _degradedProps, ...rest } = info;
+      return rest;
+    });
   } catch {
     // provideCodeLenses must never throw: a syntax error, a NUL byte, or any
     // other ts-morph parse failure degrades to "no components found in this
