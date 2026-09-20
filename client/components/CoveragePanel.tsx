@@ -107,9 +107,18 @@ export default function CoveragePanel({ theme, controller, onOpenSource }: Cover
       <button
         onClick={runCoverageAnalysis}
         disabled={isAnalyzing}
-        title="Checks which statically-known components were not observed rendering during this live session. This is a coverage signal, not a dead-code report."
+        title={
+          isAnalyzing
+            ? "Running the static analysis on the extension host blocks its event loop, so live tree updates are paused until this finishes."
+            : "Checks which statically-known components were not observed rendering during this live session. This is a coverage signal, not a dead-code report."
+        }
       >
-        {isAnalyzing ? "Checking coverage…" : "Check Coverage"}
+        {/* The parse behind this blocks the extension host's event loop, so
+            the SAME connection carrying live tree updates stalls for as long
+            as this runs -- see coverageAnalysisWiring.ts's COST NOTE. This
+            label is only a UX mitigation (tell the user why the tree just
+            froze), not a fix for the underlying block. */}
+        {isAnalyzing ? "Checking coverage… (tree paused)" : "Check Coverage"}
       </button>
       {showPanel && (
         <ResultsPanel $theme={theme}>
