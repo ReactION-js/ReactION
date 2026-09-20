@@ -45,9 +45,12 @@ function About() {
 }
 
 function App() {
-  // Start on /users so the nested route (Users -> two UserDetails children)
-  // is actually mounted, not just declared -- Switch only renders the one
-  // matching Route.
+  // Start on /users so Users' nested component tree (Users -> two
+  // UserDetails children) is actually mounted, not just declared -- Switch
+  // only renders the one matching Route. UserDetails' `match` prop below is
+  // hand-constructed, not produced by a real `:id` route param match, so
+  // this exercises DevTools tree-walking through Switch/Route/Link/NavLink
+  // and nested components, not react-router's param-matching machinery.
   return (
     <MemoryRouter initialEntries={["/users"]}>
       <Nav />

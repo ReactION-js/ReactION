@@ -1,7 +1,7 @@
 /node_modules
 # isolated spike fixtures with their own node_modules (e.g. router-v5-app,
 # pinned to old React/react-router versions incompatible with the root deps)
-/spike/fixtures/*/node_modules
+/spike/fixtures/**/node_modules
 # build output
 /out
 /build

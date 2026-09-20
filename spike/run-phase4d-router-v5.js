@@ -148,6 +148,25 @@ function collectNames(node, out) {
   return out;
 }
 
+// Unlike every other spike/run-phase*.js script, this one bundles a fixture
+// with its OWN separate node_modules (spike/fixtures/router-v5-app/) that the
+// root project's `npm install` does not create. Without this check, a fresh
+// clone hits a bare esbuild "Could not resolve react-router-dom" error that a
+// future reader has to reverse-engineer back to "oh, this fixture needs its
+// own install" -- fail loudly and name the fix instead.
+function assertFixtureDependenciesInstalled() {
+  const nodeModulesPath = path.join(FIXTURE_DIR, "node_modules");
+  if (!fs.existsSync(nodeModulesPath)) {
+    throw new Error(
+      `Fixture dependencies not installed: ${nodeModulesPath} does not exist.\n` +
+        `This fixture pins its own isolated react/react-dom/react-router-dom ` +
+        `versions (see ${path.join(FIXTURE_DIR, "package.json")}) and is not ` +
+        `covered by the root project's npm install.\n` +
+        `Fix: cd ${FIXTURE_DIR} && npm install`,
+    );
+  }
+}
+
 async function main() {
   const watchdog = setTimeout(() => {
     console.error("[phase4d-router-v5] FAIL: overall timeout");
@@ -160,6 +179,7 @@ async function main() {
       "DevTools-protocol pipeline.",
   );
 
+  assertFixtureDependenciesInstalled();
   logResolvedFixtureVersions();
 
   const { StoreConnection } = await requireCompiled(
