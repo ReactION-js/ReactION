@@ -147,13 +147,54 @@ function providerBaseName(displayName: string | null): string | null {
   return displayName.slice(0, -PROVIDER_SUFFIX.length);
 }
 
+// Only a genuine primitive-hook leaf is trusted as a context-consumption
+// candidate. A custom hook wrapper node (e.g. useTheme()) gets its own
+// synthesized name -- parsed from the function name -- and must not be
+// mistaken for an actual useContext() call just because that name happens to
+// match a provider's displayName (the false positive this guards against: an
+// unrelated component calling useTheme() internally, elsewhere under the
+// same ThemeContext provider as a real consumer). Confirmed against the real
+// installed react-devtools-inline@8.0.0 backend's buildTree (node_modules/
+// react-devtools-inline/dist/backend.js): every primitive hook (State,
+// Effect, Context, ...) is built with a literal `subHooks: []`, and nothing
+// ever pushes into a leaf's own subHooks array -- while a custom-hook
+// wrapper frame is built with `subHooks: children`, the very array its
+// wrapped hook(s) get pushed into, so a wrapper always ends up with
+// subHooks.length >= 1. Layering on id === null additionally rules out every
+// *stateful* primitive (State/Reducer/Ref/Effect/LayoutEffect/
+// InsertionEffect/Memo/Callback/CacheRefresh/ImperativeHandle/
+// SyncExternalStore/Transition/DeferredValue/Id/Optimistic/FormState/
+// ActionState/EffectEvent all get a non-null nativeHookID++ in buildTree).
+//
+// Residual ambiguity: buildTree's returned hook object has no field naming
+// which primitive produced it, so id === null plus no subHooks cannot
+// distinguish a genuine useContext()/use(someContext) call from the only
+// other id-null leaves buildTree can produce: Promise and Unresolved (from
+// use(aPromise)) and HostTransitionStatus. All three hardcode
+// `displayName: null` in their own dispatcher, so their `name` is always
+// that literal primitive string, never developer-chosen -- a false match
+// would need a Context whose OWN displayName is literally "Promise",
+// "Unresolved", or "HostTransitionStatus", accepted here as a narrower,
+// separate gap from the two-Contexts-sharing-a-displayName limitation
+// documented on buildContextMap above. (DebugValue is also id-null but never
+// reaches here: the backend's own processDebugValues() splices every
+// DebugValue leaf out of the tree before it's sent.)
+function isContextHookCandidate(hook: HooksNode): boolean {
+  return hook.id === null && hook.subHooks.length === 0;
+}
+
 // A useContext() call nested inside a custom hook surfaces as a subHooks
 // entry on the custom hook's own HooksNode rather than a top-level one, so
-// this recurses to catch that case too.
+// this recurses into every hook's subHooks regardless of whether the hook
+// itself qualifies as a candidate -- a wrapper's own name is never a
+// candidate (see isContextHookCandidate), but a genuine useContext() nested
+// inside it still must be found.
 function collectHookNames(hooks: HooksNode[]): string[] {
   const names: string[] = [];
   for (const hook of hooks) {
-    names.push(hook.name);
+    if (isContextHookCandidate(hook)) {
+      names.push(hook.name);
+    }
     if (hook.subHooks.length > 0) {
       names.push(...collectHookNames(hook.subHooks));
     }

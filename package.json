@@ -67,7 +67,7 @@
     "spike:phase1": "node spike/run-phase1.js",
     "pretest": "npm run compile && npm run lint",
     "test": "vscode-test",
-    "test:e2e": "mocha out/test/puppeteer.test.js out/test/TreeView.test.js out/test/openSource.test.js out/test/staticAnalysis.test.js out/test/staticAnalysisHtml.test.js out/test/singleFileComponents.test.js out/test/selectInstance.test.js out/test/activationEvents.test.js spike/storeGraphTransform.test.js spike/coverage.test.js spike/selectByComponent.test.js spike/kitchenSink.test.js",
+    "test:e2e": "mocha out/test/puppeteer.test.js out/test/TreeView.test.js out/test/openSource.test.js out/test/staticAnalysis.test.js out/test/staticAnalysisHtml.test.js out/test/singleFileComponents.test.js out/test/selectInstance.test.js out/test/activationEvents.test.js spike/storeGraphTransform.test.js spike/coverage.test.js spike/selectByComponent.test.js spike/kitchenSink.test.js spike/contextMap.test.js",
     "package": "vsce package"
   },
   "devDependencies": {
