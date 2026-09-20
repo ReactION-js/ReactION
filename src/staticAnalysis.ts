@@ -10,6 +10,7 @@ import {
   type ArrowFunction,
   type ParameterDeclaration,
   type ExportedDeclarations,
+  type Identifier,
 } from "ts-morph";
 
 export interface PropInfo {
@@ -148,7 +149,10 @@ function containsJsx(node: Node): boolean {
   );
 }
 
-function isPascalCase(name: string): boolean {
+// Exported for src/propDrilling.ts, which needs the exact same "is this JSX
+// tag a component, not a DOM element" test when deciding whether a JSX
+// attribute value is being forwarded to a child component.
+export function isPascalCase(name: string): boolean {
   return /^[A-Z]/.test(name);
 }
 
@@ -390,17 +394,19 @@ export function computeUnusedComponents(result: StaticAnalysisResult): Component
   });
 }
 
-function hasGenuineDestructuredReference(nameNode: Node, body: Node): boolean {
-  // A nested destructuring pattern (`{ theme: { shade } }`) has no single
-  // identifier to search on; treat it as used rather than risk a false dead
-  // report from a check that can't actually inspect it.
-  if (!Node.isIdentifier(nameNode)) return true;
-
+// Exported alongside isPascalCase for src/propDrilling.ts -- it needs the
+// exact same "which references actually count" filtering computeDeadProps
+// already worked out (same-file, within-body, minus the JsxAttribute-NAME
+// collision), just returning the nodes themselves instead of a yes/no, so it
+// can go on to classify what EACH reference actually does with the value
+// (forwards it vs. genuinely consumes it) rather than just detecting
+// presence.
+export function collectGenuineDestructuredReferenceNodes(nameNode: Identifier, body: Node): Node[] {
   const bodyStart = body.getPos();
   const bodyEnd = body.getEnd();
   const sourceFile = nameNode.getSourceFile();
 
-  return nameNode.findReferencesAsNodes().some((ref) => {
+  return nameNode.findReferencesAsNodes().filter((ref) => {
     if (ref.getSourceFile() !== sourceFile) return false;
     const pos = ref.getStart();
     if (pos < bodyStart || pos > bodyEnd) return false;
@@ -423,14 +429,30 @@ function hasGenuineDestructuredReference(nameNode: Node, body: Node): boolean {
   });
 }
 
-function hasGenuinePropertyAccess(paramIdentifier: Node, body: Node, propName: string): boolean {
-  if (!Node.isIdentifier(paramIdentifier)) return true;
+function hasGenuineDestructuredReference(nameNode: Node, body: Node): boolean {
+  // A nested destructuring pattern (`{ theme: { shade } }`) has no single
+  // identifier to search on; treat it as used rather than risk a false dead
+  // report from a check that can't actually inspect it.
+  if (!Node.isIdentifier(nameNode)) return true;
+  return collectGenuineDestructuredReferenceNodes(nameNode, body).length > 0;
+}
+
+export function collectGenuinePropertyAccessNodes(
+  paramIdentifier: Identifier,
+  body: Node,
+  propName: string,
+): Node[] {
   const paramSymbol = paramIdentifier.getSymbol();
-  return body.getDescendantsOfKind(SyntaxKind.PropertyAccessExpression).some((access) => {
+  return body.getDescendantsOfKind(SyntaxKind.PropertyAccessExpression).filter((access) => {
     if (access.getName() !== propName) return false;
     const target = access.getExpression();
     return Node.isIdentifier(target) && target.getSymbol() === paramSymbol;
   });
+}
+
+function hasGenuinePropertyAccess(paramIdentifier: Node, body: Node, propName: string): boolean {
+  if (!Node.isIdentifier(paramIdentifier)) return true;
+  return collectGenuinePropertyAccessNodes(paramIdentifier, body, propName).length > 0;
 }
 
 function findDeadProps(handle: ComponentAstHandle): string[] {
