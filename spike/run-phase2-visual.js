@@ -53,17 +53,27 @@ async function serveSampleApp() {
   const appJs = built.outputFiles[0].text;
   const appHtml =
     '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>sample</title></head><body><div id="root"></div><script src="/app.js"></script></body></html>';
+  // Task 4a manual check: a page with no React at all, so the backend still
+  // connects (the injected hook runs on every navigation regardless of what
+  // the page does) but the Store never gets any elements -- exercises the
+  // "stays in the empty state" half of the empty-state timeout check.
+  const blankHtml =
+    '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>no react here</title></head><body><p>plain HTML, no React mounts on this page</p></body></html>';
   const server = http.createServer((req, res) => {
     if (req.url === "/app.js") {
       res.writeHead(200, { "Content-Type": "text/javascript" });
       res.end(appJs);
+    } else if (req.url === "/blank.html") {
+      res.writeHead(200, { "Content-Type": "text/html" });
+      res.end(blankHtml);
     } else {
       res.writeHead(200, { "Content-Type": "text/html" });
       res.end(appHtml);
     }
   });
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
-  return { server, url: `http://127.0.0.1:${server.address().port}/` };
+  const origin = `http://127.0.0.1:${server.address().port}`;
+  return { server, url: `${origin}/`, blankUrl: `${origin}/blank.html` };
 }
 
 // Serves the real webview bundle plus a tiny host stand-in. Mirrors
@@ -84,6 +94,11 @@ function serveWebviewSimulator(bridge, onStartApp) {
   <div id="root"></div>
   <script>
     window.__REACTION_THEME__ = "dark";
+    ${
+      process.env.REACTION_TEST_EMPTY_TIMEOUT_MS
+        ? `window.__REACTION_EMPTY_STATE_TIMEOUT_MS__ = ${JSON.stringify(Number(process.env.REACTION_TEST_EMPTY_TIMEOUT_MS))};`
+        : ""
+    }
     window.acquireVsCodeApi = function () {
       return {
         // Phase 2 only ever needed the backend -> webview direction (the
@@ -160,6 +175,10 @@ function serveWebviewSimulator(bridge, onStartApp) {
                 ? `openSource would open: ${resolved}:${message.lineNumber - 1}:${message.columnNumber - 1} (0-based)`
                 : `openSource could not resolve "${message.fileName}" against ${__dirname} (expected for a bundle URL -- would show an information message instead)`,
             );
+          } else if (message && message.type === "noReactDetected") {
+            // Task 4a's empty-state timeout, relayed host-only (NOT through
+            // the wall/bridge) -- mirrors src/diagnosticsWiring.ts.
+            log(`noReactDetected message: elapsedMs=${message.elapsedMs}`);
           }
         } catch {
           /* ignore malformed messages */
@@ -194,22 +213,29 @@ function serveWebviewSimulator(bridge, onStartApp) {
 }
 
 async function main() {
-  const { url: appUrl } = await serveSampleApp();
-  log(`sample app served at ${appUrl}`);
+  const { url: appUrl, blankUrl } = await serveSampleApp();
+  // REACTION_TEST_NO_REACT=1: point Puppeteer at a page with no React at all,
+  // for the "empty state never clears" half of the Task 4a manual check.
+  const targetUrl = process.env.REACTION_TEST_NO_REACT ? blankUrl : appUrl;
+  log(`sample app served at ${appUrl} (blank page at ${blankUrl})`);
+  log(`Puppeteer will navigate to: ${targetUrl}`);
 
-  const bridge = new DevtoolsBridge();
+  const bridge = new DevtoolsBridge((message) => log(`[devtools-bridge] ${message}`));
   const relayPort = await bridge.start();
   log(`devtools relay on port ${relayPort}`);
 
   const onStartApp = async () => {
-    const page = new Puppeteer({
-      system: process.platform,
-      executablePath: CHROME_PATH,
-      localhost: appUrl,
-      headless_browser: true,
-      headless_embedded: true,
-      reactTheme: "dark",
-    });
+    const page = new Puppeteer(
+      {
+        system: process.platform,
+        executablePath: CHROME_PATH,
+        localhost: targetUrl,
+        headless_browser: true,
+        headless_embedded: true,
+        reactTheme: "dark",
+      },
+      (message) => log(`[puppeteer] ${message}`),
+    );
     await page.start(relayPort);
     log("sample app Chrome launched and backend injected");
   };

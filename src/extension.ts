@@ -5,6 +5,12 @@ import ViewPanel from "./ViewPanel";
 import { loadConfig } from "./config";
 
 export function activate(context: vscode.ExtensionContext): void {
+  // One shared channel for every module (puppeteer, devtools-bridge, webview
+  // diagnostics) so a user following issue #73's ask for verbose logs has a
+  // single place to look.
+  const outputChannel = vscode.window.createOutputChannel("ReactION");
+  context.subscriptions.push(outputChannel);
+
   const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
   if (!workspaceFolder) {
     void vscode.window.showErrorMessage(
@@ -18,10 +24,15 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("ReactION.openTree", () => {
-      ViewPanel.createOrShow(context.extensionUri, config, workspaceRoot);
+      ViewPanel.createOrShow(context.extensionUri, config, workspaceRoot, outputChannel);
     }),
     vscode.commands.registerCommand("ReactION.openWeb", () => {
-      EmbeddedViewPanel.createOrShow(context.extensionUri, config, workspaceRoot);
+      EmbeddedViewPanel.createOrShow(
+        context.extensionUri,
+        config,
+        workspaceRoot,
+        outputChannel,
+      );
     }),
     vscode.window.registerTreeDataProvider(
       "startExtension",
