@@ -62,7 +62,7 @@
     "spike:phase1": "node spike/run-phase1.js",
     "pretest": "npm run compile && npm run lint",
     "test": "vscode-test",
-    "test:e2e": "mocha out/test/puppeteer.test.js out/test/TreeView.test.js out/test/openSource.test.js out/test/staticAnalysis.test.js spike/storeGraphTransform.test.js",
+    "test:e2e": "mocha out/test/puppeteer.test.js out/test/TreeView.test.js out/test/openSource.test.js out/test/staticAnalysis.test.js out/test/staticAnalysisHtml.test.js spike/storeGraphTransform.test.js",
     "package": "vsce package"
   },
   "devDependencies": {

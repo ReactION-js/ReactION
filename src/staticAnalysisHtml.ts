@@ -1,10 +1,16 @@
 import * as path from "path";
 import type { ComponentInfo, DeadPropsEntry } from "./staticAnalysis";
+import type { PropDrillingChain } from "./propDrilling";
 
 export type StaticAnalysisViewState =
   | { status: "loading" }
   | { status: "error"; message: string }
-  | { status: "done"; unusedComponents: ComponentInfo[]; deadProps: DeadPropsEntry[] };
+  | {
+      status: "done";
+      unusedComponents: ComponentInfo[];
+      deadProps: DeadPropsEntry[];
+      propDrilling: PropDrillingChain[];
+    };
 
 function escapeHtml(text: string): string {
   return text
@@ -88,6 +94,26 @@ function renderDeadProps(workspaceRoot: string, deadProps: DeadPropsEntry[]): st
   </table>`;
 }
 
+function renderPropDrilling(chains: PropDrillingChain[]): string {
+  if (chains.length === 0) {
+    return `<h2>Prop Drilling</h2><p class="empty-state">No prop drilling detected.</p>`;
+  }
+  const items = chains
+    .map((chain) => {
+      const layers = chain.components
+        .slice(0, chain.consumedBy ? -1 : undefined)
+        .map((c) => escapeHtml(c.displayName))
+        .join(" &rarr; ");
+      const resolution = chain.consumedBy
+        ? `consumed in <code>${escapeHtml(chain.consumedBy.displayName)}</code>`
+        : "never consumed";
+      return `<li><code>${escapeHtml(chain.propName)}</code> drilled through ${layers}, ${resolution}</li>`;
+    })
+    .join("\n");
+  return `<h2>Prop Drilling</h2>
+  <ul>${items}</ul>`;
+}
+
 // Pure function (no vscode.Webview dependency, unlike TreeViewPanel's
 // generateTreeViewHtml) since this panel needs no bundle URI, nonce, or
 // script at all -- it's a static, host-rendered table, not a React app.
@@ -102,6 +128,6 @@ export function generateStaticAnalysisHtml(workspaceRoot: string, state: StaticA
     `${renderUnusedComponents(workspaceRoot, state.unusedComponents)}\n${renderDeadProps(
       workspaceRoot,
       state.deadProps,
-    )}`,
+    )}\n${renderPropDrilling(state.propDrilling)}`,
   );
 }

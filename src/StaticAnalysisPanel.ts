@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { analyzeWorkspace, computeDeadProps, computeUnusedComponents } from "./staticAnalysis";
+import { computePropDrilling } from "./propDrilling";
 import { generateStaticAnalysisHtml } from "./staticAnalysisHtml";
 
 // Shows unused-component / dead-prop findings from a pure, on-disk source
@@ -51,11 +52,13 @@ export default class StaticAnalysisPanel {
       const result = analyzeWorkspace(this.workspaceRoot);
       const unusedComponents = computeUnusedComponents(result);
       const deadProps = computeDeadProps(result);
+      const propDrilling = computePropDrilling(result);
       if (this.disposed) return;
       this.panel.webview.html = generateStaticAnalysisHtml(this.workspaceRoot, {
         status: "done",
         unusedComponents,
         deadProps,
+        propDrilling,
       });
     } catch (error) {
       if (this.disposed) return;
