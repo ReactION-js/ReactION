@@ -94,20 +94,33 @@ function renderDeadProps(workspaceRoot: string, deadProps: DeadPropsEntry[]): st
   </table>`;
 }
 
+// See PropDrillingTerminal's doc comment in propDrilling.ts for why these
+// three read differently: "unresolved-target" (the prop demonstrably keeps
+// flowing into something real -- a third-party/library component this
+// analysis can't see into) must not read the same as "never consumed" (a
+// known component where the trail genuinely goes cold), even though both
+// lack a resolved consumer.
+function describeTerminal(terminal: PropDrillingChain["terminal"]): string {
+  switch (terminal.kind) {
+    case "consumed":
+      return `consumed in <code>${escapeHtml(terminal.component.displayName)}</code>`;
+    case "unresolved-target":
+      return `forwarded to <code>&lt;${escapeHtml(terminal.tagName)}&gt;</code> (outside this analysis)`;
+    case "unknown":
+      return `never consumed (trail ends at <code>${escapeHtml(terminal.component.displayName)}</code>)`;
+  }
+}
+
 function renderPropDrilling(chains: PropDrillingChain[]): string {
   if (chains.length === 0) {
     return `<h2>Prop Drilling</h2><p class="empty-state">No prop drilling detected.</p>`;
   }
   const items = chains
     .map((chain) => {
-      const layers = chain.components
-        .slice(0, chain.consumedBy ? -1 : undefined)
-        .map((c) => escapeHtml(c.displayName))
-        .join(" &rarr; ");
-      const resolution = chain.consumedBy
-        ? `consumed in <code>${escapeHtml(chain.consumedBy.displayName)}</code>`
-        : "never consumed";
-      return `<li><code>${escapeHtml(chain.propName)}</code> drilled through ${layers}, ${resolution}</li>`;
+      const layers = chain.components.map((c) => escapeHtml(c.displayName)).join(" &rarr; ");
+      return `<li><code>${escapeHtml(chain.propName)}</code> drilled through ${layers}, ${describeTerminal(
+        chain.terminal,
+      )}</li>`;
     })
     .join("\n");
   return `<h2>Prop Drilling</h2>

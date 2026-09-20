@@ -55,6 +55,8 @@ describe("analyzeWorkspace / computeUnusedComponents / computeDeadProps", () => 
       "LabelLeaf",
       "LabelParent",
       "LazyLoaded",
+      "LibGrandparent",
+      "LibParent",
       "NeverImported",
       "PropsAccessed",
       "SpreadForwarder",
@@ -86,6 +88,13 @@ describe("analyzeWorkspace / computeUnusedComponents / computeDeadProps", () => 
     });
 
     it("flags a component that is genuinely never imported anywhere", () => {
+      // A membership check, not an exact-match on the whole unused set:
+      // pinning the full list here (as an earlier version of this test did)
+      // forced every later fixture addition (see PropDrilling.tsx) to also
+      // be wired into App.tsx purely to avoid spuriously tripping it, which
+      // would only get worse through the rest of Phase 5's own fixture
+      // growth. "does NOT flag ..." below covers the components that
+      // should stay off this list.
       assert.ok(unusedNames.includes("NeverImported"));
     });
 
@@ -115,10 +124,6 @@ describe("analyzeWorkspace / computeUnusedComponents / computeDeadProps", () => 
     it("does NOT flag the memo-wrapped or forwardRef-wrapped components", () => {
       assert.ok(!unusedNames.includes("ThemedButton"));
       assert.ok(!unusedNames.includes("ThemedCard"));
-    });
-
-    it("flags exactly the one genuinely-unused component", () => {
-      assert.deepStrictEqual(unusedNames, ["NeverImported"]);
     });
   });
 
@@ -221,25 +226,36 @@ describe("analyzeWorkspace / computeUnusedComponents / computeDeadProps", () => 
     });
 
     function findChainRootedAt(rootDisplayName: string): PropDrillingChain | undefined {
-      return chains.find((chain) => chain.components[0].displayName === rootDisplayName);
+      return chains.find((chain) => chain.components[0]?.displayName === rootDisplayName);
     }
 
-    function names(chain: PropDrillingChain | undefined): string[] {
-      return chain?.components.map((c) => c.displayName) ?? [];
+    // `components` is always just the confirmed pure-forwarding layers now
+    // (never the terminal -- see PropDrillingChain's own doc comment), so a
+    // helper folding the terminal back in keeps these assertions readable.
+    function namesIncludingTerminal(chain: PropDrillingChain | undefined): (string | undefined)[] {
+      if (!chain) return [];
+      const layers = chain.components.map((c) => c.displayName);
+      if (chain.terminal.kind === "consumed" || chain.terminal.kind === "unknown") {
+        return [...layers, chain.terminal.component.displayName];
+      }
+      return [...layers, undefined]; // "unresolved-target" has no ComponentInfo at all
     }
 
     it("finds a genuine 2+ layer chain: theme drilled through Grandparent -> Parent, consumed in Leaf", () => {
       const chain = findChainRootedAt("ThemeGrandparent");
       assert.ok(chain, "expected a chain rooted at ThemeGrandparent");
       assert.strictEqual(chain?.propName, "theme");
-      assert.deepStrictEqual(names(chain), ["ThemeGrandparent", "ThemeParent", "ThemeLeaf"]);
-      assert.strictEqual(chain?.consumedBy?.displayName, "ThemeLeaf");
+      assert.deepStrictEqual(
+        chain?.components.map((c) => c.displayName),
+        ["ThemeGrandparent", "ThemeParent"],
+      );
+      assert.deepStrictEqual(chain?.terminal, { kind: "consumed", component: findComponent(result, "ThemeLeaf") });
     });
 
     it("does NOT flag a single forwarding hop (below the 2-layer threshold) as drilling", () => {
       assert.strictEqual(findChainRootedAt("LabelParent"), undefined);
       assert.ok(
-        !chains.some((chain) => chain.components.some((c) => c.displayName === "LabelLeaf")),
+        !chains.some((chain) => namesIncludingTerminal(chain).includes("LabelLeaf")),
         "LabelLeaf should not appear in any reported chain",
       );
     });
@@ -250,31 +266,57 @@ describe("analyzeWorkspace / computeUnusedComponents / computeDeadProps", () => 
       // continuing through it to CountLeaf.
       const chain = findChainRootedAt("CountGrandparent");
       assert.ok(chain, "expected a chain rooted at CountGrandparent");
-      assert.deepStrictEqual(names(chain), ["CountGrandparent", "CountParent", "CountMixed"]);
-      assert.strictEqual(chain?.consumedBy?.displayName, "CountMixed");
+      assert.deepStrictEqual(
+        chain?.components.map((c) => c.displayName),
+        ["CountGrandparent", "CountParent"],
+      );
+      assert.strictEqual(chain?.terminal.kind, "consumed");
+      assert.strictEqual(
+        chain?.terminal.kind === "consumed" ? chain.terminal.component.displayName : undefined,
+        "CountMixed",
+      );
       assert.ok(
-        !names(chain).includes("CountLeaf"),
+        !namesIncludingTerminal(chain).includes("CountLeaf"),
         "CountLeaf must not be pulled into the chain past its real consumer, CountMixed",
       );
     });
 
     it("finds no chain at all for a component that genuinely uses its own prop (base case)", () => {
-      assert.ok(!chains.some((chain) => chain.components.some((c) => c.displayName === "DirectConsumer")));
+      assert.ok(!chains.some((chain) => namesIncludingTerminal(chain).includes("DirectConsumer")));
     });
 
-    it("SPREAD-PROPS DECISION: `{...props}` stops the chain unresolved rather than guessing it reaches the real consumer", () => {
+    it("SPREAD-PROPS DECISION: `{...props}` stops the chain as an 'unknown' dead-end, not a guessed consumer", () => {
       const chain = findChainRootedAt("SpreadGreatGrandparent");
       assert.ok(chain, "expected a chain rooted at SpreadGreatGrandparent");
-      assert.deepStrictEqual(names(chain), [
-        "SpreadGreatGrandparent",
-        "SpreadGrandparent",
-        "SpreadForwarder",
-      ]);
-      assert.strictEqual(chain?.consumedBy, undefined);
+      assert.deepStrictEqual(
+        chain?.components.map((c) => c.displayName),
+        ["SpreadGreatGrandparent", "SpreadGrandparent"],
+      );
+      assert.deepStrictEqual(chain?.terminal, {
+        kind: "unknown",
+        component: findComponent(result, "SpreadForwarder"),
+      });
       assert.ok(
-        !names(chain).includes("SpreadLeaf"),
+        !namesIncludingTerminal(chain).includes("SpreadLeaf"),
         "must not guess that the spread carries `theme` through to SpreadLeaf",
       );
+    });
+
+    it("UNRESOLVED-TARGET FIX: forwarding into a target this analysis can't resolve (a class component standing in for a third-party/library component) is reported distinctly from 'never consumed'", () => {
+      // LibGrandparent -> LibParent both purely forward `theme`; LibParent's
+      // own forward target is ExternalWidget, a CLASS component --
+      // buildComponentHandle never produces a handle for classes, so it's
+      // invisible to componentHandles even though it's a real, exported,
+      // JSX-taggable component (see PropDrilling.tsx's own comment). The
+      // prop demonstrably keeps flowing into something real; this must NOT
+      // read the same as the genuine dead-end above.
+      const chain = findChainRootedAt("LibGrandparent");
+      assert.ok(chain, "expected a chain rooted at LibGrandparent");
+      assert.deepStrictEqual(
+        chain?.components.map((c) => c.displayName),
+        ["LibGrandparent", "LibParent"],
+      );
+      assert.deepStrictEqual(chain?.terminal, { kind: "unresolved-target", tagName: "ExternalWidget" });
     });
   });
 });

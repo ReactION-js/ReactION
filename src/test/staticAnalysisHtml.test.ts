@@ -36,8 +36,8 @@ describe("generateStaticAnalysisHtml -- Prop Drilling section", () => {
   it("renders a resolved chain with its intermediate layers and final consumer", () => {
     const chain: PropDrillingChain = {
       propName: "theme",
-      components: [makeComponent("Grandparent"), makeComponent("Parent"), makeComponent("Child")],
-      consumedBy: makeComponent("Child"),
+      components: [makeComponent("Grandparent"), makeComponent("Parent")],
+      terminal: { kind: "consumed", component: makeComponent("Child") },
     };
     const html = generateStaticAnalysisHtml("/fake", {
       status: "done",
@@ -55,11 +55,11 @@ describe("generateStaticAnalysisHtml -- Prop Drilling section", () => {
     assert.strictEqual(html.match(/Child/g)?.length, 1);
   });
 
-  it("renders an unresolved chain as 'never consumed'", () => {
+  it("renders an 'unknown' terminal (e.g. spread props) as 'never consumed', naming where the trail goes cold", () => {
     const chain: PropDrillingChain = {
       propName: "theme",
-      components: [makeComponent("Grandparent"), makeComponent("Parent"), makeComponent("SpreadForwarder")],
-      consumedBy: undefined,
+      components: [makeComponent("Grandparent"), makeComponent("Parent")],
+      terminal: { kind: "unknown", component: makeComponent("SpreadForwarder") },
     };
     const html = generateStaticAnalysisHtml("/fake", {
       status: "done",
@@ -69,5 +69,29 @@ describe("generateStaticAnalysisHtml -- Prop Drilling section", () => {
     });
     assert.ok(html.includes("never consumed"));
     assert.ok(html.includes("SpreadForwarder"));
+  });
+
+  // Fix for the coordinator's code-review finding on commit 9a85803:
+  // forwarding into a target this analysis can't resolve to a known
+  // component (a third-party/library component being the common real case)
+  // must render distinctly from "never consumed" -- the prop demonstrably
+  // keeps flowing into something real, it's just outside this analysis'
+  // visibility, which is a materially different situation for a reader to
+  // act on than a genuine dead end.
+  it("renders an 'unresolved-target' terminal distinctly from 'never consumed'", () => {
+    const chain: PropDrillingChain = {
+      propName: "theme",
+      components: [makeComponent("Grandparent"), makeComponent("Parent")],
+      terminal: { kind: "unresolved-target", tagName: "ExternalButton" },
+    };
+    const html = generateStaticAnalysisHtml("/fake", {
+      status: "done",
+      unusedComponents: [],
+      deadProps: [],
+      propDrilling: [chain],
+    });
+    assert.ok(html.includes("ExternalButton"));
+    assert.ok(html.includes("outside this analysis"));
+    assert.ok(!html.includes("never consumed"));
   });
 });
