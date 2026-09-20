@@ -41,6 +41,9 @@ describe("analyzeWorkspace / computeUnusedComponents / computeDeadProps", () => 
       "AllPropsUsed",
       "App",
       "BarrelOnly",
+      "BlockArrow",
+      "ChipGroup",
+      "ConciseArrow",
       "DeadProp",
       "ExternalTypedComponent",
       "LazyLoaded",
@@ -80,7 +83,16 @@ describe("analyzeWorkspace / computeUnusedComponents / computeDeadProps", () => 
     });
 
     it("does NOT flag components that are directly imported and rendered", () => {
-      for (const name of ["App", "AllPropsUsed", "DeadProp", "ExternalTypedComponent", "PropsAccessed"]) {
+      for (const name of [
+        "App",
+        "AllPropsUsed",
+        "DeadProp",
+        "ExternalTypedComponent",
+        "PropsAccessed",
+        "ChipGroup",
+        "ConciseArrow",
+        "BlockArrow",
+      ]) {
         assert.ok(!unusedNames.includes(name), `${name} should not be flagged unused`);
       }
     });
@@ -131,13 +143,58 @@ describe("analyzeWorkspace / computeUnusedComponents / computeDeadProps", () => 
     it("correctly unwraps a forwardRef-wrapped component and finds its own dead prop", () => {
       // ThemedCard shares the exact same ThemedProps interface (and the same
       // `theme` prop name) as ThemedButton, but never reads `theme` in its
-      // own body -- a regression check for the shorthand-destructuring
-      // reference-search trap: a naive findReferencesAsNodes() on `theme`
-      // here also returns ThemedButton's own use of `theme` and every
-      // `theme=` JSX attribute at every call site, so without the two-filter
-      // approach (body-range containment + excluding JsxAttribute name
-      // nodes) this would be incorrectly reported as "used".
+      // own body. Note: this specific pair does NOT regression-guard the
+      // JsxAttribute-name filter ("filter #2") below -- every `theme=` JSX
+      // usage of these two components lives in a DIFFERENT file (App.tsx),
+      // so the plain same-file check alone already excludes it here. This
+      // test only proves the forwardRef-unwrap path resolves to the real
+      // function and finds its own dead prop; see "the JsxAttribute-name
+      // exclusion filter" below for the actual filter #2 regression guard.
       assert.deepStrictEqual(deadPropsByName.get("ThemedCard"), ["theme"]);
+    });
+
+    it("the JsxAttribute-name exclusion filter (regression guard)", () => {
+      // ChipGroup destructures `theme` from the SAME ChipProps interface
+      // Chip does, and its own body renders `<Chip theme="fixed" .../>` --
+      // a literal value, never reading ChipGroup's own `theme` variable.
+      // Because Chip and ChipGroup share ChipProps, the shorthand-
+      // destructured `theme` binding's reference search also returns that
+      // JsxAttribute's NAME node, and -- unlike the ThemedButton/ThemedCard
+      // pair above -- it lives in THIS SAME FILE and THIS SAME component's
+      // own body range, so the same-file/body-range check alone can't
+      // exclude it. Only excluding the JsxAttribute name node itself
+      // ("filter #2") gets this right; deleting that filter makes this
+      // assertion fail (verified manually -- see the commit message).
+      assert.deepStrictEqual(deadPropsByName.get("ChipGroup"), ["theme"]);
+    });
+
+    it("finds no dead props in a concise-body arrow component (`() => <jsx/>`)", () => {
+      // The function's body IS the JsxElement itself here, not a descendant
+      // of one -- regression coverage for containsJsx's no-parens case.
+      assert.strictEqual(deadPropsByName.has("ConciseArrow"), false);
+    });
+
+    it("finds a dead prop in a block-body arrow component, and reports the optional prop as not required", () => {
+      assert.deepStrictEqual(deadPropsByName.get("BlockArrow"), ["ghost"]);
+
+      const blockArrow = findComponent(result, "BlockArrow");
+      const hint = blockArrow.props.find((p) => p.name === "hint");
+      assert.ok(hint, "BlockArrowProps.hint should be extracted");
+      assert.strictEqual(hint?.required, false);
+
+      const value = blockArrow.props.find((p) => p.name === "value");
+      assert.strictEqual(value?.required, true);
+    });
+  });
+
+  describe("dynamicImportEdges", () => {
+    it("keeps the 'from' side of a dynamic import() resolution, not just the flat target set", () => {
+      const lazyLoaded = findComponent(result, "LazyLoaded");
+      const edge = result.dynamicImportEdges.find((e) => e.to === lazyLoaded.filePath);
+      assert.ok(edge, "expected a dynamicImportEdges entry targeting LazyLoaded.tsx");
+      assert.ok(edge?.from.endsWith(path.join("src", "App.tsx")));
+      // The flat lookup computeUnusedComponents actually reads is still there.
+      assert.ok(result.dynamicImportTargetFiles.has(lazyLoaded.filePath));
     });
   });
 });
