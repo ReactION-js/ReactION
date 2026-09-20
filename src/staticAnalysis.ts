@@ -241,7 +241,13 @@ function buildComponentHandle(
   return { info, declarationNode: decl, fn, propsParam };
 }
 
-function discoverComponentsInFile(file: SourceFile): ComponentAstHandle[] {
+// Exported for src/singleFileComponents.ts's CodeLens-scoped single-file
+// finder (Task 5e) -- the exact same JSX-in-body + PascalCase + exported +
+// memo/forwardRef-unwrap detection analyzeWorkspace uses per-file below,
+// just run directly against a SourceFile that lives in a lightweight,
+// single-file ts-morph Project instead of the whole-workspace one
+// buildProject constructs.
+export function discoverComponentsInFile(file: SourceFile): ComponentAstHandle[] {
   const handles: ComponentAstHandle[] = [];
   for (const [exportedName, decls] of file.getExportedDeclarations()) {
     for (const decl of decls) {

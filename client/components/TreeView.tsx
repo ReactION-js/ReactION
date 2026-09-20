@@ -151,9 +151,28 @@ function FlowGraph({ data, theme, inspector, store, vscodeApi }: TreeChartProps)
   // The inspector can clear itself independently of a click (e.g. the element
   // unmounted -> "not-found", or the backend disconnected); keep the graph's
   // own selection in sync so a stale highlight/panel doesn't linger.
+  //
+  // It can also be SET independently of a click: Task 5e's "Select in
+  // ReactION" CodeLens drives inspector.selectElement (-> ElementInspector.
+  // select) directly from a host-sent message, entirely bypassing
+  // handleNodeClick, which is the only other place `selectedId` gets set. A
+  // plain node click already sets both `selectedId` and the inspector's own
+  // elementId in the same tick, so this is a no-op then; for the CodeLens
+  // path, it's what actually makes the selection ring and InspectorPanel
+  // appear -- both are keyed off `selectedId`, not off inspector.state
+  // directly (see layoutTree's `selected: id === selectedId` and
+  // `selectedNode` below).
   useEffect(() => {
-    if (inspector.state.elementId === null && selectedId !== undefined) {
-      setSelectedId(undefined);
+    const elementId = inspector.state.elementId;
+    if (elementId === null) {
+      if (selectedId !== undefined) {
+        setSelectedId(undefined);
+      }
+      return;
+    }
+    const idString = String(elementId);
+    if (idString !== selectedId) {
+      setSelectedId(idString);
     }
   }, [inspector.state.elementId, selectedId]);
 
