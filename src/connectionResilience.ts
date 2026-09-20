@@ -13,6 +13,13 @@ export interface ResilienceBridge {
 
 export interface ResilientPage {
   onBrowserDisconnected(handler: () => void): void;
+  /**
+   * Must never reject -- report failure via the resolved `false`, not a
+   * throw. `attemptReconnect()` below drives the retry/backoff schedule and
+   * expects to stay in control of it; a rejection here would surface as an
+   * unhandled promise rejection from its `void attemptReconnect()` call
+   * sites instead of the intended "log and try again" behavior.
+   */
   reconnect(url: string): Promise<boolean>;
 }
 
@@ -130,7 +137,17 @@ export function wireConnectionResilience(hooks: ConnectionResilienceHooks): Conn
         log(
           `Reconnect attempt ${attempt + 1}/${RECONNECT_DELAYS_MS.length}: re-navigating to ${url}`,
         );
-        const reached = await page.reconnect(url);
+        // Belt-and-suspenders: reconnect() is documented never to reject, but
+        // a future implementation/change that violates that must still keep
+        // this loop in control (log-and-retry) instead of becoming an
+        // unhandled rejection off the fire-and-forget `void attemptReconnect()`.
+        let reached: boolean;
+        try {
+          reached = await page.reconnect(url);
+        } catch (error) {
+          log(`Reconnect attempt ${attempt + 1}/${RECONNECT_DELAYS_MS.length} threw unexpectedly: ${String(error)}`);
+          reached = false;
+        }
         if (reached) {
           log("Reconnect navigation succeeded; expecting the injected backend to re-establish the relay connection on this load");
           return;
