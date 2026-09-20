@@ -7,6 +7,7 @@ import { ExternalTypedComponent } from "./components/ExternalTypedComponent";
 import { PropsAccessed } from "./components/PropsAccessed";
 import { ChipGroup } from "./components/SelfReferencing";
 import { ConciseArrow, BlockArrow } from "./components/ArrowComponents";
+import { ModestPage } from "./components/depgraph/Modest";
 import {
   ThemeGrandparent,
   ThemeParent,
@@ -39,6 +40,13 @@ export default function App() {
       <ChipGroup theme="dark" label="group" />
       <ConciseArrow value="concise" />
       <BlockArrow value="block" ghost="g" hint="tooltip" />
+      {/* ModestPage is Task 5c's "base case" fixture (low fan-in AND
+          fan-out) -- rendered here so it has exactly fan-in 1. The rest of
+          components/depgraph/ (Hub, HubConsumerA/B/C, DualImporter,
+          Orchestrator) is deliberately NOT imported here; see
+          Orchestrator.tsx's own comment for why those stay disconnected
+          from this render tree. */}
+      <ModestPage />
       {/* Every PropDrilling.tsx export below is imported and rendered here
           purely so computeUnusedComponents (which only tracks cross-file
           import edges, not same-file JSX usage) doesn't flag them -- this
