@@ -1,5 +1,5 @@
 import { WebSocketServer, WebSocket, type RawData } from "ws";
-import type { LogFn } from "./logging";
+import { type LogFn, noopLog } from "./logging";
 
 // A single React DevTools "wall" message: the protocol spoken by the injected
 // react-devtools-core backend and the react-devtools-inline Store.
@@ -26,7 +26,7 @@ export default class DevtoolsBridge {
   // (spike/*.js, ViewPanel/EmbeddedViewPanel before this change) keeps working
   // unmodified.
   public constructor(log?: LogFn) {
-    this.log = log ?? (() => undefined);
+    this.log = log ?? noopLog;
   }
 
   // Starts the relay on an ephemeral loopback port and returns it. The port is

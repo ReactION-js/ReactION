@@ -1,17 +1,23 @@
 import puppeteer, { type Browser, type Page } from "puppeteer-core";
 import * as fs from "fs";
 import * as path from "path";
+import * as util from "util";
 import { type ReactionConfig, toUrl } from "./config";
-import type { LogFn } from "./logging";
+import { type LogFn, noopLog } from "./logging";
 
 // Full detail for the log (stack when available), not just String(error) --
 // issue #73 asked for verbose logs, and `String(error)` on a puppeteer launch
-// failure typically collapses to an unhelpful "Error: <message>".
+// failure typically collapses to an unhelpful "Error: <message>". A thrown
+// value that isn't an Error (realistic: puppeteer-core and Node's fs/
+// child_process APIs can reject with plain objects) needs the same treatment
+// -- String() on those degrades to "[object Object]" (or literally
+// "undefined" if the value has a toString() that returns undefined), which is
+// exactly the useless-log-line failure mode this function exists to avoid.
 function errorDetail(error: unknown): string {
   if (error instanceof Error) {
     return error.stack ?? `${error.name}: ${error.message}`;
   }
-  return String(error);
+  return util.inspect(error, { depth: 3 });
 }
 
 // Thrown when Chrome itself never came up (bad executablePath, sandbox issue,
@@ -38,16 +44,34 @@ export class DevServerUnreachableError extends Error {
   }
 }
 
+// Thrown when Chrome launched fine but the setup between launch and
+// navigation failed: getting/opening a page, reading the react-devtools-core
+// bundle off disk, or injecting it via evaluateOnNewDocument. Distinct from
+// ChromeLaunchError so a corrupted install or a page that closed itself isn't
+// misreported as an executablePath problem when Chrome demonstrably launched.
+export class BackendInjectionError extends Error {
+  public constructor(public readonly cause: unknown) {
+    super(`Chrome launched, but backend injection failed: ${errorDetail(cause)}`);
+    this.name = "BackendInjectionError";
+  }
+}
+
 // Builds the vscode.window.showErrorMessage text for a Puppeteer.start()
 // failure, distinguishing "Chrome itself failed to launch" from "Chrome
-// launched but couldn't reach the dev server" (see the two error classes
-// above). Kept here (vscode-free) so ViewPanel/EmbeddedViewPanel don't
-// duplicate this logic.
+// launched but couldn't reach the dev server" from "Chrome launched but the
+// backend couldn't be injected" (see the error classes above). Kept here
+// (vscode-free) so ViewPanel/EmbeddedViewPanel don't duplicate this logic.
 export function describeStartFailure(error: unknown): string {
   if (error instanceof DevServerUnreachableError) {
     return (
       `ReactION: Chrome launched, but could not reach the dev server at ${error.url}. ` +
       'Check the "localhost" setting in reactION-config.json and confirm the dev server is running.'
+    );
+  }
+  if (error instanceof BackendInjectionError) {
+    return (
+      "ReactION: Chrome launched, but the ReactION DevTools backend could not be injected " +
+      `(a corrupted install or an unexpected internal error). ${String(error.cause)}`
     );
   }
   const detail = error instanceof ChromeLaunchError ? error.cause : error;
@@ -90,7 +114,7 @@ export default class Puppeteer {
     this.headless = config.headless_browser;
     this.executablePath = config.executablePath;
     this.url = toUrl(config.localhost);
-    this.log = log ?? (() => undefined);
+    this.log = log ?? noopLog;
   }
 
   // Launches Chrome, injects the React DevTools backend BEFORE any app script so
@@ -111,12 +135,21 @@ export default class Puppeteer {
     }
     this.log("Chrome launched successfully");
 
-    const pages = await this.browser.pages();
-    this.page = pages[0] ?? (await this.browser.newPage());
+    // Own try/catch: none of this is "launching Chrome" (which just
+    // succeeded) -- a failure here (corrupted react-devtools-core install,
+    // the page closing itself, an injection error) must not be mislabeled as
+    // a ChromeLaunchError telling the user to check "executablePath".
+    try {
+      const pages = await this.browser.pages();
+      this.page = pages[0] ?? (await this.browser.newPage());
 
-    const backendSource = fs.readFileSync(backendSourcePath(), "utf8");
-    await this.page.evaluateOnNewDocument(backendSource);
-    await this.page.evaluateOnNewDocument(connectSource(relayPort));
+      const backendSource = fs.readFileSync(backendSourcePath(), "utf8");
+      await this.page.evaluateOnNewDocument(backendSource);
+      await this.page.evaluateOnNewDocument(connectSource(relayPort));
+    } catch (error) {
+      this.log(`Backend injection failed: ${errorDetail(error)}`);
+      throw new BackendInjectionError(error);
+    }
 
     try {
       await this.gotoWithRetry(this.url);
