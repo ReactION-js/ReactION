@@ -44,6 +44,14 @@ export default class ViewPanel {
     this.treePanel.onDidDispose(() => this.dispose(), null, this.disposables);
   }
 
+  // Exposed for Task 5e's "ReactION.selectInstance" command: the way to get
+  // at this panel's webview to post a host->webview message to, without
+  // exposing the whole private treePanel (createOrShow/dispose still own its
+  // full lifecycle).
+  public get webview(): vscode.Webview {
+    return this.treePanel.webview;
+  }
+
   public static createOrShow(
     extensionUri: vscode.Uri,
     config: ReactionConfig,

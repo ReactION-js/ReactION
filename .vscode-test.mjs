@@ -12,6 +12,8 @@ export default defineConfig({
     "out/test/diagnosticsWiring.test.js",
     "out/test/devServerProbe.test.js",
     "out/test/connectionResilience.test.js",
+    "out/test/selectInstanceCodeLens.test.js",
+    "out/test/selectInstanceWiring.test.js",
   ],
   workspaceFolder: ".",
   mocha: {

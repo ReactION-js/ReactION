@@ -51,6 +51,14 @@ export default class EmbeddedViewPanel {
     this.treePanel.onDidDispose(() => this.dispose(), null, this.disposables);
   }
 
+  // Exposed for Task 5e's "ReactION.selectInstance" command -- the TREE
+  // panel's webview specifically (it runs client/App.tsx and the live Store),
+  // not htmlPanel (a plain iframe preview with no Store to select an element
+  // in). Mirrors ViewPanel's own `webview` getter.
+  public get webview(): vscode.Webview {
+    return this.treePanel.webview;
+  }
+
   public static createOrShow(
     extensionUri: vscode.Uri,
     config: ReactionConfig,

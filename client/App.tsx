@@ -7,6 +7,7 @@ import {
   type InspectableCategory,
   type InspectorState,
 } from "./elementInspection";
+import { findMountedElementIdsByDisplayName } from "./selectByComponent";
 import type { ComponentNode } from "./types";
 import type { DevtoolsStore, InspectedElementResponse } from "react-devtools-inline/frontend";
 
@@ -29,6 +30,26 @@ const NO_REACT_DETECTED_MESSAGE =
   "development build (production builds strip the hook DevTools relies on), " +
   "no React root has mounted yet at this URL, or the wrong URL/port is configured.";
 
+// How long a "selectByComponent" result notice (zero-match / multi-match,
+// see the message handler below) stays visible before clearing itself --
+// transient, not something that needs a dismiss button for a one-line status.
+const SELECTION_NOTICE_TIMEOUT_MS = 5000;
+
+const NOTICE_STYLE = {
+  position: "fixed",
+  top: 8,
+  right: 8,
+  zIndex: 1000,
+  maxWidth: 360,
+  padding: "8px 12px",
+  borderRadius: 4,
+  fontFamily: "system-ui, sans-serif",
+  fontSize: 12,
+  color: "#fff",
+  backgroundColor: "rgba(0, 0, 0, 0.75)",
+  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.3)",
+} as const;
+
 const vscodeApi = acquireVsCodeApi();
 
 export default function App() {
@@ -39,7 +60,19 @@ export default function App() {
   );
   const [store, setStore] = useState<DevtoolsStore | undefined>(undefined);
   const [noReactDetected, setNoReactDetected] = useState(false);
+  const [selectionNotice, setSelectionNotice] = useState<string | undefined>(undefined);
   const inspectorRef = useRef<ElementInspector | undefined>(undefined);
+
+  // Auto-dismiss: a "selectByComponent" result notice is a one-line transient
+  // status, not something that should linger until the user notices it and
+  // closes it themselves.
+  useEffect(() => {
+    if (!selectionNotice) {
+      return;
+    }
+    const timer = window.setTimeout(() => setSelectionNotice(undefined), SELECTION_NOTICE_TIMEOUT_MS);
+    return () => window.clearTimeout(timer);
+  }, [selectionNotice]);
 
   // Arms a fresh empty-state timer whenever connected while treeless, and
   // clears it the moment either condition stops holding -- the effect
@@ -88,6 +121,37 @@ export default function App() {
         inspectorRef.current = undefined;
         setInspectorState(INITIAL_INSPECTOR_STATE);
         setStore(undefined);
+      } else if (data?.type === "selectByComponent") {
+        // Task 5e: a CodeLens in the editor ("Select in ReactION") posted
+        // this via src/selectInstanceWiring.ts. Reads the store fresh off
+        // `connection` rather than the `store` React state above -- this
+        // handler is captured once by the effect below and would otherwise
+        // see a stale/undefined `store` from this effect's very first render.
+        const displayName = (data as { displayName?: unknown }).displayName;
+        if (typeof displayName !== "string") {
+          return;
+        }
+        const liveStore = connection.getStore();
+        if (!liveStore || !inspectorRef.current) {
+          setSelectionNotice(`ReactION isn't connected, so "${displayName}" can't be selected.`);
+          return;
+        }
+        const ids = findMountedElementIdsByDisplayName(liveStore, displayName);
+        if (ids.length === 0) {
+          setSelectionNotice(`"${displayName}" is not currently rendered.`);
+          return;
+        }
+        // Same selection mechanism a node click uses (see TreeView.tsx's
+        // handleNodeClick) -- selecting the first match is a deliberate
+        // choice (documented on findMountedElementIdsByDisplayName), not an
+        // arbitrary one: it's the same displayName-collision limitation
+        // Task 5d's coverage feature and the context map already accept.
+        inspectorRef.current.select(ids[0]);
+        setSelectionNotice(
+          ids.length > 1
+            ? `${ids.length} live instances of "${displayName}" found — showing the first; see the graph for the others.`
+            : undefined,
+        );
       }
     };
     window.addEventListener("message", onMessage);
@@ -131,32 +195,40 @@ export default function App() {
     [],
   );
 
+  const notice = selectionNotice ? <div style={NOTICE_STYLE}>{selectionNotice}</div> : null;
+
   if (!tree) {
     return (
-      <p style={{ fontFamily: "system-ui, sans-serif", padding: "1rem" }}>
-        {connected
-          ? noReactDetected
-            ? NO_REACT_DETECTED_MESSAGE
-            : "Connected. Waiting for React components…"
-          : "Connecting to the React app…"}
-      </p>
+      <>
+        {notice}
+        <p style={{ fontFamily: "system-ui, sans-serif", padding: "1rem" }}>
+          {connected
+            ? noReactDetected
+              ? NO_REACT_DETECTED_MESSAGE
+              : "Connected. Waiting for React components…"
+            : "Connecting to the React app…"}
+        </p>
+      </>
     );
   }
 
   return (
-    <TreeChart
-      data={tree}
-      theme={theme}
-      store={store}
-      vscodeApi={vscodeApi}
-      inspector={{
-        state: inspectorState,
-        selectElement,
-        deselectElement,
-        requestExpand,
-        openSource,
-        inspectOnce,
-      }}
-    />
+    <>
+      {notice}
+      <TreeChart
+        data={tree}
+        theme={theme}
+        store={store}
+        vscodeApi={vscodeApi}
+        inspector={{
+          state: inspectorState,
+          selectElement,
+          deselectElement,
+          requestExpand,
+          openSource,
+          inspectOnce,
+        }}
+      />
+    </>
   );
 }
