@@ -14,7 +14,7 @@ import { detectDevServerUrl } from "./devServerProbe";
 // -- String() on those degrades to "[object Object]" (or literally
 // "undefined" if the value has a toString() that returns undefined), which is
 // exactly the useless-log-line failure mode this function exists to avoid.
-function errorDetail(error: unknown): string {
+export function errorDetail(error: unknown): string {
   if (error instanceof Error) {
     return error.stack ?? `${error.name}: ${error.message}`;
   }

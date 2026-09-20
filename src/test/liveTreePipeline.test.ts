@@ -52,17 +52,34 @@ function fakeOutputChannel(): { channel: vscode.OutputChannel; lines: string[] }
 // Deliberately NOT the concrete Puppeteer class -- LiveTreePipelinePage is
 // the narrow structural slice startLiveTreePipeline actually needs, so this
 // can drive it without a real Chrome.
+//
+// connectedUrl is a genuine state transition, not a fixed value: it mirrors
+// the real Puppeteer.connectedUrl getter (`this.activeUrl || this.url`),
+// which only becomes the actually-reached URL once start() resolves. A fake
+// whose connectedUrl never changes can't distinguish "wired after the real
+// URL is known" from "wired too early" -- both would read the same value
+// regardless of when the caller captured it, which is exactly the bug this
+// fake needs to be able to catch. Pass a single string when a test doesn't
+// care about the distinction (configured and connected are then the same).
 function fakePage(
   start: (relayPort: number) => Promise<void>,
-  connectedUrl: string,
+  urls: string | { configuredUrl: string; connectedUrl: string },
 ): LiveTreePipelinePage & { startCalls: number[]; closeCalls: number } {
+  const { configuredUrl, connectedUrl } =
+    typeof urls === "string" ? { configuredUrl: urls, connectedUrl: urls } : urls;
+  let resolvedUrl = configuredUrl;
   const page = {
     startCalls: [] as number[],
     closeCalls: 0,
-    connectedUrl,
+    get connectedUrl(): string {
+      return resolvedUrl;
+    },
     start: async (relayPort: number) => {
       page.startCalls.push(relayPort);
-      return start(relayPort);
+      await start(relayPort);
+      // Only flips once "launch" has actually completed -- see the header
+      // comment above.
+      resolvedUrl = connectedUrl;
     },
     close: async () => {
       page.closeCalls += 1;
@@ -209,12 +226,18 @@ suite("startLiveTreePipeline", () => {
 
     // Stands in for devServerProbe.ts's fallback-port detection: the
     // configured URL is what a caller would have known before page.start()
-    // ran; connectedUrl is the different, actually-reached one this fake
-    // reports only once "launch" completes -- exactly like the real
-    // Puppeteer's own connectedUrl getter.
+    // ran; connectedUrl is the different, actually-reached one this fake's
+    // connectedUrl only switches to once "launch" completes (see fakePage's
+    // header comment) -- exactly like the real Puppeteer's own connectedUrl
+    // getter. If wireEmptyStateDiagnostics were ever wired before page.start()
+    // resolves again, it would capture CONFIGURED_URL instead, and the first
+    // assertion below would fail.
     const CONFIGURED_URL = "http://localhost:3000";
     const CONNECTED_URL = "http://localhost:3001";
-    const page = fakePage(async () => undefined, CONNECTED_URL);
+    const page = fakePage(async () => undefined, {
+      configuredUrl: CONFIGURED_URL,
+      connectedUrl: CONNECTED_URL,
+    });
 
     try {
       await startLiveTreePipeline({
