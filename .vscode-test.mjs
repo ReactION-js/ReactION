@@ -14,6 +14,7 @@ export default defineConfig({
     "out/test/connectionResilience.test.js",
     "out/test/selectInstanceCodeLens.test.js",
     "out/test/selectInstanceWiring.test.js",
+    "out/test/liveTreePipeline.test.js",
   ],
   workspaceFolder: ".",
   mocha: {
