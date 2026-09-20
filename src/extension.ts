@@ -4,6 +4,8 @@ import EmbeddedViewPanel from "./EmbeddedViewPanel";
 import ViewPanel from "./ViewPanel";
 import StaticAnalysisPanel from "./StaticAnalysisPanel";
 import { loadConfig } from "./config";
+import { registerSelectInstanceCommand } from "./selectInstanceWiring";
+import { registerSelectInstanceCodeLensProvider } from "./selectInstanceCodeLens";
 
 export function activate(context: vscode.ExtensionContext): void {
   // One shared channel for every module (puppeteer, devtools-bridge, webview
@@ -43,6 +45,16 @@ export function activate(context: vscode.ExtensionContext): void {
       new StartExtensionProvider(),
     ),
   );
+
+  // Task 5e: source -> live instance, the other half of Phase 3b's
+  // instance -> source jump. ViewPanel and EmbeddedViewPanel are two
+  // independent commands/statics (openTree/openWeb) -- both can be open at
+  // once, so both are handed to the command rather than assuming one.
+  registerSelectInstanceCommand(context, () => [
+    ViewPanel.currentPanel,
+    EmbeddedViewPanel.currentPanel,
+  ]);
+  registerSelectInstanceCodeLensProvider(context);
 }
 
 export function deactivate(): void {
