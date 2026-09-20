@@ -1,6 +1,7 @@
 import * as path from "path";
 import type { ComponentInfo, DeadPropsEntry } from "./staticAnalysis";
 import type { PropDrillingChain } from "./propDrilling";
+import type { DependencyMetricsEntry } from "./dependencyMetrics";
 
 export type StaticAnalysisViewState =
   | { status: "loading" }
@@ -10,6 +11,7 @@ export type StaticAnalysisViewState =
       unusedComponents: ComponentInfo[];
       deadProps: DeadPropsEntry[];
       propDrilling: PropDrillingChain[];
+      dependencyMetrics: DependencyMetricsEntry[];
     };
 
 function escapeHtml(text: string): string {
@@ -37,6 +39,8 @@ const STYLE = `
   .error { color: var(--vscode-errorForeground, #f14c4c); white-space: pre-wrap; }
   .loading { color: var(--vscode-descriptionForeground); }
   .dead-prop { color: var(--vscode-errorForeground, #f14c4c); margin-right: 6px; }
+  .note { color: var(--vscode-descriptionForeground); font-size: 0.9em; margin-top: 6px; }
+  .metric-outlier { color: var(--vscode-errorForeground, #f14c4c); font-weight: 600; }
 `;
 
 function shell(body: string): string {
@@ -127,6 +131,43 @@ function renderPropDrilling(chains: PropDrillingChain[]): string {
   <ul>${items}</ul>`;
 }
 
+// Unlike the other sections, an empty dependency-metrics table isn't a
+// meaningful "nothing interesting found" result -- every file with at least
+// one component has SOME fan-in/out (even if it's 0/0), so this list is only
+// ever empty when there are no components in the workspace at all. That case
+// gets its own short message instead of an empty table.
+function renderDependencyMetrics(workspaceRoot: string, entries: DependencyMetricsEntry[]): string {
+  if (entries.length === 0) {
+    return `<h2>Dependency Metrics</h2><p class="empty-state">No components found.</p>`;
+  }
+  const rows = entries
+    .map((entry) => {
+      const fanInCell = entry.fanInOutlier
+        ? `<span class="metric-outlier">${entry.fanIn}</span>`
+        : `${entry.fanIn}`;
+      const fanOutCell = entry.fanOutOutlier
+        ? `<span class="metric-outlier">${entry.fanOut}</span>`
+        : `${entry.fanOut}`;
+      return `<tr><td>${escapeHtml(entry.component.displayName)}</td><td>${fanInCell}</td><td>${fanOutCell}</td><td><code>${escapeHtml(
+        formatLocation(workspaceRoot, entry.component),
+      )}</code></td></tr>`;
+    })
+    .join("\n");
+  // Ranked, not filtered by a hard cutoff -- "god component" is a judgment
+  // call for the developer reading this list relative to their own
+  // codebase, not something a fixed number can decide. Highlighted cells are
+  // a principled statistical flag (see computeHighOutlierFlags' own comment
+  // in dependencyMetrics.ts for why a median-based method was chosen over a
+  // fixed threshold or a plain mean/stddev one), not an authoritative
+  // verdict -- they're a starting point for the developer's own judgment.
+  return `<h2>Dependency Metrics</h2>
+  <p class="note">Fan-in/out is counted per FILE and shared by every component declared in that file. Ranked by fan-in + fan-out, highest first. Highlighted values are statistical outliers within this workspace (not a fixed cutoff) -- worth a look, not necessarily a problem.</p>
+  <table>
+    <thead><tr><th>Component</th><th>Fan-in</th><th>Fan-out</th><th>Location</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
 // Pure function (no vscode.Webview dependency, unlike TreeViewPanel's
 // generateTreeViewHtml) since this panel needs no bundle URI, nonce, or
 // script at all -- it's a static, host-rendered table, not a React app.
@@ -141,6 +182,9 @@ export function generateStaticAnalysisHtml(workspaceRoot: string, state: StaticA
     `${renderUnusedComponents(workspaceRoot, state.unusedComponents)}\n${renderDeadProps(
       workspaceRoot,
       state.deadProps,
-    )}\n${renderPropDrilling(state.propDrilling)}`,
+    )}\n${renderPropDrilling(state.propDrilling)}\n${renderDependencyMetrics(
+      workspaceRoot,
+      state.dependencyMetrics,
+    )}`,
   );
 }

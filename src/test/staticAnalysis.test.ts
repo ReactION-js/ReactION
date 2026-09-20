@@ -10,6 +10,7 @@ import {
   type StaticAnalysisResult,
 } from "../staticAnalysis";
 import { computePropDrilling, type PropDrillingChain } from "../propDrilling";
+import { computeDependencyMetrics, type DependencyMetricsEntry } from "../dependencyMetrics";
 
 // Plain mocha (describe/it), run via `npm run test:e2e` against compiled
 // output -- NOT vscode-test, since analyzeWorkspace/computeUnusedComponents/
@@ -51,13 +52,21 @@ describe("analyzeWorkspace / computeUnusedComponents / computeDeadProps", () => 
       "CountParent",
       "DeadProp",
       "DirectConsumer",
+      "DualImporter",
       "ExternalTypedComponent",
+      "HubConsumerA",
+      "HubConsumerB",
+      "HubConsumerC",
+      "HubWidget",
       "LabelLeaf",
       "LabelParent",
       "LazyLoaded",
       "LibGrandparent",
       "LibParent",
+      "ModestHelper",
+      "ModestPage",
       "NeverImported",
+      "Orchestrator",
       "PropsAccessed",
       "SpreadForwarder",
       "SpreadGrandparent",
@@ -215,6 +224,85 @@ describe("analyzeWorkspace / computeUnusedComponents / computeDeadProps", () => 
       assert.ok(edge?.from.endsWith(path.join("src", "App.tsx")));
       // The flat lookup computeUnusedComponents actually reads is still there.
       assert.ok(result.dynamicImportTargetFiles.has(lazyLoaded.filePath));
+    });
+  });
+
+  describe("computeDependencyMetrics", () => {
+    let entries: DependencyMetricsEntry[];
+
+    before(() => {
+      entries = computeDependencyMetrics(result);
+    });
+
+    function findEntry(displayName: string): DependencyMetricsEntry {
+      const entry = entries.find((e) => e.component.displayName === displayName);
+      assert.ok(entry, `expected a computeDependencyMetrics entry for "${displayName}"`);
+      return entry!;
+    }
+
+    it("computes exactly one entry per component, sharing the file's counts", () => {
+      assert.strictEqual(entries.length, result.components.length);
+    });
+
+    it("gives the hub file a high fan-in: 4 distinct importer files", () => {
+      // Importers: HubConsumerA, HubConsumerB, HubConsumerC (one static edge
+      // each), plus DualImporter (one static edge AND one dynamic edge, from
+      // the same file -- see the dedup test below for why that's still only
+      // one of the four).
+      assert.strictEqual(findEntry("HubWidget").fanIn, 4);
+    });
+
+    it("gives the orchestrator file a high fan-out and zero fan-in", () => {
+      // Orchestrator imports 4 distinct files (HubConsumerA/B/C,
+      // DualImporter) but nothing in the fixture imports Orchestrator.
+      const orchestrator = findEntry("Orchestrator");
+      assert.strictEqual(orchestrator.fanOut, 4);
+      assert.strictEqual(orchestrator.fanIn, 0);
+    });
+
+    it("gives the unremarkable base case low fan-in and fan-out", () => {
+      const modestPage = findEntry("ModestPage");
+      assert.strictEqual(modestPage.fanIn, 1);
+      assert.strictEqual(modestPage.fanOut, 1);
+    });
+
+    it("SAME-FILE DEDUP: a static AND a dynamic edge from the same file count as ONE fan-in, not two", () => {
+      const dualImporter = findComponent(result, "DualImporter");
+      const hub = findComponent(result, "HubWidget");
+
+      // Prove the raw edges really are duplicated at the (from, to) level --
+      // otherwise this test would pass vacuously even if dedup were broken.
+      const hasStaticEdge = result.fileImportEdges.some(
+        (e) => e.from === dualImporter.filePath && e.to === hub.filePath,
+      );
+      const hasDynamicEdge = result.dynamicImportEdges.some(
+        (e) => e.from === dualImporter.filePath && e.to === hub.filePath,
+      );
+      assert.ok(hasStaticEdge, "expected a static fileImportEdges entry DualImporter -> Hub");
+      assert.ok(hasDynamicEdge, "expected a dynamicImportEdges entry DualImporter -> Hub");
+
+      // If computeFileFanCounts counted raw edges instead of distinct (from,
+      // to) pairs, Hub's fan-in would be 5 (3 single-edge consumers + 2 from
+      // DualImporter) instead of 4.
+      assert.strictEqual(findEntry("HubWidget").fanIn, 4);
+    });
+
+    it("flags the hub's fan-in as a statistical outlier relative to the rest of the workspace", () => {
+      assert.strictEqual(findEntry("HubWidget").fanInOutlier, true);
+    });
+
+    it("does not flag the base case's low fan-in/out as an outlier", () => {
+      const modestPage = findEntry("ModestPage");
+      assert.strictEqual(modestPage.fanInOutlier, false);
+      assert.strictEqual(modestPage.fanOutOutlier, false);
+    });
+
+    it("sorts entries by combined fan-in + fan-out, descending", () => {
+      for (let i = 1; i < entries.length; i++) {
+        const prevScore = entries[i - 1].fanIn + entries[i - 1].fanOut;
+        const score = entries[i].fanIn + entries[i].fanOut;
+        assert.ok(prevScore >= score, `entries out of order at index ${i}`);
+      }
     });
   });
 
