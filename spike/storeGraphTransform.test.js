@@ -8,30 +8,27 @@
  * against the unmodified spike/sample-app.jsx) through the REAL, esbuild-
  * compiled client/storeBridge.ts (Store -> ComponentNode) and
  * client/flowLayout.ts (ComponentNode -> React Flow nodes/edges) -- no
- * Puppeteer, no network, no live backend. Uses the same esbuild-compile-and-
- * require technique as spike/run-phase3-renderstats.js and
- * run-phase3-contextmap.js, and the same JSDOM-globals technique as
- * spike/run-phase1.js.
+ * Puppeteer, no network, no live backend. Uses spike/testHarness.js for the
+ * esbuild-compile-and-require and JSDOM-globals boilerplate shared with the
+ * other Phase 4c spike scripts.
  *
- * Environment setup (JSDOM globals + compiling+requiring the client modules,
- * which transitively requires react-devtools-inline/frontend) is deferred
- * into `before()` rather than run at module-load time, and this file is
- * listed LAST in package.json's test:e2e mocha invocation: mocha requires
- * every listed file up front before running any test, but only *runs* each
- * file's suite in list order, so puppeteer.test.js/TreeView.test.js's real
- * Chrome sessions fully complete before this file ever touches global.window/
- * navigator/document -- avoiding any chance of puppeteer-core's own
- * WebSocket/CDP transport picking up a JSDOM global mid-flight.
+ * This file lives beside the run-phase*.js harnesses (not under
+ * spike/fixtures/, which stays pure data) and is listed in package.json's
+ * test:e2e. It sets/restores its own JSDOM globals in before()/after() (via
+ * testHarness's teardown function) rather than at module-load time, so it
+ * can safely share a mocha process with the Chrome-driven puppeteer.test.js/
+ * TreeView.test.js specs regardless of list order: this suite's globals never
+ * leak into another suite's run.
  */
 "use strict";
 
 const fs = require("node:fs");
 const path = require("node:path");
 const assert = require("node:assert");
-const Module = require("node:module");
+const { setupJsdomGlobals, requireCompiled } = require("./testHarness");
 
-const REPO_ROOT = path.join(__dirname, "..", "..");
-const FIXTURE_PATH = path.join(__dirname, "sample-app-operations.json");
+const REPO_ROOT = path.join(__dirname, "..");
+const FIXTURE_PATH = path.join(__dirname, "fixtures", "sample-app-operations.json");
 const noop = () => {};
 
 function countNodes(node) {
@@ -51,58 +48,17 @@ describe("Store -> graph transform (recorded-operations fixture replay)", () => 
   let fixture;
   let StoreConnection;
   let layoutTree;
+  let teardownJsdomGlobals;
 
   before(async () => {
-    const { JSDOM } = require("jsdom");
-    const esbuild = require("esbuild");
-
-    const dom = new JSDOM("<!DOCTYPE html><html><body></body></html>", {
-      url: "http://localhost/",
-      pretendToBeVisual: true,
-    });
-    global.window = dom.window;
-    global.self = dom.window;
-    global.document = dom.window.document;
-    try {
-      Object.defineProperty(global, "navigator", {
-        value: dom.window.navigator,
-        configurable: true,
-      });
-    } catch {
-      /* keep Node's built-in navigator */
-    }
-    global.location = dom.window.location;
-    global.HTMLElement = dom.window.HTMLElement;
-    global.Element = dom.window.Element;
-    global.Node = dom.window.Node;
-    try {
-      global.localStorage = dom.window.localStorage;
-    } catch {
-      /* ignore */
-    }
-
-    const requireCompiled = async (tsRelativePath) => {
-      const absPath = path.join(REPO_ROOT, tsRelativePath);
-      const built = await esbuild.build({
-        entryPoints: [absPath],
-        bundle: false,
-        write: false,
-        format: "cjs",
-        platform: "node",
-        target: "node18",
-      });
-      const code = built.outputFiles[0].text;
-      const compiledPath = absPath.replace(/\.ts$/, ".compiled.js");
-      const mod = new Module(compiledPath, null);
-      mod.filename = compiledPath;
-      mod.paths = Module._nodeModulePaths(path.dirname(absPath));
-      mod._compile(code, compiledPath);
-      return mod.exports;
-    };
-
-    ({ StoreConnection } = await requireCompiled("client/storeBridge.ts"));
-    ({ layoutTree } = await requireCompiled("client/flowLayout.ts"));
+    teardownJsdomGlobals = setupJsdomGlobals();
+    ({ StoreConnection } = await requireCompiled(path.join(REPO_ROOT, "client", "storeBridge.ts")));
+    ({ layoutTree } = await requireCompiled(path.join(REPO_ROOT, "client", "flowLayout.ts")));
     fixture = JSON.parse(fs.readFileSync(FIXTURE_PATH, "utf8"));
+  });
+
+  after(() => {
+    teardownJsdomGlobals?.();
   });
 
   // Replays a captured wall-message sequence through the REAL StoreConnection
@@ -177,7 +133,7 @@ describe("Store -> graph transform (recorded-operations fixture replay)", () => 
 
   it("has no orphan edges: every non-root graph node has exactly one incoming edge", () => {
     const { tree, nodes, edges } = runFullPipeline();
-    const rootId = tree.id ?? tree.name;
+    const rootId = tree.id;
     const incoming = new Map();
     for (const edge of edges) {
       incoming.set(edge.target, (incoming.get(edge.target) ?? 0) + 1);
