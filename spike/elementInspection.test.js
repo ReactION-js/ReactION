@@ -12,23 +12,39 @@
  * inspectOnce's already-correct pendingOnce-map correlation in the same
  * file) used to correlate an incoming inspectedElement response ONLY by
  * response.id (the element id), never by response.responseID against a
- * specific outstanding requestID. Concrete trigger: the "Select in
- * ReactION" CodeLens handler (App.tsx) calls inspector.select(id)
- * unconditionally with no dedup against the element already being
- * selected, so firing it twice in quick succession for the SAME component
- * sends two full (forceFullData: true) requests with nothing cancelling
- * the first. If the first, slower request's response arrives AFTER the
- * second's, its stale data would silently overwrite the fresher data,
- * since both responses have the same `id`.
+ * specific outstanding requestID. Concrete, currently-live trigger: neither
+ * the "Select in ReactION" CodeLens nor a plain node click (App.tsx) dedup
+ * against reselecting the element already selected, so firing select()
+ * twice in quick succession for the SAME component sends two full
+ * (forceFullData: true) requests, and the first (now-superseded) one's
+ * response still arrives. On this codebase's real transport (one ordered
+ * relay connection, synchronous backend dispatch -- traced end to end:
+ * sendInspect -> storeBridge.ts's wall -> postMessage ->
+ * devtoolsBridge.ts's single socket -> one WebSocket -> the backend's
+ * synchronous inspectElement dispatch) that superseded response always
+ * arrives BEFORE the second request's own response, never after -- so a
+ * superseded full-data response is harmless (the second request's
+ * full-data lands right after and overwrites it via plain last-write-wins,
+ * fix or no fix). A superseded "not-found" is NOT harmless in that same
+ * order, though: applying it calls deselect() and wipes the selection back
+ * to null even though the user already re-selected the same element, and
+ * the genuinely-current second response then gets discarded too (its `id`
+ * no longer matches the now-null selection). That's the concrete bug this
+ * fix closes, and needs no reordering at all -- see the
+ * "stale not-found response" test below, and latestTopLevelRequestID's own
+ * doc comment in client/elementInspection.ts.
  *
- * A real backend, over a single relay connection, may in practice always
- * respond in the same order requests were sent -- which would make true
- * out-of-order arrival hard to trigger live. This test sidesteps that
- * entirely by talking to a fake bridge whose "network" is just a plain
- * function call: it can deliver responses in ANY order, including the
- * exact adversarial one (the newer request's response arriving first, the
- * stale one arriving after) that a live backend might never produce on its
- * own but which the fix must still handle correctly.
+ * Genuine wire-level reordering (the older request's response arriving
+ * AFTER the newer one's) isn't realistically reachable on that same
+ * transport, which is why proving it live in spike/run-phase3-inspect.js
+ * isn't possible -- see that file's own comment on its double-select
+ * scenario. This test sidesteps the limitation entirely by talking to a
+ * fake bridge whose "network" is just a plain function call: it can
+ * deliver responses in ANY order, including the adversarial one (the newer
+ * request's response arriving first, the stale one arriving after) that
+ * this codebase's real transport can't currently produce but which the
+ * fix is written to handle correctly anyway, as defense-in-depth against a
+ * future transport change.
  *
  * Also covers the fix's second half: requestExpand's hydrated-path
  * responses and the top-level (select/poll) full-data/no-change/not-found/
