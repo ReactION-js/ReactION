@@ -1,0 +1,84 @@
+import * as assert from "node:assert";
+import { findComponentsInFileText } from "../singleFileComponents";
+
+// Plain mocha (describe/it), run via `npm run test:e2e` against compiled
+// output -- NOT vscode-test, since findComponentsInFileText/staticAnalysis.ts
+// have no vscode import (mirrors src/test/staticAnalysis.test.ts). Exercises
+// the single-file-scoped finder directly against inline text, the same way
+// the real CodeLens provider will hand it `document.getText()` -- no fixture
+// directory or tsconfig involved, since that's the whole point of this
+// module (see its own doc comment on why it can't scan the workspace).
+describe("findComponentsInFileText", () => {
+  it("finds a plain function component and its declaration location", () => {
+    const text = [
+      "import React from 'react';",
+      "",
+      "export function Greeting() {",
+      "  return <div>hi</div>;",
+      "}",
+      "",
+    ].join("\n");
+
+    const components = findComponentsInFileText("/virtual/Greeting.tsx", text);
+
+    assert.strictEqual(components.length, 1);
+    assert.strictEqual(components[0].displayName, "Greeting");
+    // Line 3 (1-based) is `export function Greeting() {`.
+    assert.strictEqual(components[0].location.line, 3);
+  });
+
+  it("finds multiple components declared in the same file", () => {
+    const text = [
+      "export function Alpha() { return <div>a</div>; }",
+      "export function Beta() { return <div>b</div>; }",
+    ].join("\n");
+
+    const names = findComponentsInFileText("/virtual/Multi.tsx", text)
+      .map((c) => c.displayName)
+      .sort();
+    assert.deepStrictEqual(names, ["Alpha", "Beta"]);
+  });
+
+  it("unwraps a same-file memo() component", () => {
+    const text = [
+      "import { memo } from 'react';",
+      "function CardInner({ title }) { return <div>{title}</div>; }",
+      "export const Card = memo(CardInner);",
+    ].join("\n");
+
+    const names = findComponentsInFileText("/virtual/Card.tsx", text).map((c) => c.displayName);
+    assert.ok(names.includes("Card"), `expected "Card" among ${JSON.stringify(names)}`);
+  });
+
+  it("returns an empty array for a file with no components", () => {
+    const text = "export const ANSWER = 42;\nfunction helper() { return ANSWER; }\n";
+    assert.deepStrictEqual(findComponentsInFileText("/virtual/NoComponents.ts", text), []);
+  });
+
+  it("returns an empty array, without throwing, for a completely empty file", () => {
+    assert.doesNotThrow(() => {
+      assert.deepStrictEqual(findComponentsInFileText("/virtual/Empty.tsx", ""), []);
+    });
+  });
+
+  it("returns an empty array, without throwing, for malformed/unparseable text", () => {
+    const brokenText = "export function Broken( {{{ return <div unterminated";
+    assert.doesNotThrow(() => {
+      findComponentsInFileText("/virtual/Broken.tsx", brokenText);
+    });
+  });
+
+  it("does not throw for a lone NUL byte (Phase 5c's own regression case)", () => {
+    assert.doesNotThrow(() => {
+      findComponentsInFileText("/virtual/Nul.tsx", "\x00");
+    });
+  });
+
+  it("does not crash on a .jsx/.js file lacking a recognized TS extension mismatch", () => {
+    // A plain, valid .jsx component through the allowJs/JSX-emit compiler
+    // options findComponentsInFileText sets up itself.
+    const text = "export function Widget() { return <span>widget</span>; }\n";
+    const names = findComponentsInFileText("/virtual/Widget.jsx", text).map((c) => c.displayName);
+    assert.deepStrictEqual(names, ["Widget"]);
+  });
+});

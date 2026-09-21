@@ -12,7 +12,12 @@
     "Visualization",
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onLanguage:typescript",
+    "onLanguage:typescriptreact",
+    "onLanguage:javascript",
+    "onLanguage:javascriptreact"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "views": {
@@ -40,6 +45,10 @@
       {
         "command": "ReactION.openWeb",
         "title": "ReactION: Embedded Webview"
+      },
+      {
+        "command": "ReactION.analyzeSource",
+        "title": "ReactION: Analyze Source"
       }
     ]
   },
@@ -54,26 +63,38 @@
     "build:webview": "webpack --mode production",
     "watch:webview": "webpack --mode development --watch",
     "lint": "eslint .",
+    "spike": "node spike/run-spike.js",
+    "spike:phase1": "node spike/run-phase1.js",
     "pretest": "npm run compile && npm run lint",
     "test": "vscode-test",
-    "test:e2e": "mocha out/test/puppeteer.test.js out/test/TreeView.test.js",
+    "test:e2e": "mocha out/test/puppeteer.test.js out/test/TreeView.test.js out/test/openSource.test.js out/test/staticAnalysis.test.js out/test/staticAnalysisHtml.test.js out/test/singleFileComponents.test.js out/test/selectInstance.test.js out/test/activationEvents.test.js spike/storeGraphTransform.test.js spike/coverage.test.js spike/selectByComponent.test.js spike/kitchenSink.test.js spike/contextMap.test.js spike/elementInspection.test.js",
     "package": "vsce package"
   },
   "devDependencies": {
+    "@dagrejs/dagre": "^3.1.1",
+    "@types/jsdom": "^30.0.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "^22.20.4",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@types/vscode": "^1.90.0",
+    "@types/ws": "^8.18.1",
     "@vscode/test-cli": "^0.0.15",
     "@vscode/test-electron": "^3.1.0",
     "@vscode/vsce": "^4.0.0",
+    "@xyflow/react": "^12.11.6",
+    "css-loader": "^7.1.5",
+    "esbuild": "^0.28.2",
     "eslint": "^10.11.0",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "jsdom": "^29.1.1",
     "mocha": "^12.0.2",
     "react": "^19.3.0",
-    "react-d3-tree": "^3.6.6",
+    "react-devtools-inline": "8.0.0",
     "react-dom": "^19.3.0",
+    "react-is": "^19.3.0",
+    "source-map": "^0.7.6",
+    "style-loader": "^4.0.0",
     "styled-components": "^6.5.3",
     "ts-loader": "^9.6.2",
     "typescript": "^5.9.3",
@@ -82,6 +103,9 @@
     "webpack-cli": "^7.2.3"
   },
   "dependencies": {
-    "puppeteer-core": "^25.11.0"
+    "puppeteer-core": "^25.11.0",
+    "react-devtools-core": "8.0.0",
+    "ts-morph": "^28.0.0",
+    "ws": "^8.21.3"
   }
 }

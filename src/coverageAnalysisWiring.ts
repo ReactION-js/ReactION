@@ -1,0 +1,102 @@
+import * as vscode from "vscode";
+import { analyzeWorkspaceCached, toComponentSummary, type ComponentSummary } from "./staticAnalysis";
+
+interface RunCoverageAnalysisMessage {
+  type?: string;
+}
+
+// StaticComponentSummary was formerly its own hand-rolled copy of "just
+// displayName + location" (deliberately just the fields client/coverage.ts's
+// correlateCoverage needs -- NOT the full ComponentInfo (props, id, AST
+// handles) analyzeWorkspace produces, which has no business leaving the
+// host). Re-exporting staticAnalysis.ts's canonical ComponentSummary under
+// this file's existing external name keeps every current caller/test working
+// unchanged while removing the independent, driftable copy -- see
+// staticAnalysis.ts's own comment on ComponentSummary for the other
+// projections this eliminates.
+export type { ComponentSummary as StaticComponentSummary } from "./staticAnalysis";
+
+// Listens for the LIVE tree webview's host-only "runCoverageAnalysis"
+// message (see client/useCoverage.ts -- posted directly via
+// vscodeApi.postMessage, NOT through the wall/bridge to the page, the same
+// pattern Task 3b's "openSource" established) and answers with 5a's
+// analyzeWorkspace results, reshaped down to StaticComponentSummary and
+// posted back to the SAME webview as "staticComponents"/
+// "staticComponentsError". Deliberately reuses analyzeWorkspace directly
+// rather than StaticAnalysisPanel: that panel owns a completely separate
+// webview/HTML for unused-component/dead-prop/prop-drilling/dependency
+// findings and is untouched by this task -- this is a different feature
+// living in the live tree webview.
+//
+// COST NOTE (worse here than in StaticAnalysisPanel): analyzeWorkspaceCached's
+// underlying ts-morph parse is synchronous and can take seconds on a large
+// workspace, and it blocks the ENTIRE extension-host event loop while it
+// runs -- StaticAnalysisPanel.runAnalysis pays the exact same cost, but that
+// panel is independent of the live pipeline, so nothing else needs the event
+// loop while it blocks. This module is wired into ViewPanel/EmbeddedViewPanel,
+// which is CONCURRENTLY driving DevtoolsBridge's live WebSocket to a running
+// Chrome instance -- while a fresh (uncached) analysis runs, that
+// connection's incoming mutations queue up unprocessed, so the tree view
+// visibly freezes and then catches up in a burst once the analysis finishes.
+// Worker-thread execution (which would avoid this) is explicitly out of
+// scope for this phase; the webview's own "Checking coverage… (tree paused)"
+// button label (see CoveragePanel.tsx) is the only mitigation for a genuine
+// cache miss. analyzeWorkspaceCached (staticAnalysis.ts) does remove the
+// redundant SECOND freeze when this fires shortly after an "Analyze Source"
+// run already parsed the same, unchanged workspace -- that's the specific
+// case this cache targets, not the cost of a cold/expired one.
+export function wireCoverageAnalysis(
+  webview: vscode.Webview,
+  workspaceRoot: string,
+): vscode.Disposable {
+  let disposed = false;
+  // A second "runCoverageAnalysis" message while one is already running is
+  // simply ignored: analyzeWorkspace has no cancellation, and the webview
+  // side (useCoverage.ts) already disables the button while a request is in
+  // flight, so this is a belt-and-suspenders guard against re-entrancy
+  // slipping through some other path -- mirrors useProfiler/useContextMap's
+  // own re-entrancy discipline on the client.
+  let inFlight = false;
+
+  const subscription = webview.onDidReceiveMessage((msg: RunCoverageAnalysisMessage) => {
+    if (msg?.type !== "runCoverageAnalysis" || inFlight) {
+      return;
+    }
+    inFlight = true;
+
+    // Yield once so this message handler returning doesn't itself block
+    // whatever's queued immediately behind it on this same event loop tick
+    // (e.g. a just-arrived DevtoolsBridge message) -- same setImmediate gate
+    // StaticAnalysisPanel.runAnalysis uses, though it buys much less here:
+    // once the synchronous analyzeWorkspaceCached call below actually starts
+    // a real (uncached) parse, it still blocks the whole event loop --
+    // including that same live bridge traffic -- for as long as the parse
+    // takes. See this file's top-level COST NOTE.
+    void new Promise<void>((resolve) => setImmediate(resolve)).then(() => {
+      if (disposed) {
+        return;
+      }
+      try {
+        const result = analyzeWorkspaceCached(workspaceRoot);
+        const components: ComponentSummary[] = result.components.map(toComponentSummary);
+        if (!disposed) {
+          void webview.postMessage({ type: "staticComponents", components });
+        }
+      } catch (error) {
+        if (!disposed) {
+          void webview.postMessage({
+            type: "staticComponentsError",
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
+      } finally {
+        inFlight = false;
+      }
+    });
+  });
+
+  return new vscode.Disposable(() => {
+    disposed = true;
+    subscription.dispose();
+  });
+}

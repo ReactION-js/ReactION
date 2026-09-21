@@ -1,10 +1,10 @@
 import * as vscode from "vscode";
 import { generateTreeViewHtml } from "./TreeViewPanel";
 import Puppeteer from "./puppeteer";
-import { startTreeSync } from "./treeSync";
-import type { ReactionConfig } from "./config";
-
-const REFRESH_INTERVAL_MS = 1000;
+import DevtoolsBridge from "./devtoolsBridge";
+import { startLiveTreePipeline } from "./liveTreePipeline";
+import { createModuleLogger } from "./outputChannelLogger";
+import { type ReactionConfig } from "./config";
 
 // Shows the React component tree in a single webview panel.
 export default class ViewPanel {
@@ -13,6 +13,8 @@ export default class ViewPanel {
 
   private readonly treePanel: vscode.WebviewPanel;
   private readonly page: Puppeteer;
+  private readonly bridge: DevtoolsBridge;
+  private readonly outputChannel: vscode.OutputChannel;
   private readonly disposables: vscode.Disposable[] = [];
   private disposed = false;
 
@@ -20,23 +22,37 @@ export default class ViewPanel {
     treePanel: vscode.WebviewPanel,
     extensionUri: vscode.Uri,
     config: ReactionConfig,
+    workspaceRoot: string,
+    outputChannel: vscode.OutputChannel,
   ) {
     this.treePanel = treePanel;
+    this.outputChannel = outputChannel;
     this.treePanel.webview.html = generateTreeViewHtml(
       treePanel.webview,
       extensionUri,
       config.reactTheme,
     );
 
-    this.page = new Puppeteer(config);
-    void this.start();
+    this.page = new Puppeteer(config, createModuleLogger(outputChannel, "puppeteer"));
+    this.bridge = new DevtoolsBridge(createModuleLogger(outputChannel, "devtools-bridge"));
+    void this.start(workspaceRoot);
 
     this.treePanel.onDidDispose(() => this.dispose(), null, this.disposables);
+  }
+
+  // Exposed for Task 5e's "ReactION.selectInstance" command: the way to get
+  // at this panel's webview to post a host->webview message to, without
+  // exposing the whole private treePanel (createOrShow/dispose still own its
+  // full lifecycle).
+  public get webview(): vscode.Webview {
+    return this.treePanel.webview;
   }
 
   public static createOrShow(
     extensionUri: vscode.Uri,
     config: ReactionConfig,
+    workspaceRoot: string,
+    outputChannel: vscode.OutputChannel,
   ): void {
     const treeColumn = vscode.ViewColumn.Two;
 
@@ -56,28 +72,25 @@ export default class ViewPanel {
       },
     );
 
-    ViewPanel.currentPanel = new ViewPanel(treePanel, extensionUri, config);
+    ViewPanel.currentPanel = new ViewPanel(
+      treePanel,
+      extensionUri,
+      config,
+      workspaceRoot,
+      outputChannel,
+    );
   }
 
-  private async start(): Promise<void> {
-    try {
-      await this.page.start();
-    } catch (error) {
-      void vscode.window.showErrorMessage(
-        `ReactION: could not launch Chrome. Check "executablePath" in reactION-config.json. ${String(error)}`,
-      );
-      return;
-    }
-
-    if (this.disposed) {
-      // Panel was closed while Chrome was launching; tear down the browser.
-      void this.page.close();
-      return;
-    }
-
-    this.disposables.push(
-      startTreeSync(this.page, this.treePanel.webview, REFRESH_INTERVAL_MS),
-    );
+  private async start(workspaceRoot: string): Promise<void> {
+    await startLiveTreePipeline({
+      bridge: this.bridge,
+      page: this.page,
+      treeWebview: this.treePanel.webview,
+      workspaceRoot,
+      outputChannel: this.outputChannel,
+      pushDisposable: (disposable) => this.disposables.push(disposable),
+      isDisposed: () => this.disposed,
+    });
   }
 
   public dispose(): void {
@@ -88,6 +101,7 @@ export default class ViewPanel {
     ViewPanel.currentPanel = undefined;
 
     void this.page.close();
+    this.bridge.dispose();
     this.treePanel.dispose();
     while (this.disposables.length) {
       this.disposables.pop()?.dispose();
