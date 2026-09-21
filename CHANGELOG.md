@@ -7,6 +7,12 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-21
+
+### Added
+
+- GitHub Actions workflow to automatically publish the extension to the VS Code Marketplace on `v*` tag pushes (or via manual `workflow_dispatch`). Runs lint and compiles before publishing using `VSCE_PAT`.
+
 ## [0.2.0] - 2026-09-19
 
 ### Changed

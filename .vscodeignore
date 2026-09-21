@@ -25,3 +25,6 @@ reactION-config.json
 package-lock.json
 **/*.vsix
 .DS_Store
+REARCHITECTURE-PLAN.md
+spike/**
+.claude/**
