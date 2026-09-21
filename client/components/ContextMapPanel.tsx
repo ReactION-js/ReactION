@@ -61,7 +61,11 @@ export default function ContextMapPanel({ theme, controller }: ContextMapPanelPr
 
   return (
     <Wrapper className={`reaction-theme-${theme}`}>
-      <button onClick={build} disabled={isBuilding}>
+      <button
+        onClick={build}
+        disabled={isBuilding}
+        title="Scan the tree for React Context providers and list which components consume each one."
+      >
         {isBuilding ? "Building context map…" : "Build context map"}
       </button>
       {entries && (

@@ -1,7 +1,7 @@
 // Deliberately free of any `vscode` import (matching src/openSource.ts's own
 // convention) so the panel-selection logic stays plain-mocha-testable under
 // Node -- see src/test/selectInstance.test.ts and src/selectInstanceWiring.ts,
-// which wraps this for the extension host's real ViewPanel/EmbeddedViewPanel.
+// which wraps this for the extension host's real ViewPanel.
 
 export interface SelectInstanceArgs {
   displayName: string;
@@ -15,10 +15,9 @@ export interface OpenPanel {
   webview: PostableWebview;
 }
 
-// ReactION.openTree (ViewPanel) and ReactION.openWeb (EmbeddedViewPanel) are
-// two independent commands with two independent `currentPanel` statics --
-// nothing stops a user from running both in the same session, so this posts
-// to EVERY currently-open panel rather than assuming at most one exists.
+// ReactION.openTree drives ViewPanel; this posts to EVERY currently-open
+// panel in the list it is given (a single ViewPanel today) rather than
+// assuming a specific one, so it stays correct if more panels are added.
 // Showing an informational message is left to the caller (showNoPanelMessage)
 // since building that message (with its "Open ReactION" action button) needs
 // `vscode.window`, which this module deliberately stays free of.

@@ -1,6 +1,6 @@
 {
   "name": "ReactION",
-  "displayName": "ReactION-BETA",
+  "displayName": "ReactION — React Component Visualizer",
   "publisher": "ReactION-JS",
   "description": "React Component Visualizer for VS Code",
   "version": "0.3.0",
@@ -16,7 +16,8 @@
     "onLanguage:typescript",
     "onLanguage:typescriptreact",
     "onLanguage:javascript",
-    "onLanguage:javascriptreact"
+    "onLanguage:javascriptreact",
+    "onView:startExtension"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -28,6 +29,28 @@
         }
       ]
     },
+    "viewsWelcome": [
+      {
+        "view": "startExtension",
+        "when": "!reaction.appStarted",
+        "contents": "Visualize your React app's live component tree — right inside VS Code.\n\nStep 1 of 3 — Start your React app in development mode (for example, run npm run dev or npm start in your project's terminal).\n\nOnce your dev server is running, confirm to continue:\n[$(check) My dev server is running](command:ReactION.confirmDevServerRunning)"
+      },
+      {
+        "view": "startExtension",
+        "when": "reaction.appStarted && !reaction.configured",
+        "contents": "Step 2 of 3 — Point ReactION at your running app.\n\nSet the URL to match your dev server. ReactION auto-detects the common ports for you.\n[$(gear) Configure Dev Server](command:ReactION.setup)"
+      },
+      {
+        "view": "startExtension",
+        "when": "reaction.configured && !reaction.launched",
+        "contents": "$(pass-filled) Dev server configured.\n\nStep 3 of 3 — Launch the live component graph:\n[$(play) Launch ReactION](command:ReactION.openTree)\n\nNeed a different URL?\n[$(gear) Reconfigure](command:ReactION.setup)"
+      },
+      {
+        "view": "startExtension",
+        "when": "reaction.launched",
+        "contents": "$(check-all) You're all set — ReactION is configured and launched.\n\n[$(play) Launch ReactION](command:ReactION.openTree)\n\nNeed help or want to change your setup?\n[$(gear) Reconfigure Dev Server](command:ReactION.setup)\n[$(book) Help & Troubleshooting](command:ReactION.showWalkthrough)"
+      }
+    ],
     "viewsContainers": {
       "activitybar": [
         {
@@ -43,12 +66,87 @@
         "title": "ReactION: Launch"
       },
       {
-        "command": "ReactION.openWeb",
-        "title": "ReactION: Embedded Webview"
-      },
-      {
         "command": "ReactION.analyzeSource",
         "title": "ReactION: Analyze Source"
+      },
+      {
+        "command": "ReactION.setup",
+        "title": "ReactION: Configure Dev Server",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "ReactION.showWalkthrough",
+        "title": "ReactION: Getting Started",
+        "icon": "$(book)"
+      },
+      {
+        "command": "ReactION.showLog",
+        "title": "ReactION: Show Log"
+      },
+      {
+        "command": "ReactION.resetOnboarding",
+        "title": "ReactION: Reset Onboarding"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "ReactION.showWalkthrough",
+          "when": "view == startExtension",
+          "group": "navigation@1"
+        },
+        {
+          "command": "ReactION.setup",
+          "when": "view == startExtension",
+          "group": "navigation@2"
+        }
+      ]
+    },
+    "walkthroughs": [
+      {
+        "id": "reactionWalkthrough",
+        "title": "Get Started with ReactION",
+        "description": "Visualize and profile your React app's live component tree inside VS Code.",
+        "steps": [
+          {
+            "id": "startApp",
+            "title": "Start your React app in dev mode",
+            "description": "ReactION reads a running app through a real Chrome instance, so start your app in development mode first (for example `npm run dev` or `npm start`), then note the URL it serves on.\n[Open a Terminal](command:workbench.action.terminal.new)",
+            "media": {
+              "markdown": "resources/walkthrough/start-app.md"
+            }
+          },
+          {
+            "id": "configure",
+            "title": "Point ReactION at your dev server",
+            "description": "Tell ReactION which URL your app runs on. The setup wizard auto-detects common ports and saves your choice to reactION-config.json.\n[Configure Dev Server](command:ReactION.setup)",
+            "media": {
+              "markdown": "resources/walkthrough/configure.md"
+            },
+            "completionEvents": [
+              "onCommand:ReactION.setup"
+            ]
+          },
+          {
+            "id": "launch",
+            "title": "Launch the live component graph",
+            "description": "Open the interactive graph of your running app, then click any node to inspect its live props, state, and hooks.\n[Launch ReactION](command:ReactION.openTree)",
+            "media": {
+              "markdown": "resources/walkthrough/launch.md"
+            },
+            "completionEvents": [
+              "onCommand:ReactION.openTree"
+            ]
+          },
+          {
+            "id": "troubleshoot",
+            "title": "Troubleshooting & tips",
+            "description": "Graph empty, or Chrome won't launch? Here are the common fixes and where to look.\n[Show ReactION Log](command:ReactION.showLog)",
+            "media": {
+              "markdown": "resources/walkthrough/troubleshoot.md"
+            }
+          }
+        ]
       }
     ]
   },
@@ -59,6 +157,7 @@
   "scripts": {
     "vscode:prepublish": "npm run compile && npm run build:webview",
     "compile": "tsc -p ./",
+    "build:all": "npm run compile && npm run build:webview",
     "watch": "tsc -watch -p ./",
     "build:webview": "webpack --mode production",
     "watch:webview": "webpack --mode development --watch",

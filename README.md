@@ -2,7 +2,7 @@
   <br>
     <img src="https://github.com/jsliapark/ReactION/blob/staging/resources/Text_2.png?raw=true" alt="logo" width="400">
   <br>
-  Dedicated React IDE in VS Code
+  React Component Visualizer for VS Code
   <br>
   <br>
 </h1>
@@ -10,7 +10,7 @@
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/ReactION-js/ReactION/pulls)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/ReactION-js/ReactION/LICENSE)
 
-<h4 align="center">A React development environment inside your VS Code editor.</h4>
+<h4 align="center">Visualize your React app's live component tree — right inside VS Code.</h4>
 
 [ReactION](https://reactionjs.io/) turns your React app's live component tree into an interactive graph, right inside VS Code. It drives a real Chrome instance behind the scenes, injects the official React DevTools protocol, and streams live updates into a webview that renders them as an interactive graph — giving you an always-up-to-date visual map of your app plus insights a standalone DevTools panel can't offer, because it doesn't live in your editor. ReactION is in <i>active development</i>; we welcome constructive feedback and contributions. See `REARCHITECTURE-PLAN.md` in this repo for the full technical plan and phase-by-phase history behind the current architecture.
 
@@ -31,9 +31,8 @@ A short demo GIF is on the way — for now, the screenshot above and the feature
 4. **Jump to source.** Click "Open in editor" on a selected node to open the exact file and line it's defined at, resolved from the source location React's DevTools hook records for that element (see Limitations below for when this can't resolve).
 5. **Profile re-renders.** Start a profiling session to get a render-count heatmap over the graph, plus a per-component "why did this render" reason (props/state/hooks changed) and a "wasted render" flag when a component re-ran without its inputs actually changing.
 6. **Map your context.** Build an on-demand provider → consumers map for React Context, so you can see who's actually reading from a given provider without tracing imports by hand.
-7. **Embedded HTML preview.** Run `ReactION: Embedded Webview` to see your running app in an iframe alongside its live component graph.
-8. **Diagnostics you can actually read.** A dedicated "ReactION" Output channel logs the Chrome launch, the DevTools relay, and webview activity, and the graph shows a clear message when no React app is detected at the configured URL instead of staying blank.
-9. **Resilient to restarts.** ReactION auto-detects your dev server (probing common fallback ports if the configured one isn't answering yet) and automatically re-navigates and reconnects the graph if the dev server restarts mid-session. If the underlying Chrome window itself closes or crashes, ReactION shows a warning rather than silently going blank — close and reopen the panel to relaunch it.
+7. **Diagnostics you can actually read.** A dedicated "ReactION" Output channel logs the Chrome launch, the DevTools relay, and webview activity, and the graph shows a clear message when no React app is detected at the configured URL instead of staying blank.
+8. **Resilient to restarts.** ReactION auto-detects your dev server (probing common fallback ports if the configured one isn't answering yet) and automatically re-navigates and reconnects the graph if the dev server restarts mid-session. If the underlying Chrome window itself closes or crashes, ReactION shows a warning rather than silently going blank — close and reopen the panel to relaunch it.
 
 ### Limitations
 
@@ -57,8 +56,8 @@ A short demo GIF is on the way — for now, the screenshot above and the feature
 3. Open VS Code Extension mode by pressing `F5` or `ctr+5`
 4. When a new VS Code window pops up, open the React code file that you want to run the extension on
 5. `npm start` your React file and run your application in `localhost:3000` (default)
-6. Run the main extension by clicking on the ReactION logo on the side panel or `ReactION:Launch`
-7. Run the embedded HTML webview version with the command `cmd + shift + p` then `ReactION: Embedded Webview`
+6. Follow the **Get Started with ReactION** walkthrough that opens on first run (reopen anytime with `ReactION: Getting Started`) — it walks you through configuring your dev-server URL and launching the graph
+7. Or click the ReactION logo in the activity bar and use the step-by-step **Launch** view; `ReactION: Configure Dev Server` auto-detects your running app and sets the URL for you
 8. Enjoy the live component graph!
 
 #### [Download From VS Code Marketplace]
@@ -81,7 +80,6 @@ You can configure ReactION's default settings through the ReactION-config.json f
   "executablePath": "",
   "localhost": "localhost:3000",
   "headless_browser": false,
-  "headless_embedded": true,
   "reactTheme": "dark"
 }
 ```
@@ -99,7 +97,6 @@ You can configure ReactION's default settings through the ReactION-config.json f
 - [React](https://reactjs.org/) - Webview UI
 - [styled-components](https://styled-components.com/) - Webview styling
 - [Mocha](https://mochajs.org/) / [`@vscode/test-cli`](https://www.npmjs.com/package/@vscode/test-cli) - Testing
-- Love ❤️
 
 ## Roadmap
 

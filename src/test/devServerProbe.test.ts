@@ -67,6 +67,27 @@ suite("devServerProbe.detectDevServerUrl", () => {
     }
   });
 
+  test("detects a server bound to 127.0.0.1 when configured as localhost (IPv4/IPv6 resilience)", async function () {
+    this.timeout(10_000);
+    // The server listens on IPv4 127.0.0.1 only (startServer binds there). A
+    // probe of `localhost` that resolves to ::1 first would miss it -- this
+    // guards the variant-probing that fixes that macOS failure mode.
+    const { server, host } = await startServer();
+    const port = host.split(":")[1];
+    try {
+      const lines: string[] = [];
+      const result = await detectDevServerUrl(`localhost:${port}`, (m) => lines.push(m), {
+        probeTimeoutMs: 500,
+        fallbackHosts: [],
+      });
+
+      assert.strictEqual(result.source, "configured");
+      assert.strictEqual(result.url, `http://localhost:${port}`);
+    } finally {
+      await closeServer(server);
+    }
+  });
+
   test("falls back to a reachable alternate port when the configured URL is not reachable", async function () {
     this.timeout(10_000);
     const fallback = await startServer();

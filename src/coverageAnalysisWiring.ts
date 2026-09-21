@@ -33,7 +33,7 @@ export type { ComponentSummary as StaticComponentSummary } from "./staticAnalysi
 // workspace, and it blocks the ENTIRE extension-host event loop while it
 // runs -- StaticAnalysisPanel.runAnalysis pays the exact same cost, but that
 // panel is independent of the live pipeline, so nothing else needs the event
-// loop while it blocks. This module is wired into ViewPanel/EmbeddedViewPanel,
+// loop while it blocks. This module is wired into ViewPanel,
 // which is CONCURRENTLY driving DevtoolsBridge's live WebSocket to a running
 // Chrome instance -- while a fresh (uncached) analysis runs, that
 // connection's incoming mutations queue up unprocessed, so the tree view
