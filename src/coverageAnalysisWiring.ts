@@ -1,20 +1,20 @@
 import * as vscode from "vscode";
-import { analyzeWorkspace } from "./staticAnalysis";
+import { analyzeWorkspace, toComponentSummary, type ComponentSummary } from "./staticAnalysis";
 
 interface RunCoverageAnalysisMessage {
   type?: string;
 }
 
-// Deliberately just the fields client/coverage.ts's correlateCoverage needs
-// (displayName to correlate on, the rest to jump to source) -- NOT the full
-// ComponentInfo (props, id, AST handles) analyzeWorkspace produces, which
-// has no business leaving the host.
-export interface StaticComponentSummary {
-  displayName: string;
-  filePath: string;
-  line: number;
-  column: number;
-}
+// StaticComponentSummary was formerly its own hand-rolled copy of "just
+// displayName + location" (deliberately just the fields client/coverage.ts's
+// correlateCoverage needs -- NOT the full ComponentInfo (props, id, AST
+// handles) analyzeWorkspace produces, which has no business leaving the
+// host). Re-exporting staticAnalysis.ts's canonical ComponentSummary under
+// this file's existing external name keeps every current caller/test working
+// unchanged while removing the independent, driftable copy -- see
+// staticAnalysis.ts's own comment on ComponentSummary for the other
+// projections this eliminates.
+export type { ComponentSummary as StaticComponentSummary } from "./staticAnalysis";
 
 // Listens for the LIVE tree webview's host-only "runCoverageAnalysis"
 // message (see client/useCoverage.ts -- posted directly via
@@ -74,12 +74,7 @@ export function wireCoverageAnalysis(
       }
       try {
         const result = analyzeWorkspace(workspaceRoot);
-        const components: StaticComponentSummary[] = result.components.map((component) => ({
-          displayName: component.displayName,
-          filePath: component.location.filePath,
-          line: component.location.line,
-          column: component.location.column,
-        }));
+        const components: ComponentSummary[] = result.components.map(toComponentSummary);
         if (!disposed) {
           void webview.postMessage({ type: "staticComponents", components });
         }

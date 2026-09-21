@@ -40,6 +40,37 @@ export interface ComponentInfo {
   props: PropInfo[];
 }
 
+// Canonical "just displayName + location" projection of ComponentInfo, for
+// every caller that only ever correlates on a component's name and jumps to
+// its source (never touches props, id, or an AST handle). Before this
+// existed, src/coverageAnalysisWiring.ts, src/singleFileComponents.ts, and
+// client/coverage.ts's webview-side copy had each independently hand-rolled
+// their own trimmed-down shape -- two of them flattened, one kept a nested
+// `location` plus an unused id/filePath -- with no compiler link between any
+// of them, so a change to SourceLocation's own shape would have needed
+// reconciling by hand in three places instead of one. `filePath` here
+// deliberately duplicates `location.filePath`: this flattened shape is built
+// specifically for callers (coverageAnalysisWiring.ts, and client/coverage.ts
+// across the src/client compilation boundary) that want plain top-level
+// fields for a postMessage payload, not the nested SourceLocation itself --
+// see singleFileComponents.ts's own SingleFileComponentInfo for the one real
+// consumer that legitimately needs the nested shape instead.
+export interface ComponentSummary {
+  displayName: string;
+  filePath: string;
+  line: number;
+  column: number;
+}
+
+export function toComponentSummary(info: ComponentInfo): ComponentSummary {
+  return {
+    displayName: info.displayName,
+    filePath: info.location.filePath,
+    line: info.location.line,
+    column: info.location.column,
+  };
+}
+
 // AST handles kept alongside the plain-data ComponentInfo so a later task
 // (prop-drilling, fan-in/out) can walk the body/type-check the props
 // parameter again without re-running analyzeWorkspace's discovery pass.
