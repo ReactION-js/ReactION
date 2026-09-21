@@ -14,7 +14,7 @@ export interface WallMessage {
 // verification harness under plain Node.
 //
 // Invariant: callers construct exactly one instance and call start() exactly
-// once per instance (both ViewPanel/EmbeddedViewPanel and the spike harnesses
+// once per instance (both ViewPanel and the spike harnesses
 // do this: a fresh DevtoolsBridge per panel/run). onBackendConnected/
 // onBackendDisconnected have no matching unsubscribe, so a hypothetical
 // future "restart this connection without recreating the panel" flow that
@@ -36,7 +36,7 @@ export default class DevtoolsBridge {
   private readonly disconnectHandlers: Array<() => void> = [];
 
   // `log` is optional and defaults to a no-op so every existing call site
-  // (spike/*.js, ViewPanel/EmbeddedViewPanel before this change) keeps working
+  // (spike/*.js, ViewPanel before this change) keeps working
   // unmodified.
   public constructor(log?: LogFn) {
     this.log = log ?? noopLog;

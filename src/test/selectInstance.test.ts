@@ -35,13 +35,13 @@ describe("selectInstanceInPanels", () => {
     assert.deepStrictEqual(posted, [{ type: "selectByComponent", displayName: "Widget" }]);
   });
 
-  it("posts to BOTH panels when ViewPanel and EmbeddedViewPanel are open simultaneously", () => {
-    const tree = fakePanel();
-    const web = fakePanel();
-    selectInstanceInPanels([tree.panel, web.panel], { displayName: "Widget" }, () => {
+  it("posts to every open panel when more than one is open", () => {
+    const first = fakePanel();
+    const second = fakePanel();
+    selectInstanceInPanels([first.panel, second.panel], { displayName: "Widget" }, () => {
       assert.fail("should not show the no-panel message when panels are open");
     });
-    assert.deepStrictEqual(tree.posted, [{ type: "selectByComponent", displayName: "Widget" }]);
-    assert.deepStrictEqual(web.posted, [{ type: "selectByComponent", displayName: "Widget" }]);
+    assert.deepStrictEqual(first.posted, [{ type: "selectByComponent", displayName: "Widget" }]);
+    assert.deepStrictEqual(second.posted, [{ type: "selectByComponent", displayName: "Widget" }]);
   });
 });

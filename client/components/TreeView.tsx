@@ -161,8 +161,21 @@ function FlowGraph({ data, theme, inspector, store, vscodeApi }: TreeChartProps)
   return (
     <Container $theme={theme} className={`treeChart reaction-theme-${theme}`}>
       <Toolbar>
-        <button onClick={toggleOrientation}>Change orientation</button>
-        <button onClick={profiler.toggleProfiling} disabled={profiler.toggleDisabled}>
+        <button
+          onClick={toggleOrientation}
+          title="Switch the graph between top-to-bottom and left-to-right layouts."
+        >
+          Change orientation
+        </button>
+        <button
+          onClick={profiler.toggleProfiling}
+          disabled={profiler.toggleDisabled}
+          title={
+            profiler.isProfiling
+              ? "Stop recording and show how many times — and why — each component re-rendered."
+              : "Record component re-renders while you use your app: click to start, interact with the app, then Stop to see per-component render counts (highlighted on the graph) and why each one re-rendered."
+          }
+        >
           {profiler.isProfiling ? "Stop Profiling" : "Start Profiling"}
         </button>
         <ContextMapPanel theme={theme} controller={contextMap} />

@@ -32,7 +32,7 @@ export function buildProbeCandidates(
 // response at all -- including a non-2xx status -- counts as "reachable":
 // this only answers "is something listening and speaking HTTP here", not
 // "does this route exist".
-function probeUrl(url: string, timeoutMs: number): Promise<boolean> {
+function probeSingle(url: string, timeoutMs: number): Promise<boolean> {
   return new Promise((resolve) => {
     let settled = false;
     const finish = (reachable: boolean) => {
@@ -60,6 +60,48 @@ function probeUrl(url: string, timeoutMs: number): Promise<boolean> {
       finish(false);
     }
   });
+}
+
+// A `localhost` URL is also probed as 127.0.0.1 and [::1]. Node may resolve
+// `localhost` to a single family (often ::1 first on macOS) while the dev
+// server listens on the other (many bind IPv4-only, e.g. 0.0.0.0 or
+// 127.0.0.1) -- the classic "server is up but the probe says no response".
+// Each variant is built independently so one that can't be constructed never
+// drops the others.
+function probeTargets(url: string): string[] {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return [url];
+  }
+  if (parsed.hostname !== "localhost") {
+    return [url];
+  }
+  const targets = [url];
+  for (const host of ["127.0.0.1", "[::1]"]) {
+    try {
+      const variant = new URL(url);
+      variant.hostname = host;
+      targets.push(variant.toString());
+    } catch {
+      // Skip a variant that can't be built; the others still stand.
+    }
+  }
+  return targets;
+}
+
+// Reachable if the URL -- or, for `localhost`, any of its IPv4/IPv6 forms --
+// answers within the timeout. Variants are raced in parallel so a refused
+// family doesn't add latency.
+function probeUrl(url: string, timeoutMs: number): Promise<boolean> {
+  const targets = probeTargets(url);
+  if (targets.length === 1) {
+    return probeSingle(targets[0], timeoutMs);
+  }
+  return Promise.all(targets.map((target) => probeSingle(target, timeoutMs))).then((results) =>
+    results.some(Boolean),
+  );
 }
 
 export type DevServerProbeSource = "configured" | "fallback" | "unreachable";

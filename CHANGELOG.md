@@ -7,6 +7,27 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Guided first-run onboarding: a "Get Started with ReactION" walkthrough (start your app → configure the dev-server URL → launch the graph → troubleshooting) that opens automatically the first time the extension activates and is reopenable anytime via `ReactION: Getting Started`.
+- Step-by-step welcome content in the ReactION activity-bar "Launch" view that reveals one step at a time (configure → launch → done) and advances as you complete each, replacing the bare "no data provider registered" placeholder.
+- `ReactION: Configure Dev Server` setup wizard that auto-detects a running dev server on common ports, lets you confirm/enter the URL, checks that Chrome can be found, saves to `reactION-config.json`, and offers to launch immediately.
+- `ReactION: Reset Onboarding` command to clear saved progress and replay the guided setup from step 1.
+
+### Changed
+
+- Config is now re-read on every launch, so changes from the setup wizard (or a hand-edit of `reactION-config.json`) take effect without reloading the window.
+- The start-failure notification now offers a "Configure…" action that jumps straight to the setup wizard.
+- Rebranded from a "Dedicated React IDE" to a **React component visualizer**, to match what the extension actually does.
+
+### Removed
+
+- The **Embedded Webview** (`ReactION: Embedded Webview`) command and its iframe preview. It duplicated the real Chrome window ReactION already drives, and the iframe was decoupled from the live graph; the single **Launch** flow is the supported way to view the component graph. The unused `headless_embedded` config field was removed with it.
+
+### Fixed
+
+- Auto-detect no longer reports "couldn't find a running dev server" when the app is up: a `localhost` URL is now probed over both IPv4 (`127.0.0.1`) and IPv6 (`::1`), fixing the macOS case where Node resolves `localhost` to `::1` while the dev server listens on IPv4 only. The setup wizard also checks more common ports and waits a little longer for a first response.
+
 ## [0.3.0] - 2026-09-21
 
 ### Added

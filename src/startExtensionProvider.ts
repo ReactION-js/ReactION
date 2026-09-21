@@ -1,23 +1,17 @@
 import * as vscode from "vscode";
 
-// Provides the single actionable item shown in the activity-bar view.
-// Selecting it runs the ReactION.openTree command.
+// The Launch view is intentionally empty: its step-by-step onboarding (start
+// your app -> configure the URL -> launch the graph) is contributed as
+// `viewsWelcome` in package.json, which VS Code renders whenever the view has
+// no items. Registering this provider (returning no children) keeps the view
+// backed by a data provider so it shows that welcome content instead of the
+// "no data provider registered" placeholder before the extension activates.
 export default class StartExtensionProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
   public getTreeItem(element: vscode.TreeItem): vscode.TreeItem {
     return element;
   }
 
   public getChildren(): vscode.TreeItem[] {
-    const launch = new vscode.TreeItem(
-      "Launch ReactION",
-      vscode.TreeItemCollapsibleState.None,
-    );
-    launch.command = {
-      command: "ReactION.openTree",
-      title: "ReactION: Launch",
-    };
-    launch.iconPath = new vscode.ThemeIcon("play");
-    launch.tooltip = "Open the React component tree";
-    return [launch];
+    return [];
   }
 }
