@@ -31,11 +31,23 @@ import { discoverComponentsInFile, type ComponentInfo } from "./staticAnalysis";
 // incomplete type via the checker on this single-file path, unlike
 // analyzeWorkspace's whole-workspace one. Fine today, since a CodeLens only
 // ever reads displayName + location -- but ComponentInfo's own `props` field
-// would silently carry that degraded data if it leaked out. Omitted below
-// (SingleFileComponentInfo) for exactly that reason: a future caller that
-// tries to read `.props` off THIS function's result gets a compile error
-// instead of quietly-wrong data.
-export type SingleFileComponentInfo = Omit<ComponentInfo, "props">;
+// would silently carry that degraded data if it leaked out. Excluded from
+// SingleFileComponentInfo below for exactly that reason: a future caller
+// that tries to read `.props` off THIS function's result gets a compile
+// error instead of quietly-wrong data.
+//
+// Picked (rather than this type's former shape, `Omit<ComponentInfo,
+// "props">`) down to exactly the two fields SelectInstanceCodeLensProvider
+// actually reads. `id` and the top-level `filePath` (redundant with
+// `location.filePath`) rode along unused ever since this type was
+// introduced -- Omit excludes only `props`, so both leaked straight through.
+// Picking straight from ComponentInfo -- rather than hand-listing
+// `{ displayName: string; location: SourceLocation }` again -- keeps this
+// tied to ComponentInfo by the compiler, so a future shape change there is
+// reflected here automatically instead of silently drifting; see
+// staticAnalysis.ts's ComponentSummary for the flattened counterpart used
+// wherever a nested `location` isn't what the caller needs instead.
+export type SingleFileComponentInfo = Pick<ComponentInfo, "displayName" | "location">;
 
 // LIMITATION (accepted, not a bug): resolveComponentFunction's
 // Identifier-following branch resolves symbols via THIS file's own binder
@@ -56,10 +68,10 @@ export function findComponentsInFileText(
       compilerOptions: { allowJs: true, jsx: ts.JsxEmit.ReactJSX },
     });
     const sourceFile = project.createSourceFile(filePath, fileText, { overwrite: true });
-    return discoverComponentsInFile(sourceFile).map(({ info }) => {
-      const { props: _degradedProps, ...rest } = info;
-      return rest;
-    });
+    return discoverComponentsInFile(sourceFile).map(({ info }) => ({
+      displayName: info.displayName,
+      location: info.location,
+    }));
   } catch {
     // provideCodeLenses must never throw: a syntax error, a NUL byte, or any
     // other ts-morph parse failure degrades to "no components found in this

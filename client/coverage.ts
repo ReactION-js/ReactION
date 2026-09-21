@@ -9,8 +9,25 @@
 // Deliberately just the fields useCoverage.ts / CoveragePanel.tsx need
 // (displayName to correlate on, the rest to jump to source) -- NOT the full
 // ComponentInfo shape (props, id, etc.) from staticAnalysis.ts, which stays
-// host-side. See src/coverageAnalysisWiring.ts for where this gets built
-// from a real ComponentInfo's `location`.
+// host-side. Built from a real ComponentInfo by src/staticAnalysis.ts's own
+// toComponentSummary and sent here via src/coverageAnalysisWiring.ts's
+// "staticComponents" message.
+//
+// CANONICAL SOURCE OF TRUTH: src/staticAnalysis.ts's `ComponentSummary`
+// interface -- this declaration must keep matching it field-for-field.
+// This file can't import it directly: client/ builds under
+// tsconfig.client.json through webpack/ts-loader, a separate compilation
+// unit from src/'s own tsc build (tsconfig.json includes only src/**/*,
+// tsconfig.client.json only client/**/*, and neither config includes the
+// other side's files), so there is no compiler-enforced link across the
+// boundary. This mirrors how src/sourceOpeningWiring.ts's OpenSourceMessage
+// and client/App.tsx's "openSource" postMessage call independently shape the
+// same wire message rather than sharing a type declaration -- this
+// codebase's established convention for a src/-vs-client/ message shape,
+// not a new mechanism invented for this one. A dedicated structural-parity
+// test (src/test/componentSummaryShapeParity.test.ts) parses both
+// declarations directly and fails if they ever drift, since the compiler
+// itself cannot catch it here.
 export interface StaticComponentSummary {
   displayName: string;
   filePath: string;
