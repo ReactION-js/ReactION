@@ -1,15 +1,14 @@
 import * as assert from "node:assert";
 import * as vscode from "vscode";
 import ViewPanel from "../ViewPanel";
-import EmbeddedViewPanel from "../EmbeddedViewPanel";
 
 // vscode-test (tdd suite/test): exercises the REAL "ReactION.selectInstance"
 // command extension.ts registers on activation, rather than re-registering a
 // second copy here (vscode.commands.registerCommand throws if a command id
 // is already registered, and the real extension has already claimed this
-// one by the time any test file in this run activates it). ViewPanel/
-// EmbeddedViewPanel.currentPanel are plain public statics, so a fake panel
-// object is stubbed directly onto them -- mirrors how
+// one by the time any test file in this run activates it).
+// ViewPanel.currentPanel is a plain public static, so a fake panel object is
+// stubbed directly onto it -- mirrors how
 // src/test/sourceOpeningWiring.test.ts fakes a webview object rather than
 // standing up a real WebviewPanel.
 suite("ReactION.selectInstance command", () => {
@@ -19,11 +18,6 @@ suite("ReactION.selectInstance command", () => {
     await extension.activate();
 
     assert.strictEqual(ViewPanel.currentPanel, undefined, "no ViewPanel should be open in a fresh test session");
-    assert.strictEqual(
-      EmbeddedViewPanel.currentPanel,
-      undefined,
-      "no EmbeddedViewPanel should be open in a fresh test session",
-    );
 
     const originalShowInformationMessage = vscode.window.showInformationMessage;
     let shownMessage: string | undefined;
@@ -63,40 +57,6 @@ suite("ReactION.selectInstance command", () => {
       assert.deepStrictEqual(posted, [{ type: "selectByComponent", displayName: "Widget" }]);
     } finally {
       ViewPanel.currentPanel = originalCurrentPanel;
-    }
-  });
-
-  test("posts to BOTH panels when ViewPanel and EmbeddedViewPanel are open simultaneously", async () => {
-    const treePosted: unknown[] = [];
-    const webPosted: unknown[] = [];
-    const fakeTreePanel = {
-      webview: {
-        postMessage: (message: unknown) => {
-          treePosted.push(message);
-          return Promise.resolve(true);
-        },
-      },
-    } as unknown as ViewPanel;
-    const fakeWebPanel = {
-      webview: {
-        postMessage: (message: unknown) => {
-          webPosted.push(message);
-          return Promise.resolve(true);
-        },
-      },
-    } as unknown as EmbeddedViewPanel;
-
-    const originalTreePanel = ViewPanel.currentPanel;
-    const originalWebPanel = EmbeddedViewPanel.currentPanel;
-    ViewPanel.currentPanel = fakeTreePanel;
-    EmbeddedViewPanel.currentPanel = fakeWebPanel;
-    try {
-      await vscode.commands.executeCommand("ReactION.selectInstance", { displayName: "Item" });
-      assert.deepStrictEqual(treePosted, [{ type: "selectByComponent", displayName: "Item" }]);
-      assert.deepStrictEqual(webPosted, [{ type: "selectByComponent", displayName: "Item" }]);
-    } finally {
-      ViewPanel.currentPanel = originalTreePanel;
-      EmbeddedViewPanel.currentPanel = originalWebPanel;
     }
   });
 });

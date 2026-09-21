@@ -61,6 +61,9 @@ export default function App() {
   const [store, setStore] = useState<DevtoolsStore | undefined>(undefined);
   const [noReactDetected, setNoReactDetected] = useState(false);
   const [selectionNotice, setSelectionNotice] = useState<string | undefined>(undefined);
+  const [startError, setStartError] = useState<{ title: string; hint: string } | undefined>(
+    undefined,
+  );
   const inspectorRef = useRef<ElementInspector | undefined>(undefined);
 
   // Auto-dismiss: a "selectByComponent" result notice is a one-line transient
@@ -101,6 +104,7 @@ export default function App() {
       connection.handleHostMessage(event.data);
       if (data?.type === "backend-connected") {
         setConnected(true);
+        setStartError(undefined);
         inspectorRef.current?.dispose();
         const bridge = connection.getBridge();
         const newStore = connection.getStore();
@@ -121,6 +125,15 @@ export default function App() {
         inspectorRef.current = undefined;
         setInspectorState(INITIAL_INSPECTOR_STATE);
         setStore(undefined);
+      } else if (data?.type === "start-failed") {
+        // The host (liveTreePipeline.ts) couldn't launch Chrome / reach the
+        // dev server; show its actionable title+hint instead of a perpetual
+        // "Connecting…".
+        const failure = data as { title?: unknown; hint?: unknown };
+        setStartError({
+          title: typeof failure.title === "string" ? failure.title : "ReactION couldn't start.",
+          hint: typeof failure.hint === "string" ? failure.hint : "",
+        });
       } else if (data?.type === "selectByComponent") {
         // Task 5e: a CodeLens in the editor ("Select in ReactION") posted
         // this via src/selectInstanceWiring.ts. Reads the store fresh off
@@ -201,13 +214,27 @@ export default function App() {
     return (
       <>
         {notice}
-        <p style={{ fontFamily: "system-ui, sans-serif", padding: "1rem" }}>
-          {connected
-            ? noReactDetected
-              ? NO_REACT_DETECTED_MESSAGE
-              : "Connected. Waiting for React components…"
-            : "Connecting to the React app…"}
-        </p>
+        {startError && !connected ? (
+          <div
+            style={{
+              fontFamily: "system-ui, sans-serif",
+              padding: "1rem",
+              maxWidth: 520,
+              lineHeight: 1.5,
+            }}
+          >
+            <p style={{ fontWeight: 600, margin: "0 0 8px" }}>{startError.title}</p>
+            {startError.hint && <p style={{ margin: 0, opacity: 0.85 }}>{startError.hint}</p>}
+          </div>
+        ) : (
+          <p style={{ fontFamily: "system-ui, sans-serif", padding: "1rem" }}>
+            {connected
+              ? noReactDetected
+                ? NO_REACT_DETECTED_MESSAGE
+                : "Connected. Waiting for React components…"
+              : "Connecting to the React app…"}
+          </p>
+        )}
       </>
     );
   }

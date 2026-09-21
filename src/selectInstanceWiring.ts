@@ -2,8 +2,8 @@ import * as vscode from "vscode";
 import { selectInstanceInPanels, type OpenPanel, type SelectInstanceArgs } from "./selectInstance";
 
 // Registers "ReactION.selectInstance", the command the Task 5e CodeLens
-// invokes. `getOpenPanels` is injected (rather than importing
-// ViewPanel/EmbeddedViewPanel directly here) so this stays testable against
+// invokes. `getOpenPanels` is injected (rather than importing ViewPanel
+// directly here) so this stays testable against
 // fake panel objects, mirroring how Task 3b/4a's own host-wiring tests fake a
 // webview rather than standing up a real WebviewPanel.
 export function registerSelectInstanceCommand(
