@@ -365,31 +365,53 @@ async function main() {
   // already uses) against this same live backend -- unlike every check
   // above, which talks to the raw inspectElement/inspectedElement protocol
   // directly and never exercises ElementInspector's own request/response
-  // correlation at all. Proves the fix for a review finding: select()
-  // called twice in a row for the SAME still-selected element (exactly
-  // what the "Select in ReactION" CodeLens does -- App.tsx calls
-  // inspector.select(id) unconditionally, with no dedup against the
-  // element already being selected) must converge on correct data, not
-  // whichever of the two responses happened to arrive first.
+  // correlation at all.
   //
-  // Caveat this harness can't get around: over a single relay connection
-  // with synchronous per-request backend processing, and both requests
-  // here targeting the IDENTICAL element (so neither is inherently slower
-  // to dehydrate than the other), the two responses are, in practice,
-  // vanishingly unlikely to arrive out of send order -- there's no size/
-  // cost asymmetry to exploit the way the finding's "large slow first
-  // request" scenario describes. So this is a real end-to-end convergence/
-  // regression proof, not an adversarial proof that out-of-order arrival
-  // is handled correctly. That adversarial proof -- the OLDER request's
-  // response delivered AFTER the newer one's, in that exact order -- is in
-  // the permanent spike/elementInspection.test.js suite instead, which
-  // talks to a fake bridge it fully controls and can therefore deliver
-  // responses in any order at all, including ones a live backend would
-  // never actually produce. (Confirmed discriminating: running that suite
-  // against this repo's pre-fix client/elementInspection.ts, via `git show
+  // Real-world trigger this proves the fix for: select() has no dedup
+  // against reselecting the same id -- neither the "Select in ReactION"
+  // CodeLens nor a plain node click (App.tsx) check for it -- so firing it
+  // twice in a row for the same still-selected element sends two full
+  // requests, and the first (now-superseded) one's response still arrives.
+  // This harness's own transport (one relay connection, synchronous
+  // backend dispatch, traced end to end: sendInspect -> storeBridge.ts's
+  // wall -> postMessage -> devtoolsBridge.ts's single socket -> one
+  // WebSocket -> the backend's synchronous inspectElement dispatch)
+  // delivers that superseded response BEFORE the second request's own
+  // response, never after -- genuine wire-level reordering isn't
+  // realistically reachable here.
+  //
+  // Which means `settledCount` alone (does the FINAL value match the last
+  // response that arrived?) does NOT discriminate the fix from no fix:
+  // under always-FIFO delivery, "whichever response was applied last wins"
+  // already gives the right VALUE for a full-data response whether or not
+  // the earlier one was ever suppressed -- reverting the fix would still
+  // print the same settledCount here. What DOES discriminate is whether
+  // the superseded response was actually suppressed rather than merely
+  // overwritten: applying a response always calls setState, so pre-fix
+  // BOTH responses produce a state transition (2 selects + 2 applied
+  // responses = 4 total) while post-fix only the current one does (2
+  // selects + 1 applied + 1 discarded = 3) -- see `stateTransitions` in
+  // doubleSelectCheck below. That distinction is also what the concrete
+  // live bug hinges on: a superseded full-data response is harmless under
+  // FIFO delivery (it just gets overwritten), but a superseded "not-found"
+  // is not -- applying it would call deselect() and wrongly clear a
+  // selection the user already remade (see latestTopLevelRequestID's own
+  // doc comment in client/elementInspection.ts for the full chain,
+  // including why the genuinely-current response would then ALSO get
+  // discarded once the id-check no longer matches a null selection).
+  //
+  // What this harness still can't prove: genuine out-of-order arrival (the
+  // older request's response landing AFTER the newer one's, which this
+  // transport never actually produces). That more general case -- full
+  // "any arrival order" correctness, not just this one live trigger -- is
+  // covered instead by the permanent spike/elementInspection.test.js
+  // suite, which talks to a fake bridge it fully controls and can
+  // therefore deliver responses in any order at all. (Confirmed
+  // discriminating: running that suite against this repo's pre-fix
+  // client/elementInspection.ts, via `git show
   // HEAD:client/elementInspection.ts` before this fix landed, fails 3 of
-  // its 8 cases with the exact symptom this finding describes -- a stale
-  // response overwriting fresher data.)
+  // its 8 cases with exactly the wrongful-deselect/stale-data symptoms
+  // described above.)
   let doubleSelectCheck = false;
   let doubleSelectSummary = undefined;
   if (counterElement && store && frontendBridge) {
@@ -456,14 +478,21 @@ async function main() {
 
         // Both requests must have actually gotten a response (nothing
         // lost), the inspector must settle cleanly (no stuck loading, no
-        // error), and -- the crux of the fix -- the data it settles on
-        // must be the LAST response that actually arrived on the wire for
-        // this element, not an earlier one clobbering it after the fact.
+        // error), and its data must match the last response that arrived
+        // on the wire -- true under this transport's FIFO delivery
+        // regardless of the fix (see the header comment above), so on its
+        // own this would pass identically whether or not the fix is
+        // present. The one condition that actually depends on the fix is
+        // stateTransitions === 3: exactly one of the two responses must
+        // have been discarded (2 from the two select() calls + 1 applied
+        // response), not both applied (which would give 4). Reverting the
+        // fix turns only this condition false.
         doubleSelectCheck =
           observedResponses.length === 2 &&
           !settled.error &&
           typeof settledCount === "number" &&
-          settledCount === lastObservedCount;
+          settledCount === lastObservedCount &&
+          stateTransitions === 3;
       } finally {
         frontendBridge.removeListener("inspectedElement", observer);
         inspector.dispose();

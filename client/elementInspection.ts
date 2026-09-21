@@ -30,6 +30,26 @@ const POLL_INTERVAL_MS = 1000;
 // selected (forceFullData: false, so an unchanged element gets the cheap
 // "no-change" response), and supports expanding one dehydrated path on
 // demand. Deliberately protocol-only -- rendering lives in InspectorPanel.
+//
+// Every response is matched against the requestID of the specific request
+// it answers (latestTopLevelRequestID/latestExpandRequestIDs below), not
+// just the element id. This matters because select()/requestExpand() have
+// no dedup against re-issuing a request for what's already selected/
+// expanded -- both App.tsx's node-click and "Select in ReactION" CodeLens
+// handlers call select(id) unconditionally -- so a superseded request's
+// response can still arrive after a newer request has been sent for the
+// same element/path. On this codebase's real transport (one ordered relay
+// connection, synchronous backend dispatch) that superseded response
+// always arrives BEFORE the newer request's own response, never after, so
+// it can't clobber fresher full-data via last-write-wins either way -- but
+// a superseded "not-found" is NOT harmless even in that order: applying it
+// wrongly deselects an element the user already re-selected, and the
+// genuinely-current response then gets discarded too (its `id` no longer
+// matches the now-null selection). Matching by requestID is what catches
+// that concrete case; it also happens to make the correlation correct
+// under a hypothetical future transport that could reorder responses,
+// which is why spike/elementInspection.test.js exercises that more
+// general case directly.
 export class ElementInspector {
   private state: InspectorState = INITIAL_INSPECTOR_STATE;
   private rendererID: number | null = null;
@@ -39,12 +59,26 @@ export class ElementInspector {
   // the CURRENTLY selected element -- the initial select() full-data fetch,
   // or a poll tick's lightweight refresh. handleResponse only applies a
   // full-data/no-change/not-found/error response whose responseID matches
-  // this, so a slow earlier request (e.g. a large element's still-running
-  // full dehydration) can never clobber a faster later one with stale data.
-  // This matters because select() has no dedup against reselecting the same
-  // id: the "Select in ReactION" CodeLens (App.tsx) calls it unconditionally,
-  // so firing it twice in quick succession for the same element sends two
-  // full requests with nothing cancelling the first. Reset to null on every
+  // this, discarding one that doesn't even though its `id` still matches.
+  //
+  // Concrete, currently-live bug this closes: select() has no dedup against
+  // reselecting the same id (neither the "Select in ReactION" CodeLens nor
+  // a plain node click in App.tsx check for it), so firing it twice in
+  // quick succession for the same element sends two full requests -- and
+  // the first (now superseded) one's response still arrives; under this
+  // codebase's real transport (one ordered relay connection, synchronous
+  // backend dispatch) it arrives BEFORE the second request's response,
+  // never after. A superseded full-data response is harmless in that
+  // order (the second request's full-data lands right after and overwrites
+  // it via plain last-write-wins, fix or no fix) -- but a superseded
+  // "not-found" is not: applying it calls deselect() and wipes the
+  // selection back to null even though the user already re-selected the
+  // same element, after which the genuinely-current second response also
+  // gets discarded (its `id` no longer matches the now-null selection).
+  // That wrongful-deselect-on-an-ordinary-double-click is what this guards
+  // against; the general "any arrival order" case is defense-in-depth for
+  // a transport this codebase doesn't have today (see
+  // spike/elementInspection.test.js). Reset to null on every
   // select()/deselect(), since a new selection starts with no "latest"
   // request yet.
   private latestTopLevelRequestID: number | null = null;
@@ -166,6 +200,13 @@ export class ElementInspector {
     this.pendingOnce.clear();
   }
 
+  // Every select()/requestExpand() caller assigns this return value into
+  // latestTopLevelRequestID/latestExpandRequestIDs AFTER this call returns,
+  // which assumes bridge.send() below never synchronously re-enters
+  // handleResponse (via onInspectedElement) before that assignment runs --
+  // true of every bridge this codebase constructs today, but worth noting
+  // since a synchronously-delivering bridge would see the assignment happen
+  // too late and wrongly discard the very response it was meant to accept.
   private sendInspect(
     id: number,
     rendererID: number,
