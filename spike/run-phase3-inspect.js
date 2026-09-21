@@ -65,6 +65,7 @@ try {
 const { createBridge, createStore } = require("react-devtools-inline/frontend");
 const DevtoolsBridge = require("../out/devtoolsBridge.js").default;
 const Puppeteer = require("../out/puppeteer.js").default;
+const { requireCompiled } = require("./testHarness");
 
 const CHROME_PATH =
   process.env.CHROME_PATH ||
@@ -359,6 +360,117 @@ async function main() {
     }
   }
 
+  // Drives the REAL client/elementInspection.ts ElementInspector (via
+  // requireCompiled, the same technique run-phase5e-select-instance.js
+  // already uses) against this same live backend -- unlike every check
+  // above, which talks to the raw inspectElement/inspectedElement protocol
+  // directly and never exercises ElementInspector's own request/response
+  // correlation at all. Proves the fix for a review finding: select()
+  // called twice in a row for the SAME still-selected element (exactly
+  // what the "Select in ReactION" CodeLens does -- App.tsx calls
+  // inspector.select(id) unconditionally, with no dedup against the
+  // element already being selected) must converge on correct data, not
+  // whichever of the two responses happened to arrive first.
+  //
+  // Caveat this harness can't get around: over a single relay connection
+  // with synchronous per-request backend processing, and both requests
+  // here targeting the IDENTICAL element (so neither is inherently slower
+  // to dehydrate than the other), the two responses are, in practice,
+  // vanishingly unlikely to arrive out of send order -- there's no size/
+  // cost asymmetry to exploit the way the finding's "large slow first
+  // request" scenario describes. So this is a real end-to-end convergence/
+  // regression proof, not an adversarial proof that out-of-order arrival
+  // is handled correctly. That adversarial proof -- the OLDER request's
+  // response delivered AFTER the newer one's, in that exact order -- is in
+  // the permanent spike/elementInspection.test.js suite instead, which
+  // talks to a fake bridge it fully controls and can therefore deliver
+  // responses in any order at all, including ones a live backend would
+  // never actually produce. (Confirmed discriminating: running that suite
+  // against this repo's pre-fix client/elementInspection.ts, via `git show
+  // HEAD:client/elementInspection.ts` before this fix landed, fails 3 of
+  // its 8 cases with the exact symptom this finding describes -- a stale
+  // response overwriting fresher data.)
+  let doubleSelectCheck = false;
+  let doubleSelectSummary = undefined;
+  if (counterElement && store && frontendBridge) {
+    const { ElementInspector } = await requireCompiled(
+      path.join(__dirname, "..", "client", "elementInspection.ts"),
+    );
+    const rendererID = store.getRendererIDForElement(counterElement.id);
+    if (rendererID != null) {
+      let latestState = null;
+      let stateTransitions = 0;
+      const inspector = new ElementInspector(frontendBridge, store, (state) => {
+        latestState = state;
+        stateTransitions += 1;
+      });
+      // Independent observer alongside the inspector's own listener (the
+      // real bridge fans a message out to every registered listener, same
+      // as simulateWebview here) -- purely so this harness can log what
+      // actually came back on the wire for this element, for a human
+      // reviewer to cross-check against what the inspector settled on.
+      const observedResponses = [];
+      const observer = (payload) => {
+        if (payload && payload.id === counterElement.id) {
+          observedResponses.push(payload);
+        }
+      };
+      frontendBridge.addListener("inspectedElement", observer);
+      try {
+        // The double-fire itself: synchronous, back-to-back, before either
+        // response can possibly have arrived yet.
+        inspector.select(counterElement.id);
+        inspector.select(counterElement.id);
+
+        const settled = await new Promise((resolve, reject) => {
+          const start = Date.now();
+          const check = () => {
+            if (latestState && latestState.elementId === counterElement.id && !latestState.loading) {
+              resolve(latestState);
+              return;
+            }
+            if (Date.now() - start > 10_000) {
+              reject(new Error("timed out waiting for double-select to settle"));
+              return;
+            }
+            setTimeout(check, 50);
+          };
+          check();
+        });
+
+        const lastObserved = observedResponses[observedResponses.length - 1];
+        const lastObservedCount =
+          lastObserved && lastObserved.type === "full-data" ? lastObserved.value.props.data.count : undefined;
+        const settledCount =
+          settled.element && settled.element.props ? settled.element.props.data.count : undefined;
+
+        doubleSelectSummary = {
+          requestsObserved: observedResponses.length,
+          responseTypes: observedResponses.map((r) => r.type),
+          lastObservedCount,
+          settledCount,
+          settledError: settled.error,
+          stateTransitions,
+        };
+        log(`double-select summary = ${JSON.stringify(doubleSelectSummary)}`);
+
+        // Both requests must have actually gotten a response (nothing
+        // lost), the inspector must settle cleanly (no stuck loading, no
+        // error), and -- the crux of the fix -- the data it settles on
+        // must be the LAST response that actually arrived on the wire for
+        // this element, not an earlier one clobbering it after the fact.
+        doubleSelectCheck =
+          observedResponses.length === 2 &&
+          !settled.error &&
+          typeof settledCount === "number" &&
+          settledCount === lastObservedCount;
+      } finally {
+        frontendBridge.removeListener("inspectedElement", observer);
+        inspector.dispose();
+      }
+    }
+  }
+
   await page.close();
   bridge.dispose();
   server.close();
@@ -370,7 +482,8 @@ async function main() {
     propsCheck &&
     noChangeOrFullDataOnPoll &&
     hooksCheck &&
-    expandCheck;
+    expandCheck &&
+    doubleSelectCheck;
 
   console.log("\n=== PHASE 3a HARNESS RESULT ===");
   console.log(`store.numElements            : ${elementCount}`);
@@ -379,6 +492,7 @@ async function main() {
   console.log(`poll -> no-change/full-data  : ${noChangeOrFullDataOnPoll}`);
   console.log(`App hooks well-formed        : ${hooksCheck} (${JSON.stringify(receivedHooksSummary)})`);
   console.log(`expand hydrated-path         : ${expandCheck} (${JSON.stringify(expandSummary)})`);
+  console.log(`double-select converges      : ${doubleSelectCheck} (${JSON.stringify(doubleSelectSummary)})`);
   console.log(pass ? "RESULT: PASS ✅" : "RESULT: FAIL ❌");
   process.exit(pass ? 0 : 1);
 }

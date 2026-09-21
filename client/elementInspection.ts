@@ -35,6 +35,35 @@ export class ElementInspector {
   private rendererID: number | null = null;
   private pollHandle: ReturnType<typeof setInterval> | undefined;
   private nextRequestID = 0;
+  // requestID of the most recently sent "top-level" (path: null) request for
+  // the CURRENTLY selected element -- the initial select() full-data fetch,
+  // or a poll tick's lightweight refresh. handleResponse only applies a
+  // full-data/no-change/not-found/error response whose responseID matches
+  // this, so a slow earlier request (e.g. a large element's still-running
+  // full dehydration) can never clobber a faster later one with stale data.
+  // This matters because select() has no dedup against reselecting the same
+  // id: the "Select in ReactION" CodeLens (App.tsx) calls it unconditionally,
+  // so firing it twice in quick succession for the same element sends two
+  // full requests with nothing cancelling the first. Reset to null on every
+  // select()/deselect(), since a new selection starts with no "latest"
+  // request yet.
+  private latestTopLevelRequestID: number | null = null;
+  // Same idea as latestTopLevelRequestID, but per expanded path (keyed by
+  // encodePath() on the same [category, ...path] array sendInspect is given)
+  // instead of one shared pointer. Expanding two different paths, or a poll
+  // refreshing top-level data while a path is mid-expand, are independent,
+  // legitimately concurrent operations that must NOT invalidate each other:
+  // mergeHydratedPath only ever touches the path it was given, so a poll and
+  // an expand (or two different expands) can never step on each other's
+  // data. A single shared "latest expand" pointer would break that -- it
+  // would discard a still-outstanding, still-wanted expand of path A the
+  // moment path B was also expanded. Only re-expanding the SAME path before
+  // its previous response lands needs a staleness guard, which is what the
+  // per-path keying gives us. Cleared wholesale on select()/deselect() (a
+  // new selection has no history worth keeping); an individual path's entry
+  // is simply overwritten, never removed, on re-expansion, which is fine
+  // since only the current value per key is ever consulted.
+  private readonly latestExpandRequestIDs = new Map<string, number>();
   // One-shot inspectOnce() requests in flight, keyed by their own requestID
   // (shared counter with the select/poll flow below, so ids never collide).
   // Checked first in onInspectedElement so a background probe never leaks
@@ -65,6 +94,8 @@ export class ElementInspector {
   public select(id: number): void {
     this.stopPolling();
     this.rendererID = this.store.getRendererIDForElement(id);
+    this.latestTopLevelRequestID = null;
+    this.latestExpandRequestIDs.clear();
     if (this.rendererID === null) {
       this.setState({
         elementId: id,
@@ -77,15 +108,17 @@ export class ElementInspector {
 
     const rendererID = this.rendererID;
     this.setState({ elementId: id, element: null, loading: true, error: null });
-    this.sendInspect(id, rendererID, null, true);
+    this.latestTopLevelRequestID = this.sendInspect(id, rendererID, null, true);
     this.pollHandle = setInterval(() => {
-      this.sendInspect(id, rendererID, null, false);
+      this.latestTopLevelRequestID = this.sendInspect(id, rendererID, null, false);
     }, POLL_INTERVAL_MS);
   }
 
   public deselect(): void {
     this.stopPolling();
     this.rendererID = null;
+    this.latestTopLevelRequestID = null;
+    this.latestExpandRequestIDs.clear();
     this.setState(INITIAL_INSPECTOR_STATE);
   }
 
@@ -98,12 +131,9 @@ export class ElementInspector {
     if (this.state.elementId === null || this.rendererID === null) {
       return;
     }
-    this.sendInspect(
-      this.state.elementId,
-      this.rendererID,
-      [category, ...path],
-      false,
-    );
+    const fullPath = [category, ...path];
+    const requestID = this.sendInspect(this.state.elementId, this.rendererID, fullPath, false);
+    this.latestExpandRequestIDs.set(encodePath(fullPath), requestID);
   }
 
   // Fire-and-await inspectElement request that bypasses the select/poll
@@ -166,9 +196,34 @@ export class ElementInspector {
     this.onChange(next);
   }
 
+  // True if `responseID` is still the newest outstanding request for
+  // whichever slot it belongs to -- the single top-level slot, or its own
+  // path's entry in latestExpandRequestIDs. requestIDs are never reused or
+  // shared across calls (nextRequestID is one counter for every sendInspect
+  // call this class makes, select/poll/expand/inspectOnce alike), and a
+  // response's `type` is entirely determined by what its own request asked
+  // for (a path: null request can only ever come back full-data/no-change/
+  // not-found/error; a pathed one only hydrated-path/not-found/error), so a
+  // plain membership check across both slots -- without first classifying
+  // the response by type -- can't accidentally match the wrong slot.
+  private isLatestRequest(responseID: number): boolean {
+    if (responseID === this.latestTopLevelRequestID) {
+      return true;
+    }
+    for (const latest of this.latestExpandRequestIDs.values()) {
+      if (responseID === latest) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private handleResponse(response: InspectedElementResponse): void {
     if (response.id !== this.state.elementId) {
       return; // Stale response for a since-changed selection.
+    }
+    if (!this.isLatestRequest(response.responseID)) {
+      return; // Superseded by a newer request for the same element/path.
     }
     switch (response.type) {
       case "full-data":

@@ -10,16 +10,17 @@ module.exports = tseslint.config(
       "node_modules/**",
       "resources/**",
       // spike/storeGraphTransform.test.js, spike/coverage.test.js,
-      // spike/selectByComponent.test.js, spike/kitchenSink.test.js, and
-      // spike/contextMap.test.js are permanent, CI-wired regression tests
-      // (see package.json's test:e2e), not throwaway harnesses -- unlike the
-      // rest of spike/, they should get the same static-analysis coverage
-      // src/test/*.ts already gets (this is how a dead import slipped in
-      // undetected during Phase 4c review). ESLint's flat-config negation
-      // can't re-include a file matched by a "**" glob on the same prefix
-      // (confirmed empirically), so this is a single-level "spike/*" plus a
-      // separate recursive ignore for the nested fixtures/ data directory,
-      // instead of one "spike/**".
+      // spike/selectByComponent.test.js, spike/kitchenSink.test.js,
+      // spike/contextMap.test.js, and spike/elementInspection.test.js are
+      // permanent, CI-wired regression tests (see package.json's test:e2e),
+      // not throwaway harnesses -- unlike the rest of spike/, they should
+      // get the same static-analysis coverage src/test/*.ts already gets
+      // (this is how a dead import slipped in undetected during Phase 4c
+      // review). ESLint's flat-config negation can't re-include a file
+      // matched by a "**" glob on the same prefix (confirmed empirically),
+      // so this is a single-level "spike/*" plus a separate recursive
+      // ignore for the nested fixtures/ data directory, instead of one
+      // "spike/**".
       "spike/*",
       "spike/fixtures/**",
       "!spike/storeGraphTransform.test.js",
@@ -27,6 +28,7 @@ module.exports = tseslint.config(
       "!spike/selectByComponent.test.js",
       "!spike/kitchenSink.test.js",
       "!spike/contextMap.test.js",
+      "!spike/elementInspection.test.js",
       "**/*.config.js",
       ".vscode-test/**",
       ".vscode-test.mjs",
@@ -64,6 +66,7 @@ module.exports = tseslint.config(
       "spike/selectByComponent.test.js",
       "spike/kitchenSink.test.js",
       "spike/contextMap.test.js",
+      "spike/elementInspection.test.js",
     ],
     languageOptions: {
       sourceType: "commonjs",
