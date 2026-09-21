@@ -100,7 +100,7 @@ function FlowGraph({ data, theme, inspector, store, vscodeApi }: TreeChartProps)
 
   const profiler = useProfiler(store, inspector.state.elementId);
   const contextMap = useContextMap(store, inspector.inspectOnce);
-  const everRendered = useEverRendered(store);
+  const everRendered = useEverRendered(store, data);
   const coverage = useCoverage(store, vscodeApi, everRendered.getEverRenderedNames);
 
   const { nodes: layoutNodes, edges: layoutEdges } = useMemo(
