@@ -27,7 +27,15 @@ suite("ComponentSummary / StaticComponentSummary shape parity", () => {
     const declaration = sourceFile.getInterfaceOrThrow(interfaceName);
     return declaration
       .getProperties()
-      .map((prop) => `${prop.getName()}: ${prop.getTypeNodeOrThrow().getText()}`)
+      .map((prop) => {
+        // Question-token/readonly live outside the type node, so comparing
+        // only `getTypeNodeOrThrow().getText()` would miss e.g. `column:
+        // number` silently drifting to `column?: number` on one side --
+        // include both modifiers explicitly rather than just the type text.
+        const optional = prop.hasQuestionToken() ? "?" : "";
+        const readonly = prop.isReadonly() ? "readonly " : "";
+        return `${readonly}${prop.getName()}${optional}: ${prop.getTypeNodeOrThrow().getText()}`;
+      })
       .sort();
   }
 
