@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { analyzeWorkspace, computeDeadProps, computeUnusedComponents } from "./staticAnalysis";
+import { analyzeWorkspaceCached, computeDeadProps, computeUnusedComponents } from "./staticAnalysis";
 import { computePropDrilling } from "./propDrilling";
 import { computeDependencyMetrics } from "./dependencyMetrics";
 import { generateStaticAnalysisHtml } from "./staticAnalysisHtml";
@@ -50,7 +50,14 @@ export default class StaticAnalysisPanel {
     if (this.disposed) return;
 
     try {
-      const result = analyzeWorkspace(this.workspaceRoot);
+      // forceFresh: true -- this command IS the user's explicit "give me a
+      // current result" request (see analyzeWorkspaceCached's own doc
+      // comment), and it already used to re-run unconditionally on every
+      // invocation even while its own panel was still open. Still populates
+      // the shared cache below, so a "Check Coverage" click moments later
+      // (coverageAnalysisWiring.ts) can reuse this exact result instead of
+      // paying its own full parse.
+      const result = analyzeWorkspaceCached(this.workspaceRoot, { forceFresh: true });
       const unusedComponents = computeUnusedComponents(result);
       const deadProps = computeDeadProps(result);
       const propDrilling = computePropDrilling(result);
