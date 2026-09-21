@@ -31,9 +31,25 @@
  *     scenario. `store` itself still swaps to a new instance on reconnect
  *     either way (App.tsx's `store` state is independent of this patch), so
  *     this isolates whether useProfiler's OWN new `[store]` effect (not
- *     App.tsx unmounting) is what resets profiler state: if the assertions
- *     still pass with TreeChart never unmounting, the reset can't be coming
- *     from the unmount safety net.
+ *     App.tsx unmounting) is what resets profiler state.
+ *
+ *     This is a rigorous discriminator for `profilingSnapshot`/heat-badge
+ *     state specifically ("NO heat badges remain" below): a fresh page load
+ *     restarts react-devtools-core's fiber-id counter from 0, so a STALE,
+ *     unreset snapshot from the old store would plausibly still numerically
+ *     match the deterministic sample app's post-reconnect node ids and show
+ *     non-zero badges if the new effect weren't resetting it -- confirmed by
+ *     reading node_modules/react-devtools-core/dist/backend.js's uidCounter.
+ *     It is NOT a rigorous discriminator for `isProfiling`/
+ *     `isProcessingData`/`stopConfirmationPending`: a freshly-constructed
+ *     ProfilerStore already defaults isProfilingBasedOnUserInput/
+ *     isProcessingData to false regardless of the new effect (confirmed
+ *     against node_modules/react-devtools-inline/dist/frontend.js), and
+ *     stopConfirmationPending is already false by the time this harness's
+ *     disconnect fires (it waits for processedAfterStop first) -- so the
+ *     "isProfiling reset"/"not disabled" checks below would read the same
+ *     PASS/FAIL either way and are kept for completeness/regression
+ *     coverage, not as proof the new effect specifically caused them.
  *
  * Run `npm run compile && npm run build:webview` first. Chrome required
  * (CHROME_PATH env var, defaults to the same path every other
