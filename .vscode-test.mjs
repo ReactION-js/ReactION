@@ -16,6 +16,7 @@ export default defineConfig({
     "out/test/selectInstanceWiring.test.js",
     "out/test/liveTreePipeline.test.js",
     "out/test/componentSummaryShapeParity.test.js",
+    "out/test/staticAnalysisCache.test.js",
   ],
   workspaceFolder: ".",
   mocha: {

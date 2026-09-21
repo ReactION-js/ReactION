@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { analyzeWorkspace, toComponentSummary, type ComponentSummary } from "./staticAnalysis";
+import { analyzeWorkspaceCached, toComponentSummary, type ComponentSummary } from "./staticAnalysis";
 
 interface RunCoverageAnalysisMessage {
   type?: string;
@@ -28,19 +28,23 @@ export type { ComponentSummary as StaticComponentSummary } from "./staticAnalysi
 // findings and is untouched by this task -- this is a different feature
 // living in the live tree webview.
 //
-// COST NOTE (worse here than in StaticAnalysisPanel): analyzeWorkspace's
-// ts-morph parse is synchronous and can take seconds on a large workspace,
-// and it blocks the ENTIRE extension-host event loop while it runs --
-// StaticAnalysisPanel.runAnalysis pays the exact same cost, but that panel
-// is independent of the live pipeline, so nothing else needs the event loop
-// while it blocks. This module is wired into ViewPanel/EmbeddedViewPanel,
+// COST NOTE (worse here than in StaticAnalysisPanel): analyzeWorkspaceCached's
+// underlying ts-morph parse is synchronous and can take seconds on a large
+// workspace, and it blocks the ENTIRE extension-host event loop while it
+// runs -- StaticAnalysisPanel.runAnalysis pays the exact same cost, but that
+// panel is independent of the live pipeline, so nothing else needs the event
+// loop while it blocks. This module is wired into ViewPanel/EmbeddedViewPanel,
 // which is CONCURRENTLY driving DevtoolsBridge's live WebSocket to a running
-// Chrome instance -- while analyzeWorkspace runs, that connection's incoming
-// mutations queue up unprocessed, so the tree view visibly freezes and then
-// catches up in a burst once the analysis finishes. Worker-thread execution
-// (which would avoid this) is explicitly out of scope for this phase; the
-// webview's own "Checking coverage… (tree paused)" button label (see
-// CoveragePanel.tsx) is the only mitigation here, not a fix for it.
+// Chrome instance -- while a fresh (uncached) analysis runs, that
+// connection's incoming mutations queue up unprocessed, so the tree view
+// visibly freezes and then catches up in a burst once the analysis finishes.
+// Worker-thread execution (which would avoid this) is explicitly out of
+// scope for this phase; the webview's own "Checking coverage… (tree paused)"
+// button label (see CoveragePanel.tsx) is the only mitigation for a genuine
+// cache miss. analyzeWorkspaceCached (staticAnalysis.ts) does remove the
+// redundant SECOND freeze when this fires shortly after an "Analyze Source"
+// run already parsed the same, unchanged workspace -- that's the specific
+// case this cache targets, not the cost of a cold/expired one.
 export function wireCoverageAnalysis(
   webview: vscode.Webview,
   workspaceRoot: string,
@@ -64,16 +68,16 @@ export function wireCoverageAnalysis(
     // whatever's queued immediately behind it on this same event loop tick
     // (e.g. a just-arrived DevtoolsBridge message) -- same setImmediate gate
     // StaticAnalysisPanel.runAnalysis uses, though it buys much less here:
-    // once the synchronous analyzeWorkspace call below actually starts, it
-    // still blocks the whole event loop -- including that same live bridge
-    // traffic -- for as long as the parse takes. See this file's top-level
-    // COST NOTE.
+    // once the synchronous analyzeWorkspaceCached call below actually starts
+    // a real (uncached) parse, it still blocks the whole event loop --
+    // including that same live bridge traffic -- for as long as the parse
+    // takes. See this file's top-level COST NOTE.
     void new Promise<void>((resolve) => setImmediate(resolve)).then(() => {
       if (disposed) {
         return;
       }
       try {
-        const result = analyzeWorkspace(workspaceRoot);
+        const result = analyzeWorkspaceCached(workspaceRoot);
         const components: ComponentSummary[] = result.components.map(toComponentSummary);
         if (!disposed) {
           void webview.postMessage({ type: "staticComponents", components });

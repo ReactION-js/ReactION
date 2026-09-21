@@ -433,6 +433,62 @@ export function analyzeWorkspace(workspaceRoot: string): StaticAnalysisResult {
   };
 }
 
+// CACHE SAFETY (why caching the FULL result -- live Project included -- is
+// fine here): the Project holds only in-memory parsed source text and AST
+// nodes, no file handles or other unmanaged resource that needs an explicit
+// dispose -- letting a cache entry's reference drop (replaced by a fresh
+// entry, or simply never read again) is exactly as sufficient as it already
+// is today for every existing uncached analyzeWorkspace call's own Project,
+// which is never disposed either. The cache is keyed per workspaceRoot with
+// no eviction sweep beyond the TTL overwrite below; that stays safe only
+// because one running extension host calls this with the same one (or, for
+// a multi-root workspace, a handful of) workspaceRoot string(s) for its
+// whole lifetime -- this is not a pattern to reuse somewhere that might see
+// many distinct roots without adding real eviction. A summaries-only cache
+// (just `components`) was considered instead, to sidestep holding the live
+// Project longer, but StaticAnalysisPanel's computeDeadProps/
+// computePropDrilling/computeDependencyMetrics all walk componentHandles'
+// live AST nodes directly -- a summaries-only cache would only ever be able
+// to serve coverageAnalysisWiring.ts's narrower needs, not eliminate the
+// double-parse Finding 2 actually reported between these two callers.
+const workspaceAnalysisCache = new Map<string, { result: StaticAnalysisResult; computedAt: number }>();
+
+// THRESHOLD DECISION: 5 seconds. The scenario this cache fixes is framed as
+// "moments apart" -- run "Analyze Source", then switch to the live tree and
+// click "Check Coverage" shortly after -- i.e. ordinary human reaction time
+// between two UI actions, not a deliberate wait. 5s comfortably covers that
+// gap while staying short enough that source edits made right after seeing
+// analysis results won't sit behind a stale cache entry for long once
+// something else triggers its own fresh analysis.
+export const STATIC_ANALYSIS_CACHE_TTL_MS = 5000;
+
+// Shares one recent analyzeWorkspace result across callers instead of each
+// independently re-running the full, synchronous, event-loop-blocking parse
+// against an unchanged source tree -- see StaticAnalysisPanel.ts and
+// coverageAnalysisWiring.ts, whose back-to-back calls motivated this.
+// `forceFresh` exists for StaticAnalysisPanel's "ReactION: Analyze Source"
+// command specifically: that command IS the user's explicit request for a
+// current result (it already re-runs on every invocation, even while its own
+// panel is still open), so it always bypasses the cache on READ -- but still
+// WRITES its fresh result back into the cache, which is what lets a
+// "Check Coverage" click moments later hit the entry this call just
+// populated instead of paying its own full parse. Nothing else needs to
+// bypass it: a plain few-second TTL is a fine tradeoff for every other
+// caller given how short it already is.
+export function analyzeWorkspaceCached(
+  workspaceRoot: string,
+  options?: { forceFresh?: boolean },
+): StaticAnalysisResult {
+  const cached = workspaceAnalysisCache.get(workspaceRoot);
+  if (cached && !options?.forceFresh && Date.now() - cached.computedAt < STATIC_ANALYSIS_CACHE_TTL_MS) {
+    return cached.result;
+  }
+
+  const result = analyzeWorkspace(workspaceRoot);
+  workspaceAnalysisCache.set(workspaceRoot, { result, computedAt: Date.now() });
+  return result;
+}
+
 // unused = no external reference to the component's own exported symbol AND
 // its containing file is never a dynamic import() target -- both parts are
 // required, see buildReferenceGraph's dynamic-import comment for why a
