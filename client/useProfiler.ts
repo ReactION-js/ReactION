@@ -64,17 +64,31 @@ export function useProfiler(
     undefined,
   );
 
+  // A reconnect swaps `store` for a brand-new instance with all-new fiber
+  // ids (see App.tsx / storeBridge.ts). Reset explicitly here instead of
+  // relying on the caller (FlowGraph) happening to unmount entirely across
+  // every disconnect/reconnect -- true today via App.tsx's `!tree` gate, but
+  // not a guarantee this hook should depend on. Mirrors useContextMap.ts/
+  // useCoverage.ts's own `[store]`-keyed reset effect.
+  useEffect(() => {
+    setIsProfiling(false);
+    setIsProcessingData(false);
+    setStopConfirmationPending(false);
+    setProfilingSnapshot(undefined);
+  }, [store]);
+
   // Bind to the live profiler session for the current Store. A reconnect
   // swaps `store` for a brand-new instance (see App.tsx / storeBridge.ts),
   // so this re-binds (and the cleanup below unbinds the old listeners)
-  // whenever that happens; profilingSnapshot and the other state here are
-  // reset for free by the caller (FlowGraph) unmounting entirely while
-  // disconnected, so stale data referencing the old Store's fiber ids never
-  // lingers. There's no explicit stopProfiling() on unmount if a session is
-  // still active when the panel closes -- a conscious choice, not an
-  // oversight: the stock DevTools Profiler UI has the same behavior (a
-  // recording left running just keeps running in the backend), and adding
-  // an unmount-triggered stop was out of scope for this task.
+  // whenever that happens; the reset effect above already clears
+  // profilingSnapshot and the rest of this hook's state on that same
+  // transition, so stale data referencing the old Store's fiber ids never
+  // lingers here even if a future FlowGraph stays mounted across reconnects.
+  // There's no explicit stopProfiling() on unmount if a session is still
+  // active when the panel closes -- a conscious choice, not an oversight:
+  // the stock DevTools Profiler UI has the same behavior (a recording left
+  // running just keeps running in the backend), and adding an
+  // unmount-triggered stop was out of scope for this task.
   useEffect(() => {
     if (!store) {
       return;
