@@ -61,7 +61,7 @@ export class BackendInjectionError extends Error {
 // failure, distinguishing "Chrome itself failed to launch" from "Chrome
 // launched but couldn't reach the dev server" from "Chrome launched but the
 // backend couldn't be injected" (see the error classes above). Kept here
-// (vscode-free) so ViewPanel/EmbeddedViewPanel don't duplicate this logic.
+// (vscode-free) so ViewPanel doesn't duplicate this logic.
 export function describeStartFailure(error: unknown): string {
   if (error instanceof DevServerUnreachableError) {
     return (
@@ -77,6 +77,37 @@ export function describeStartFailure(error: unknown): string {
   }
   const detail = error instanceof ChromeLaunchError ? error.cause : error;
   return `ReactION: could not launch Chrome. Check "executablePath" in reactION-config.json. ${errorDetail(detail)}`;
+}
+
+// Concise, webview-facing counterpart to describeStartFailure: the same
+// three-way diagnosis, but as a short title + actionable hint with none of the
+// raw errorDetail stacks (those still go to the error toast + Output channel).
+// Shown as inline copy in the empty panel so a stopped dev server reads as
+// "start your app" instead of an endless "Connecting…".
+export interface StartFailureNotice {
+  title: string;
+  hint: string;
+}
+
+export function describeStartFailureBrief(error: unknown): StartFailureNotice {
+  if (error instanceof DevServerUnreachableError) {
+    return {
+      title: `Can't reach your dev server at ${error.url}.`,
+      hint:
+        "Start your React app (for example `npm run dev` or `npm start`), then reopen this " +
+        'panel. If it runs on a different port, update "localhost" in reactION-config.json.',
+    };
+  }
+  if (error instanceof BackendInjectionError) {
+    return {
+      title: "Chrome launched, but the ReactION DevTools backend couldn't be injected.",
+      hint: "Close and reopen the panel. If it keeps happening, reinstall the extension.",
+    };
+  }
+  return {
+    title: "Couldn't launch Chrome.",
+    hint: 'Check that "executablePath" in reactION-config.json points to your browser binary.',
+  };
 }
 
 // Locates the prebuilt react-devtools-core backend bundle to inject into the page.
@@ -114,7 +145,7 @@ export default class Puppeteer {
   private browserDisconnectHandler: (() => void) | undefined;
 
   // `log` is optional and defaults to a no-op so every existing call site
-  // (spike/*.js, ViewPanel/EmbeddedViewPanel before this change) keeps working
+  // (spike/*.js, ViewPanel before this change) keeps working
   // unmodified.
   public constructor(config: ReactionConfig, log?: LogFn) {
     this.headless = config.headless_browser;
@@ -156,6 +187,23 @@ export default class Puppeteer {
         headless: this.headless,
         executablePath: this.executablePath,
         pipe: true,
+        // Our relay is loopback-only (see devtoolsBridge.ts) and `pipe: true`
+        // above means no remote-debugging TCP port -- so macOS's built-in
+        // firewall already exempts all of our traffic. These flags additionally
+        // silence Chrome's own background/outbound chatter (telemetry, safe-
+        // browsing, component/sync updates) so outbound firewalls like Little
+        // Snitch/LuLu and strict corporate endpoint agents don't prompt or block
+        // on launch. `--proxy-bypass-list` keeps the loopback relay direct even
+        // if a corporate PAC/policy tries to route localhost through a proxy.
+        args: [
+          "--no-first-run",
+          "--no-default-browser-check",
+          "--disable-background-networking",
+          "--disable-component-update",
+          "--disable-sync",
+          "--disable-domain-reliability",
+          "--proxy-bypass-list=127.0.0.1;localhost;[::1]",
+        ],
       });
     } catch (error) {
       this.log(`Chrome launch failed: ${errorDetail(error)}`);

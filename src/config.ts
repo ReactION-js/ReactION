@@ -7,11 +7,16 @@ export interface ReactionConfig {
   executablePath: string;
   localhost: string;
   headless_browser: boolean;
-  headless_embedded: boolean;
   reactTheme: "light" | "dark";
 }
 
 const CONFIG_FILENAME = "reactION-config.json";
+
+// Absolute path to the workspace's reactION-config.json -- exported so the
+// setup wizard can write to (and open) the same file loadConfig() reads.
+export function configFilePath(workspaceRoot: string): string {
+  return path.join(workspaceRoot, CONFIG_FILENAME);
+}
 
 // Best-guess Chrome location per platform; Linux has no reliable default.
 function defaultExecutablePath(platform: NodeJS.Platform): string {
@@ -32,7 +37,6 @@ export function defaultConfig(): ReactionConfig {
     executablePath: defaultExecutablePath(system),
     localhost: "localhost:3000",
     headless_browser: false,
-    headless_embedded: true,
     reactTheme: "dark",
   };
 }
@@ -64,6 +68,13 @@ export function loadConfig(workspaceRoot: string): ReactionConfig {
     );
     return defaults;
   }
+}
+
+// Persists config back to reactION-config.json (used by the setup wizard).
+// Writes the full object with the same tab indentation loadConfig() creates,
+// so a hand-edited file and a wizard-written one stay formatted identically.
+export function saveConfig(workspaceRoot: string, config: ReactionConfig): void {
+  fs.writeFileSync(configFilePath(workspaceRoot), JSON.stringify(config, null, "\t"));
 }
 
 // Normalizes a host such as "localhost:3000" into a navigable URL.

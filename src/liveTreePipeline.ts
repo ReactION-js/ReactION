@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import type DevtoolsBridge from "./devtoolsBridge";
-import { describeStartFailure, errorDetail } from "./puppeteer";
+import { describeStartFailure, describeStartFailureBrief, errorDetail } from "./puppeteer";
 import { wireBridgeToWebview } from "./bridgeWiring";
 import { wireSourceOpening } from "./sourceOpeningWiring";
 import { wireCoverageAnalysis } from "./coverageAnalysisWiring";
@@ -32,12 +32,11 @@ export interface LiveTreePipelineOptions {
   isDisposed: () => boolean;
 }
 
-// The startup sequence ViewPanel.start()/EmbeddedViewPanel.start() both ran
-// byte-for-byte identically: start the relay, wire the tree webview to it and
-// to source-opening/coverage-analysis, launch Chrome, then wire empty-state
-// diagnostics and connection resilience against the URL actually reached.
-// Nothing here needs EmbeddedViewPanel's extra htmlPanel field, so one shared
-// function serves both panels.
+// The startup sequence ViewPanel.start() runs: start the relay, wire the tree
+// webview to it and to source-opening/coverage-analysis, launch Chrome, then
+// wire empty-state diagnostics and connection resilience against the URL
+// actually reached. Kept as a standalone function (rather than a ViewPanel
+// method) so it stays unit-testable against a fake page/webview.
 export async function startLiveTreePipeline(options: LiveTreePipelineOptions): Promise<void> {
   const { bridge, page, treeWebview, workspaceRoot, outputChannel, pushDisposable, isDisposed } =
     options;
@@ -86,11 +85,20 @@ export async function startLiveTreePipeline(options: LiveTreePipelineOptions): P
     await page.start(relayPort);
   } catch (error) {
     if (!isDisposed()) {
+      // Tell the webview too, so the empty panel shows an actionable "start
+      // your dev server" message instead of an endless "Connecting…" -- the
+      // toast alone is easy to miss and doesn't explain the blank tree.
+      void treeWebview.postMessage({ type: "start-failed", ...describeStartFailureBrief(error) });
+      // "Configure…" jumps straight to the setup wizard so the most common
+      // failure (wrong URL / dev server not running) is one click from the
+      // fix, not a hunt through reactION-config.json.
       void vscode.window
-        .showErrorMessage(describeStartFailure(error), "Show Log")
+        .showErrorMessage(describeStartFailure(error), "Configure…", "Show Log")
         .then((choice) => {
           if (choice === "Show Log") {
             outputChannel.show();
+          } else if (choice === "Configure…") {
+            void vscode.commands.executeCommand("ReactION.setup");
           }
         });
     }

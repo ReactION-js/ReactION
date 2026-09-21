@@ -20,7 +20,6 @@ function baseConfig(overrides: Partial<ReactionConfig> = {}): ReactionConfig {
     executablePath: "",
     localhost: "localhost:3000",
     headless_browser: true,
-    headless_embedded: true,
     reactTheme: "dark",
     ...overrides,
   };
@@ -186,7 +185,6 @@ suite("Puppeteer backend-injection failure (previously-uncovered middle section 
         executablePath: CHROME_PATH,
         localhost: "127.0.0.1:1",
         headless_browser: true,
-        headless_embedded: true,
         reactTheme: "dark",
       },
       (message) => lines.push(message),
