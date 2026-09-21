@@ -1,0 +1,11 @@
+{
+  "name": "router-v5-app-fixture",
+  "private": true,
+  "description": "Phase 4d fixture: reproduces GitHub issue #72's exact dependency versions (react-router-dom@5 on React 16.9) in isolation from the root project's React 19. Bundled by the root project's esbuild; no build tooling of its own.",
+  "dependencies": {
+    "react": "16.9.0",
+    "react-dom": "16.9.0",
+    "react-router": "5.0.1",
+    "react-router-dom": "5.0.1"
+  }
+}

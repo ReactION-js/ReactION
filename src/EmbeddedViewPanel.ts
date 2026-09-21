@@ -2,10 +2,10 @@ import * as vscode from "vscode";
 import { generateTreeViewHtml } from "./TreeViewPanel";
 import { generateHtmlPreview } from "./htmlViewPanel";
 import Puppeteer from "./puppeteer";
-import { startTreeSync } from "./treeSync";
+import DevtoolsBridge from "./devtoolsBridge";
+import { startLiveTreePipeline } from "./liveTreePipeline";
+import { createModuleLogger } from "./outputChannelLogger";
 import { type ReactionConfig, toUrl } from "./config";
-
-const REFRESH_INTERVAL_MS = 1000;
 
 // Shows the running app (iframe preview) alongside its component tree.
 export default class EmbeddedViewPanel {
@@ -15,6 +15,8 @@ export default class EmbeddedViewPanel {
   private readonly htmlPanel: vscode.WebviewPanel;
   private readonly treePanel: vscode.WebviewPanel;
   private readonly page: Puppeteer;
+  private readonly bridge: DevtoolsBridge;
+  private readonly outputChannel: vscode.OutputChannel;
   private readonly disposables: vscode.Disposable[] = [];
   private disposed = false;
 
@@ -23,9 +25,12 @@ export default class EmbeddedViewPanel {
     treePanel: vscode.WebviewPanel,
     extensionUri: vscode.Uri,
     config: ReactionConfig,
+    workspaceRoot: string,
+    outputChannel: vscode.OutputChannel,
   ) {
     this.htmlPanel = htmlPanel;
     this.treePanel = treePanel;
+    this.outputChannel = outputChannel;
 
     this.htmlPanel.webview.html = generateHtmlPreview(toUrl(config.localhost));
     this.treePanel.webview.html = generateTreeViewHtml(
@@ -34,16 +39,27 @@ export default class EmbeddedViewPanel {
       config.reactTheme,
     );
 
-    this.page = new Puppeteer(config);
-    void this.start();
+    this.page = new Puppeteer(config, createModuleLogger(outputChannel, "puppeteer"));
+    this.bridge = new DevtoolsBridge(createModuleLogger(outputChannel, "devtools-bridge"));
+    void this.start(workspaceRoot);
 
     this.htmlPanel.onDidDispose(() => this.dispose(), null, this.disposables);
     this.treePanel.onDidDispose(() => this.dispose(), null, this.disposables);
   }
 
+  // Exposed for Task 5e's "ReactION.selectInstance" command -- the TREE
+  // panel's webview specifically (it runs client/App.tsx and the live Store),
+  // not htmlPanel (a plain iframe preview with no Store to select an element
+  // in). Mirrors ViewPanel's own `webview` getter.
+  public get webview(): vscode.Webview {
+    return this.treePanel.webview;
+  }
+
   public static createOrShow(
     extensionUri: vscode.Uri,
     config: ReactionConfig,
+    workspaceRoot: string,
+    outputChannel: vscode.OutputChannel,
   ): void {
     const htmlColumn = vscode.ViewColumn.Two;
     const treeColumn = vscode.ViewColumn.Three;
@@ -78,28 +94,21 @@ export default class EmbeddedViewPanel {
       treePanel,
       extensionUri,
       config,
+      workspaceRoot,
+      outputChannel,
     );
   }
 
-  private async start(): Promise<void> {
-    try {
-      await this.page.start();
-    } catch (error) {
-      void vscode.window.showErrorMessage(
-        `ReactION: could not launch Chrome. Check "executablePath" in reactION-config.json. ${String(error)}`,
-      );
-      return;
-    }
-
-    if (this.disposed) {
-      // Panel was closed while Chrome was launching; tear down the browser.
-      void this.page.close();
-      return;
-    }
-
-    this.disposables.push(
-      startTreeSync(this.page, this.treePanel.webview, REFRESH_INTERVAL_MS),
-    );
+  private async start(workspaceRoot: string): Promise<void> {
+    await startLiveTreePipeline({
+      bridge: this.bridge,
+      page: this.page,
+      treeWebview: this.treePanel.webview,
+      workspaceRoot,
+      outputChannel: this.outputChannel,
+      pushDisposable: (disposable) => this.disposables.push(disposable),
+      isDisposed: () => this.disposed,
+    });
   }
 
   public dispose(): void {
@@ -110,6 +119,7 @@ export default class EmbeddedViewPanel {
     EmbeddedViewPanel.currentPanel = undefined;
 
     void this.page.close();
+    this.bridge.dispose();
     this.htmlPanel.dispose();
     this.treePanel.dispose();
     while (this.disposables.length) {
