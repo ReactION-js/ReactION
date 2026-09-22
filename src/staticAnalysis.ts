@@ -489,15 +489,65 @@ export function analyzeWorkspaceCached(
   return result;
 }
 
-// unused = no external reference to the component's own exported symbol AND
-// its containing file is never a dynamic import() target -- both parts are
-// required, see buildReferenceGraph's dynamic-import comment for why a
-// lazy-loaded component would otherwise be a false positive here.
+// Next.js's own file-based routing conventions: a component whose file lives
+// here is invoked by the framework matching a URL to the file path, never by
+// an import statement anywhere in the codebase -- the exact same "no
+// reference found anywhere" signature computeUnusedComponents looks for on a
+// genuinely orphaned component, but for the opposite reason (it's the app's
+// own entry point, not dead code). Without this exemption, every page/route/
+// layout in a Next.js project would be flagged "Unused" purely because
+// nothing imports it, which is how this routing style always works.
+const NEXT_APP_ROUTER_ENTRY_FILENAMES = new Set([
+  "page",
+  "layout",
+  "template",
+  "default",
+  "loading",
+  "error",
+  "not-found",
+  "route",
+]);
+
+function isFrameworkRouteEntryPoint(workspaceRoot: string, filePath: string): boolean {
+  const segments = path.relative(workspaceRoot, filePath).split(path.sep);
+  // Pages Router: every file under a `pages/` directory is a route,
+  // including _app/_document/_error and anything under pages/api/ -- no
+  // filename convention to check, the directory alone makes it one. Not
+  // anchored to a fixed depth from the workspace root: a monorepo
+  // (Turborepo/Nx/pnpm workspaces) commonly opens the whole repo as the
+  // VS Code workspace while the actual Next.js app -- and its own pages/ --
+  // sits several directories down (e.g. apps/web/pages/...), so this checks
+  // for `pages` as a segment anywhere in the path, not just workspaceRoot's
+  // immediate (or src/-nested) child.
+  if (segments.includes("pages")) {
+    return true;
+  }
+  // App Router: only its specially-named files are actual route entry
+  // points inside an `app/` directory (also matching a route-group-nested
+  // one, e.g. apps/web/src/app/(marketing)/about/page.tsx) -- an ordinary
+  // component someone colocates there still needs a real reference like
+  // anywhere else. Same "anywhere in the path" reasoning as `pages` above.
+  if (segments.includes("app")) {
+    const fileName = path.basename(filePath, path.extname(filePath));
+    if (NEXT_APP_ROUTER_ENTRY_FILENAMES.has(fileName)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// unused = no external reference to the component's own exported symbol,
+// its containing file is never a dynamic import() target, and it isn't a
+// framework-invoked route entry point -- all three are required, see
+// buildReferenceGraph's dynamic-import comment and
+// isFrameworkRouteEntryPoint's own comment for why each would otherwise be a
+// false positive here.
 export function computeUnusedComponents(result: StaticAnalysisResult): ComponentInfo[] {
   return result.components.filter((component) => {
     const externallyReferenced = result.externallyReferencedComponentIds.has(component.id);
     const fileIsDynamicImportTarget = result.dynamicImportTargetFiles.has(component.filePath);
-    return !externallyReferenced && !fileIsDynamicImportTarget;
+    const isRouteEntryPoint = isFrameworkRouteEntryPoint(result.workspaceRoot, component.filePath);
+    return !externallyReferenced && !fileIsDynamicImportTarget && !isRouteEntryPoint;
   });
 }
 

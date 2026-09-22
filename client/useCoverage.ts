@@ -7,6 +7,7 @@ export interface CoverageController {
   isAnalyzing: boolean;
   error: string | undefined;
   runCoverageAnalysis: () => void;
+  dismiss: () => void;
 }
 
 interface StaticComponentsHostMessage {
@@ -89,5 +90,13 @@ export function useCoverage(
     vscodeApi.postMessage({ type: "runCoverageAnalysis" });
   }, [vscodeApi]);
 
-  return { result, isAnalyzing, error, runCoverageAnalysis };
+  // Lets the toolbar's results panel be closed without waiting for a
+  // reconnect (the only other place result/error get cleared, see the
+  // [store] effect above).
+  const dismiss = useCallback(() => {
+    setResult(undefined);
+    setError(undefined);
+  }, []);
+
+  return { result, isAnalyzing, error, runCoverageAnalysis, dismiss };
 }

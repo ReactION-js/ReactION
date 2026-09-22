@@ -1,5 +1,6 @@
 import styled from "styled-components";
 import type { ContextMapController } from "../useContextMap";
+import Tooltip from "./Tooltip";
 
 export interface ContextMapPanelProps {
   theme: "light" | "dark";
@@ -30,6 +31,26 @@ const ResultsPanel = styled.div<{ $theme: "light" | "dark" }>`
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 `;
 
+const Header = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+`;
+
+const CloseButton = styled.button`
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 4px 8px 0 0;
+  opacity: 0.7;
+  &:hover {
+    opacity: 1;
+  }
+`;
+
 const EntryBlock = styled.div`
   padding: 4px 12px;
   & + & {
@@ -57,19 +78,26 @@ const EmptyNotice = styled.div`
 // not a graph overlay on the React Flow canvas -- out of scope per the
 // Phase 3d task brief.
 export default function ContextMapPanel({ theme, controller }: ContextMapPanelProps) {
-  const { entries, isBuilding, build } = controller;
+  const { entries, isBuilding, build, dismiss } = controller;
 
   return (
     <Wrapper className={`reaction-theme-${theme}`}>
-      <button
-        onClick={build}
-        disabled={isBuilding}
-        title="Scan the tree for React Context providers and list which components consume each one."
+      <Tooltip
+        theme={theme}
+        label="Scan the tree for React Context providers and list which components consume each one."
+        disabled={entries !== undefined}
       >
-        {isBuilding ? "Building context map…" : "Build context map"}
-      </button>
+        <button onClick={build} disabled={isBuilding}>
+          {isBuilding ? "Building context map…" : "Build context map"}
+        </button>
+      </Tooltip>
       {entries && (
         <ResultsPanel $theme={theme}>
+          <Header>
+            <CloseButton onClick={dismiss} title="Close">
+              &times;
+            </CloseButton>
+          </Header>
           {entries.length === 0 ? (
             <EmptyNotice>No consumed contexts found.</EmptyNotice>
           ) : (

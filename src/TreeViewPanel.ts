@@ -18,11 +18,13 @@ export function generateTreeViewHtml(
   webview: vscode.Webview,
   extensionUri: vscode.Uri,
   theme: string,
+  mode: "static" | "live",
 ): string {
   const bundleUri = webview.asWebviewUri(
     vscode.Uri.joinPath(extensionUri, "out", "build", "bundle.js"),
   );
   const nonce = makeNonce();
+  const title = mode === "static" ? "ReactION Static" : "ReactION Live";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -30,11 +32,14 @@ export function generateTreeViewHtml(
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} data:; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}' ${webview.cspSource};" />
-  <title>Virtual DOM Tree</title>
+  <title>${title}</title>
 </head>
 <body>
   <div id="root"></div>
-  <script nonce="${nonce}">window.__REACTION_THEME__ = ${JSON.stringify(theme)};</script>
+  <script nonce="${nonce}">
+    window.__REACTION_THEME__ = ${JSON.stringify(theme)};
+    window.__REACTION_MODE__ = ${JSON.stringify(mode)};
+  </script>
   <script nonce="${nonce}" src="${bundleUri}"></script>
 </body>
 </html>`;
