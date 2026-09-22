@@ -132,6 +132,13 @@ describe("ElementInspector request/response correlation (select/poll/expand path
           ? rendererIDsById[id]
           : null;
       },
+      // select()'s highlightInPage() reads displayName off this for the
+      // overlay label; this suite doesn't care what it says, just that the
+      // call doesn't throw against a store that (like the real one) always
+      // has this method.
+      getElementByID() {
+        return null;
+      },
     };
     const states = [];
     const inspector = new ElementInspector(bridge, store, (state) => states.push(state));

@@ -1,5 +1,6 @@
 import styled from "styled-components";
 import type { CoverageController } from "../useCoverage";
+import Tooltip from "./Tooltip";
 
 export interface CoveragePanelProps {
   theme: "light" | "dark";
@@ -31,9 +32,30 @@ const ResultsPanel = styled.div<{ $theme: "light" | "dark" }>`
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 `;
 
+const Header = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+`;
+
 const SummaryLine = styled.div`
   padding: 4px 12px;
   font-weight: 600;
+`;
+
+const CloseButton = styled.button`
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 4px 8px 0 0;
+  opacity: 0.7;
+  &:hover {
+    opacity: 1;
+  }
 `;
 
 // The load-bearing "coverage, not dead code" disclaimer -- see
@@ -99,36 +121,45 @@ const ErrorNotice = styled.div`
 // graph overlay on the React Flow canvas, mirroring ContextMapPanel's own
 // "plain list, not a canvas overlay" scope decision.
 export default function CoveragePanel({ theme, controller, onOpenSource }: CoveragePanelProps) {
-  const { result, isAnalyzing, error, runCoverageAnalysis } = controller;
+  const { result, isAnalyzing, error, runCoverageAnalysis, dismiss } = controller;
   const showPanel = result !== undefined || error !== undefined;
 
   return (
     <Wrapper className={`reaction-theme-${theme}`}>
-      <button
-        onClick={runCoverageAnalysis}
-        disabled={isAnalyzing}
-        title={
+      <Tooltip
+        theme={theme}
+        label={
           isAnalyzing
             ? "Running the static analysis on the extension host blocks its event loop, so live tree updates are paused until this finishes."
             : "Checks which statically-known components were not observed rendering during this live session. This is a coverage signal, not a dead-code report."
         }
+        disabled={showPanel}
       >
-        {/* The parse behind this blocks the extension host's event loop, so
-            the SAME connection carrying live tree updates stalls for as long
-            as this runs -- see coverageAnalysisWiring.ts's COST NOTE. This
-            label is only a UX mitigation (tell the user why the tree just
-            froze), not a fix for the underlying block. */}
-        {isAnalyzing ? "Checking coverage… (tree paused)" : "Check Coverage"}
-      </button>
+        <button onClick={runCoverageAnalysis} disabled={isAnalyzing}>
+          {/* The parse behind this blocks the extension host's event loop, so
+              the SAME connection carrying live tree updates stalls for as long
+              as this runs -- see coverageAnalysisWiring.ts's COST NOTE. This
+              label is only a UX mitigation (tell the user why the tree just
+              froze), not a fix for the underlying block. */}
+          {isAnalyzing ? "Checking coverage… (tree paused)" : "Check Coverage"}
+        </button>
+      </Tooltip>
       {showPanel && (
         <ResultsPanel $theme={theme}>
-          {error && <ErrorNotice>{error}</ErrorNotice>}
-          {result && (
-            <>
+          <Header>
+            {error && <ErrorNotice>{error}</ErrorNotice>}
+            {result && (
               <SummaryLine>
                 {Math.round(result.coverageFraction * 100)}% of {result.totalComponents} statically-known
                 component{result.totalComponents === 1 ? "" : "s"} observed rendering this session
               </SummaryLine>
+            )}
+            <CloseButton onClick={dismiss} title="Close">
+              &times;
+            </CloseButton>
+          </Header>
+          {result && (
+            <>
               <CaveatNote>
                 "Not rendered" means not observed live during THIS session — not dead code. A modal
                 that wasn't opened, an error state that wasn't triggered, or a route that wasn't

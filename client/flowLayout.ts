@@ -40,11 +40,16 @@ interface LayoutOptions {
   renderCounts?: ReadonlyMap<number, number>;
 }
 
-// Flattens the ComponentNode tree into React Flow nodes/edges and lays them out
-// with dagre. Descendants of a collapsed node are omitted so a large subtree can
-// be shrunk without losing the rest of the graph.
+// Flattens a forest of ComponentNode trees into React Flow nodes/edges and lays
+// them out with dagre. Descendants of a collapsed node are omitted so a large
+// subtree can be shrunk without losing the rest of the graph. `roots` is a
+// plain array rather than one wrapping node: each entry starts its own walk
+// with no parentId, so dagre lays out multiple roots as genuinely disconnected
+// graph components -- no edge implies a connection between them that isn't
+// there (the live tree is always a one-element array; the static composition
+// tree can have more than one, see staticComponentTree.ts).
 export function layoutTree(
-  root: ComponentNode,
+  roots: readonly ComponentNode[],
   options: LayoutOptions,
 ): { nodes: FlowNode[]; edges: Edge[] } {
   const { collapsedIds, searchTerm, direction, selectedId, onToggleCollapse, renderCounts } =
@@ -118,7 +123,7 @@ export function layoutTree(
     }
   };
 
-  visit(root, undefined);
+  roots.forEach((root) => visit(root, undefined));
   dagre.layout(graph);
 
   for (const node of nodes) {
