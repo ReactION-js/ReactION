@@ -187,6 +187,12 @@ export default class Puppeteer {
         headless: this.headless,
         executablePath: this.executablePath,
         pipe: true,
+        // Without this, Puppeteer forces a fixed 800x600 viewport regardless
+        // of the actual window size, so a visible (non-headless) Chrome
+        // window renders the page in a small top-left rectangle and leaves
+        // the rest blank. `null` makes the viewport track the window's real
+        // inner size instead.
+        defaultViewport: null,
         // Our relay is loopback-only (see devtoolsBridge.ts) and `pipe: true`
         // above means no remote-debugging TCP port -- so macOS's built-in
         // firewall already exempts all of our traffic. These flags additionally
@@ -203,6 +209,7 @@ export default class Puppeteer {
           "--disable-sync",
           "--disable-domain-reliability",
           "--proxy-bypass-list=127.0.0.1;localhost;[::1]",
+          ...(this.headless ? [] : ["--start-maximized"]),
         ],
       });
     } catch (error) {

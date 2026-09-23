@@ -43,6 +43,37 @@ export function computeRenderCounts(commitData: CommitDataFrontend[]): Map<numbe
   return counts;
 }
 
+export interface FiberRenderStats {
+  renderCount: number;
+  wastedCount: number;
+}
+
+// Superset of computeRenderCounts: also tallies, per fiber, how many of its
+// commits were a wasted render (isWastedRender above) rather than a real
+// mount/update. Kept as its own function rather than folded into
+// computeRenderCounts since most existing callers (the profiler heatmap)
+// only need the raw count, not an isWastedRender check on every change
+// description -- see useInitialLoadReport.ts's report, the one caller that
+// needs to tell "re-rendered because something legitimately changed" apart
+// from "re-rendered for nothing".
+export function computeRenderStats(commitData: CommitDataFrontend[]): Map<number, FiberRenderStats> {
+  const stats = new Map<number, FiberRenderStats>();
+  for (const commit of commitData) {
+    if (commit.changeDescriptions === null) {
+      continue;
+    }
+    for (const [fiberId, change] of commit.changeDescriptions) {
+      const entry = stats.get(fiberId) ?? { renderCount: 0, wastedCount: 0 };
+      entry.renderCount += 1;
+      if (isWastedRender(change)) {
+        entry.wastedCount += 1;
+      }
+      stats.set(fiberId, entry);
+    }
+  }
+  return stats;
+}
+
 // Short, human-readable summary of why a fiber re-rendered, mirroring the
 // stock UI's plain-language style without needing to match its exact copy.
 export function describeChange(change: ChangeDescription): string {

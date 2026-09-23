@@ -1,7 +1,9 @@
-# Launch the live component graph
+# Launch ReactION Live Rendering
 
-With your app running and the URL configured, click **Launch ReactION** on this
-step (or use the **Launch** view in the ReactION activity-bar icon on the left).
+With your app running and the URL configured, click **Launch ReactION Live
+Rendering** on this step (or use the **Launch** view in the ReactION
+activity-bar icon on the left). This opens in its own tab, separate from
+**ReactION Static**.
 
 ### What happens
 

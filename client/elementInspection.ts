@@ -146,6 +146,7 @@ export class ElementInspector {
     this.pollHandle = setInterval(() => {
       this.latestTopLevelRequestID = this.sendInspect(id, rendererID, null, false);
     }, POLL_INTERVAL_MS);
+    this.highlightInPage(id, rendererID);
   }
 
   public deselect(): void {
@@ -154,6 +155,32 @@ export class ElementInspector {
     this.latestTopLevelRequestID = null;
     this.latestExpandRequestIDs.clear();
     this.setState(INITIAL_INSPECTOR_STATE);
+    this.bridge.send("clearHostInstanceHighlight");
+  }
+
+  // Draws react-devtools-core's own highlight overlay around the selected
+  // element's real DOM node(s) directly in the live page, and scrolls it
+  // into view -- the exact bridge protocol the stock React DevTools UI uses
+  // for this (see react-devtools-core/dist/backend.js's setupHighlighter:
+  // 'highlightHostInstance' / 'clearHostInstanceHighlight', both wired up
+  // unconditionally whenever the backend attaches, so nothing extra needs
+  // enabling on our end). This is the answer to "where is this on the page"
+  // for a node with no source location at all (an Anonymous framework
+  // wrapper, say) -- seeing its actual bounding box is still possible even
+  // when opening its file is not.
+  //
+  // hideAfterTimeout: false (unlike the stock UI's default 2s auto-fade)
+  // since the point here is "show me where this is" for as long as it stays
+  // selected -- select()/deselect() replace or clear it, not a timer.
+  private highlightInPage(id: number, rendererID: number): void {
+    this.bridge.send("highlightHostInstance", {
+      id,
+      rendererID,
+      displayName: this.store.getElementByID(id)?.displayName ?? null,
+      hideAfterTimeout: false,
+      openBuiltinElementsPanel: false,
+      scrollIntoView: true,
+    });
   }
 
   // path is relative to the category root, e.g. ['user', 'address'] to expand
@@ -190,6 +217,7 @@ export class ElementInspector {
 
   public dispose(): void {
     this.stopPolling();
+    this.bridge.send("clearHostInstanceHighlight");
     this.bridge.removeListener("inspectedElement", this.onInspectedElement);
     // Unblock any inspectOnce() callers still awaiting a response (e.g. a
     // useContextMap build in flight when the backend disconnects) instead of

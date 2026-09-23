@@ -8,6 +8,11 @@ const TYPE_COLORS: Record<string, string> = {
   Class: "#f0883e",
   Memo: "#a5d6ff",
   ForwardRef: "#d2a8ff",
+  // Also reused by the static tree (src/staticComponentTree.ts) for a
+  // component that renders `<X.Provider>` for some Context (see
+  // staticContextUsage.ts) -- same concept, just detected statically
+  // instead of from a live Context element, so the two trees read
+  // consistently.
   Context: "#7ee787",
   Host: "#8b949e",
   Root: "#e3e3e3",
@@ -15,6 +20,22 @@ const TYPE_COLORS: Record<string, string> = {
   SuspenseList: "#ff7b72",
   Profiler: "#d29922",
   Other: "#8b949e",
+  // Synthetic "N × Name" placeholder standing in for a run of identical-
+  // displayName siblings -- see treeGrouping.ts's groupSiblingsByName.
+  Group: "#58a6ff",
+  // Static tree only (src/staticComponentTree.ts): never referenced from
+  // anywhere else in the workspace, per computeUnusedComponents -- a real
+  // "is this dead code" signal, deliberately the one loud/red color in this
+  // otherwise muted palette so it stands out while scanning the graph.
+  Unused: "#f85149",
+  // Static tree only: a fan-in/fan-out outlier (dependencyMetrics.ts) --
+  // unusually depended-on or unusually dependent, i.e. where a change is
+  // riskiest to make or hardest to isolate.
+  Hub: "#d29922",
+  // Static tree only: has at least one declared prop its own body never
+  // reads (staticAnalysis.ts's computeDeadProps) -- a milder, "worth a
+  // look" signal rather than Unused's "nothing points here at all".
+  "Dead Props": "#ff8a4c",
 };
 
 // Render-count heatmap tint color. Kept separate from TYPE_COLORS (the

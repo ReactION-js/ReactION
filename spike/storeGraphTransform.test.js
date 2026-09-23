@@ -79,7 +79,10 @@ describe("Store -> graph transform (recorded-operations fixture replay)", () => 
     conn.dispose();
 
     assert.ok(tree, "replay produced no ComponentNode tree at all");
-    const { nodes, edges } = layoutTree(tree, {
+    // layoutTree now takes a forest (see client/flowLayout.ts's own comment on
+    // why -- the static composition tree can have more than one disconnected
+    // root); the live tree replayed here is always exactly one.
+    const { nodes, edges } = layoutTree([tree], {
       collapsedIds: new Set(),
       searchTerm: "",
       direction: "TB",

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import TreeChart from "./components/TreeView";
+import Spinner from "./components/Spinner";
 import { StoreConnection } from "./storeBridge";
 import {
   ElementInspector,
@@ -8,11 +9,19 @@ import {
   type InspectorState,
 } from "./elementInspection";
 import { findMountedElementIdsByDisplayName } from "./selectByComponent";
+import { useStaticComponentTree } from "./useStaticComponentTree";
 import type { ComponentNode } from "./types";
 import type { DevtoolsStore, InspectedElementResponse } from "react-devtools-inline/frontend";
 
 const theme: "light" | "dark" =
   window.__REACTION_THEME__ === "light" ? "light" : "dark";
+
+// Set once by the host at panel creation (src/TreeViewPanel.ts) and never
+// changed for the lifetime of this webview -- "static" and "live" are now
+// separate tabs/panels, not a runtime toggle within one panel. Read as a
+// plain constant (not state) since there is nothing that ever changes it
+// after this module first evaluates.
+const mode: "static" | "live" = window.__REACTION_MODE__ === "live" ? "live" : "static";
 
 // 7s: long enough to absorb a slow dev-server compile/HMR cycle right after
 // connect, short enough that a genuinely React-less page (closes #73) doesn't
@@ -54,6 +63,22 @@ const vscodeApi = acquireVsCodeApi();
 
 export default function App() {
   const [tree, setTree] = useState<ComponentNode | undefined>(undefined);
+  // Only actually populated in "static" mode -- see useStaticComponentTree's
+  // own comment. Calling it unconditionally keeps this a plain hook call (no
+  // rules-of-hooks issue); in "live" mode the host never wires
+  // staticComponentTreeWiring at all, so no "staticComponentTree" message
+  // ever arrives and this just stays undefined.
+  const staticTree = useStaticComponentTree();
+  const displayTree = mode === "static" ? staticTree : tree;
+  // Distinguishes "haven't asked to connect yet" from "asked, still
+  // connecting" -- both look like `!connected` below, but should render very
+  // differently (a "Connect to live app" call to action vs. the existing
+  // "Connecting…" status). Only meaningful in "live" mode.
+  const [liveConnectionRequested, setLiveConnectionRequested] = useState(false);
+  const connectToLiveApp = useCallback(() => {
+    setLiveConnectionRequested(true);
+    vscodeApi.postMessage({ type: "connectToLiveApp" });
+  }, []);
   const [connected, setConnected] = useState(false);
   const [inspectorState, setInspectorState] = useState<InspectorState>(
     INITIAL_INSPECTOR_STATE,
@@ -210,11 +235,27 @@ export default function App() {
 
   const notice = selectionNotice ? <div style={NOTICE_STYLE}>{selectionNotice}</div> : null;
 
-  if (!tree) {
+  if (mode === "live" && !tree) {
     return (
       <>
         {notice}
-        {startError && !connected ? (
+        {!liveConnectionRequested ? (
+          <div
+            style={{
+              fontFamily: "system-ui, sans-serif",
+              padding: "1rem",
+              maxWidth: 520,
+              lineHeight: 1.5,
+            }}
+          >
+            <p style={{ margin: "0 0 12px" }}>
+              Connect to your running React app to see real render counts, a wasted-render
+              heatmap, and click-to-highlight in the browser. This launches a real Chrome window
+              pointed at your dev server.
+            </p>
+            <button onClick={connectToLiveApp}>Connect to live app</button>
+          </div>
+        ) : startError && !connected ? (
           <div
             style={{
               fontFamily: "system-ui, sans-serif",
@@ -227,24 +268,64 @@ export default function App() {
             {startError.hint && <p style={{ margin: 0, opacity: 0.85 }}>{startError.hint}</p>}
           </div>
         ) : (
-          <p style={{ fontFamily: "system-ui, sans-serif", padding: "1rem" }}>
-            {connected
-              ? noReactDetected
-                ? NO_REACT_DETECTED_MESSAGE
-                : "Connected. Waiting for React components…"
-              : "Connecting to the React app…"}
-          </p>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              fontFamily: "system-ui, sans-serif",
+              padding: "1rem",
+            }}
+          >
+            {!noReactDetected && <Spinner theme={theme} />}
+            <span>
+              {connected
+                ? noReactDetected
+                  ? NO_REACT_DETECTED_MESSAGE
+                  : "Connected. Waiting for React components…"
+                : "Connecting to the React app…"}
+            </span>
+          </div>
         )}
       </>
     );
+  }
+
+  if (mode === "static" && !staticTree) {
+    return (
+      <>
+        {notice}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            fontFamily: "system-ui, sans-serif",
+            padding: "1rem",
+          }}
+        >
+          <Spinner theme={theme} />
+          <span>Analyzing your project's components…</span>
+        </div>
+      </>
+    );
+  }
+
+  if (!displayTree) {
+    // Unreachable in practice -- the two branches above already cover "live
+    // mode with no live tree yet" and "static mode with no static tree yet",
+    // so displayTree is always defined here. Keeps TypeScript's narrowing
+    // honest instead of a non-null assertion.
+    return null;
   }
 
   return (
     <>
       {notice}
       <TreeChart
-        data={tree}
+        data={displayTree}
         theme={theme}
+        mode={mode}
         store={store}
         vscodeApi={vscodeApi}
         inspector={{

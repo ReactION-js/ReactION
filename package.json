@@ -32,23 +32,7 @@
     "viewsWelcome": [
       {
         "view": "startExtension",
-        "when": "!reaction.appStarted",
-        "contents": "Visualize your React app's live component tree — right inside VS Code.\n\nStep 1 of 3 — Start your React app in development mode (for example, run npm run dev or npm start in your project's terminal).\n\nOnce your dev server is running, confirm to continue:\n[$(check) My dev server is running](command:ReactION.confirmDevServerRunning)"
-      },
-      {
-        "view": "startExtension",
-        "when": "reaction.appStarted && !reaction.configured",
-        "contents": "Step 2 of 3 — Point ReactION at your running app.\n\nSet the URL to match your dev server. ReactION auto-detects the common ports for you.\n[$(gear) Configure Dev Server](command:ReactION.setup)"
-      },
-      {
-        "view": "startExtension",
-        "when": "reaction.configured && !reaction.launched",
-        "contents": "$(pass-filled) Dev server configured.\n\nStep 3 of 3 — Launch the live component graph:\n[$(play) Launch ReactION](command:ReactION.openTree)\n\nNeed a different URL?\n[$(gear) Reconfigure](command:ReactION.setup)"
-      },
-      {
-        "view": "startExtension",
-        "when": "reaction.launched",
-        "contents": "$(check-all) You're all set — ReactION is configured and launched.\n\n[$(play) Launch ReactION](command:ReactION.openTree)\n\nNeed help or want to change your setup?\n[$(gear) Reconfigure Dev Server](command:ReactION.setup)\n[$(book) Help & Troubleshooting](command:ReactION.showWalkthrough)"
+        "contents": "Visualize your React app's component tree — right inside VS Code.\n\n$(star-full) Recommended — instantly see your project's component structure from static analysis. No dev server, no browser, no setup:\n[$(play) Launch ReactION Static](command:ReactION.openTree)\n\nWant real render counts, a wasted-render heatmap, and live DOM highlighting? Connect to your running app (short setup):\n[$(rocket) Launch ReactION Live Rendering](command:ReactION.openTreeLive)\n\nNeed help?\n[$(book) Help & Troubleshooting](command:ReactION.showWalkthrough)"
       }
     ],
     "viewsContainers": {
@@ -63,7 +47,11 @@
     "commands": [
       {
         "command": "ReactION.openTree",
-        "title": "ReactION: Launch"
+        "title": "ReactION: Launch Static"
+      },
+      {
+        "command": "ReactION.openTreeLive",
+        "title": "ReactION: Launch Live Rendering"
       },
       {
         "command": "ReactION.analyzeSource",
@@ -109,16 +97,27 @@
         "description": "Visualize and profile your React app's live component tree inside VS Code.",
         "steps": [
           {
+            "id": "launchStatic",
+            "title": "Launch ReactION Static (recommended)",
+            "description": "Instantly see your project's component structure from static analysis — no dev server, no browser, no setup required. Click any node to jump straight to its source.\n[Launch ReactION Static](command:ReactION.openTree)",
+            "media": {
+              "markdown": "resources/walkthrough/launch-static.md"
+            },
+            "completionEvents": [
+              "onCommand:ReactION.openTree"
+            ]
+          },
+          {
             "id": "startApp",
-            "title": "Start your React app in dev mode",
-            "description": "ReactION reads a running app through a real Chrome instance, so start your app in development mode first (for example `npm run dev` or `npm start`), then note the URL it serves on.\n[Open a Terminal](command:workbench.action.terminal.new)",
+            "title": "Live rendering: start your React app in dev mode",
+            "description": "Want real render counts, a wasted-render heatmap, and live DOM highlighting too? ReactION reads a running app through a real Chrome instance, so start your app in development mode first (for example `npm run dev` or `npm start`), then note the URL it serves on.\n[Open a Terminal](command:workbench.action.terminal.new)",
             "media": {
               "markdown": "resources/walkthrough/start-app.md"
             }
           },
           {
             "id": "configure",
-            "title": "Point ReactION at your dev server",
+            "title": "Live rendering: point ReactION at your dev server",
             "description": "Tell ReactION which URL your app runs on. The setup wizard auto-detects common ports and saves your choice to reactION-config.json.\n[Configure Dev Server](command:ReactION.setup)",
             "media": {
               "markdown": "resources/walkthrough/configure.md"
@@ -128,14 +127,14 @@
             ]
           },
           {
-            "id": "launch",
-            "title": "Launch the live component graph",
-            "description": "Open the interactive graph of your running app, then click any node to inspect its live props, state, and hooks.\n[Launch ReactION](command:ReactION.openTree)",
+            "id": "launchLive",
+            "title": "Launch ReactION Live Rendering",
+            "description": "Open the interactive graph of your running app, then click any node to inspect its live props, state, and hooks.\n[Launch ReactION Live Rendering](command:ReactION.openTreeLive)",
             "media": {
               "markdown": "resources/walkthrough/launch.md"
             },
             "completionEvents": [
-              "onCommand:ReactION.openTree"
+              "onCommand:ReactION.openTreeLive"
             ]
           },
           {
@@ -166,7 +165,7 @@
     "spike:phase1": "node spike/run-phase1.js",
     "pretest": "npm run compile && npm run lint",
     "test": "vscode-test",
-    "test:e2e": "mocha out/test/puppeteer.test.js out/test/TreeView.test.js out/test/openSource.test.js out/test/staticAnalysis.test.js out/test/staticAnalysisHtml.test.js out/test/singleFileComponents.test.js out/test/selectInstance.test.js out/test/activationEvents.test.js spike/storeGraphTransform.test.js spike/coverage.test.js spike/selectByComponent.test.js spike/kitchenSink.test.js spike/contextMap.test.js spike/elementInspection.test.js",
+    "test:e2e": "mocha out/test/puppeteer.test.js out/test/TreeView.test.js out/test/openSource.test.js out/test/staticAnalysis.test.js out/test/staticAnalysisHtml.test.js out/test/staticComponentTree.test.js out/test/singleFileComponents.test.js out/test/selectInstance.test.js out/test/activationEvents.test.js spike/storeGraphTransform.test.js spike/coverage.test.js spike/selectByComponent.test.js spike/kitchenSink.test.js spike/contextMap.test.js spike/elementInspection.test.js",
     "package": "vsce package"
   },
   "devDependencies": {

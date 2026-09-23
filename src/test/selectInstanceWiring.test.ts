@@ -7,17 +7,23 @@ import ViewPanel from "../ViewPanel";
 // second copy here (vscode.commands.registerCommand throws if a command id
 // is already registered, and the real extension has already claimed this
 // one by the time any test file in this run activates it).
-// ViewPanel.currentPanel is a plain public static, so a fake panel object is
-// stubbed directly onto it -- mirrors how
+// ViewPanel.currentLivePanel is a plain public static, so a fake panel
+// object is stubbed directly onto it -- mirrors how
 // src/test/sourceOpeningWiring.test.ts fakes a webview object rather than
-// standing up a real WebviewPanel.
+// standing up a real WebviewPanel. Only the live panel is relevant here:
+// selectInstance jumps source -> a LIVE element, which only the live tab
+// (Chrome/DevTools connected) can ever have.
 suite("ReactION.selectInstance command", () => {
   test("shows an informational message when no panel is open", async () => {
     const extension = vscode.extensions.getExtension("ReactION-JS.ReactION");
     assert.ok(extension, "ReactION extension should be present");
     await extension.activate();
 
-    assert.strictEqual(ViewPanel.currentPanel, undefined, "no ViewPanel should be open in a fresh test session");
+    assert.strictEqual(
+      ViewPanel.currentLivePanel,
+      undefined,
+      "no live ViewPanel should be open in a fresh test session",
+    );
 
     const originalShowInformationMessage = vscode.window.showInformationMessage;
     let shownMessage: string | undefined;
@@ -50,13 +56,13 @@ suite("ReactION.selectInstance command", () => {
       },
     } as unknown as ViewPanel;
 
-    const originalCurrentPanel = ViewPanel.currentPanel;
-    ViewPanel.currentPanel = fakePanel;
+    const originalCurrentPanel = ViewPanel.currentLivePanel;
+    ViewPanel.currentLivePanel = fakePanel;
     try {
       await vscode.commands.executeCommand("ReactION.selectInstance", { displayName: "Widget" });
       assert.deepStrictEqual(posted, [{ type: "selectByComponent", displayName: "Widget" }]);
     } finally {
-      ViewPanel.currentPanel = originalCurrentPanel;
+      ViewPanel.currentLivePanel = originalCurrentPanel;
     }
   });
 });
