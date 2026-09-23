@@ -515,3 +515,67 @@ describe("analyzeWorkspace without a tsconfig.json, over plain .jsx (no TypeScri
     findComponent(result, "Widget");
   });
 });
+
+// Regression guard for computeUnusedComponents' route-entry-point exemption
+// (isFrameworkRouteEntryPoint): a Next.js page/route is never imported by
+// anything in the codebase -- the framework reaches it by matching a URL to
+// its file path -- so without this exemption every page in a Next.js project
+// would be flagged "Unused" for the same reason a genuinely dead component
+// is. Nested under apps/web/ rather than directly at the workspace root:
+// a monorepo (Turborepo/Nx/pnpm workspaces) commonly opens the whole repo as
+// the VS Code workspace while the actual Next.js app lives several
+// directories down, which an earlier, root-anchored version of this check
+// missed entirely.
+describe("computeUnusedComponents' framework-route-entry-point exemption", () => {
+  let workspaceRoot: string;
+  let result: StaticAnalysisResult;
+  let unusedNames: string[];
+
+  before(() => {
+    workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "reaction-static-analysis-routes-"));
+    const write = (relativePath: string, componentName: string) => {
+      const filePath = path.join(workspaceRoot, ...relativePath.split("/"));
+      fs.mkdirSync(path.dirname(filePath), { recursive: true });
+      fs.writeFileSync(filePath, `export default function ${componentName}() { return <div />; }\n`);
+    };
+
+    // Pages Router, nested two directories below the workspace root.
+    write("apps/web/pages/index.tsx", "HomePage");
+    // App Router, also nested, with its own src/ layer -- a reserved
+    // filename (`page`) is what should make this one exempt.
+    write("apps/web/src/app/page.tsx", "AppRouterHome");
+    // Same `app/` directory, but NOT a reserved filename -- only the
+    // directory-plus-filename combination should be exempt, not everything
+    // under `app/` regardless of name.
+    write("apps/web/src/app/Widget.tsx", "Widget");
+    // Not under pages/ or app/ at all, and never imported -- must still be
+    // flagged, or this exemption would be swallowing components it has no
+    // business touching.
+    write("apps/web/components/Orphan.tsx", "Orphan");
+
+    result = analyzeWorkspace(workspaceRoot);
+    unusedNames = computeUnusedComponents(result)
+      .map((c) => c.displayName)
+      .sort();
+  });
+
+  after(() => {
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  });
+
+  it("does NOT flag a Pages Router page nested under a monorepo app directory", () => {
+    assert.ok(!unusedNames.includes("HomePage"));
+  });
+
+  it("does NOT flag an App Router entry file (reserved filename) nested under a monorepo app directory", () => {
+    assert.ok(!unusedNames.includes("AppRouterHome"));
+  });
+
+  it("still flags an ordinary, never-imported component under app/ that isn't a reserved App Router filename", () => {
+    assert.ok(unusedNames.includes("Widget"));
+  });
+
+  it("still flags an ordinary, never-imported component outside pages/ and app/ entirely", () => {
+    assert.ok(unusedNames.includes("Orphan"));
+  });
+});

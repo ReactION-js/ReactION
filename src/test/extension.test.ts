@@ -13,6 +13,10 @@ suite("ReactION extension", () => {
       "ReactION.openTree should be registered",
     );
     assert.ok(
+      commands.includes("ReactION.openTreeLive"),
+      "ReactION.openTreeLive should be registered",
+    );
+    assert.ok(
       commands.includes("ReactION.selectInstance"),
       "ReactION.selectInstance should be registered",
     );

@@ -15,6 +15,7 @@ export interface ContextMapController {
   entries: ContextMapEntry[] | undefined;
   isBuilding: boolean;
   build: () => void;
+  dismiss: () => void;
 }
 
 // Owns the "Build context map" toolbar action: an explicit, user-triggered
@@ -114,5 +115,12 @@ export function useContextMap(
     })();
   }, [store, inspectOnce]);
 
-  return { entries, isBuilding, build };
+  // Lets the toolbar's results panel be closed without waiting for a
+  // reconnect (the only other place entries gets cleared, see the [store]
+  // effect above).
+  const dismiss = useCallback(() => {
+    setEntries(undefined);
+  }, []);
+
+  return { entries, isBuilding, build, dismiss };
 }

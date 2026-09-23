@@ -14,10 +14,11 @@ async function waitUntil(predicate: () => boolean, timeoutMs = 5000): Promise<vo
 }
 
 // A real vscode.Webview supports any number of independent
-// onDidReceiveMessage subscribers (bridgeWiring/sourceOpeningWiring/
-// coverageAnalysisWiring/diagnosticsWiring each register their own on the
-// SAME tree webview in production) -- a fake that only remembers the last
-// listener would silently drop the earlier ones.
+// onDidReceiveMessage subscribers (ViewPanel's static-phase wiring --
+// sourceOpeningWiring/coverageAnalysisWiring/staticComponentTreeWiring --
+// and this pipeline's own bridgeWiring/diagnosticsWiring each register
+// their own on the SAME tree webview in production) -- a fake that only
+// remembers the last listener would silently drop the earlier ones.
 function fakeTreeWebview(): {
   webview: vscode.Webview;
   trigger: (message: unknown) => void;
@@ -103,18 +104,13 @@ suite("startLiveTreePipeline", () => {
         bridge,
         page,
         treeWebview: webview,
-        workspaceRoot: "/tmp/reaction-pipeline-test",
         outputChannel: channel,
         pushDisposable: (disposable) => pushed.push(disposable),
         isDisposed: () => false,
       });
 
       assert.deepStrictEqual(page.startCalls, [bridge.relayPort]);
-      assert.strictEqual(
-        pushed.length,
-        5,
-        "bridge-to-webview, source-opening, coverage, diagnostics, resilience",
-      );
+      assert.strictEqual(pushed.length, 3, "bridge-to-webview, diagnostics, resilience");
     } finally {
       pushed.forEach((disposable) => disposable.dispose());
       bridge.dispose();
@@ -150,7 +146,6 @@ suite("startLiveTreePipeline", () => {
       bridge,
       page,
       treeWebview: webview,
-      workspaceRoot: "/tmp/reaction-pipeline-test",
       outputChannel: channel,
       pushDisposable: (disposable) => pushed.push(disposable),
       isDisposed: () => disposed,
@@ -193,7 +188,6 @@ suite("startLiveTreePipeline", () => {
         bridge,
         page,
         treeWebview: webview,
-        workspaceRoot: "/tmp/reaction-pipeline-test",
         outputChannel: channel,
         pushDisposable: (disposable) => pushed.push(disposable),
         isDisposed: () => disposed,
@@ -202,8 +196,8 @@ suite("startLiveTreePipeline", () => {
       await waitUntil(() => rejectPageStart !== undefined);
       assert.strictEqual(
         pushed.length,
-        3,
-        "the pre-launch wiring (bridge-to-webview, source-opening, coverage) should already be done",
+        1,
+        "the pre-launch wiring (bridge-to-webview) should already be done",
       );
 
       disposed = true;
@@ -244,7 +238,6 @@ suite("startLiveTreePipeline", () => {
         bridge,
         page,
         treeWebview: webview,
-        workspaceRoot: "/tmp/reaction-pipeline-test",
         outputChannel: channel,
         pushDisposable: (disposable) => pushed.push(disposable),
         isDisposed: () => false,
@@ -302,7 +295,6 @@ suite("startLiveTreePipeline", () => {
           bridge,
           page,
           treeWebview: webview,
-          workspaceRoot: "/tmp/reaction-pipeline-test",
           outputChannel: channel,
           pushDisposable: (disposable) => pushed.push(disposable),
           isDisposed: () => false,

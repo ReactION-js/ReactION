@@ -2,8 +2,6 @@ import * as vscode from "vscode";
 import type DevtoolsBridge from "./devtoolsBridge";
 import { describeStartFailure, describeStartFailureBrief, errorDetail } from "./puppeteer";
 import { wireBridgeToWebview } from "./bridgeWiring";
-import { wireSourceOpening } from "./sourceOpeningWiring";
-import { wireCoverageAnalysis } from "./coverageAnalysisWiring";
 import { wireEmptyStateDiagnostics } from "./diagnosticsWiring";
 import { wireConnectionResilience, type ResilientPage } from "./connectionResilience";
 import { createModuleLogger } from "./outputChannelLogger";
@@ -22,7 +20,6 @@ export interface LiveTreePipelineOptions {
   bridge: DevtoolsBridge;
   page: LiveTreePipelinePage;
   treeWebview: vscode.Webview;
-  workspaceRoot: string;
   outputChannel: vscode.OutputChannel;
   pushDisposable: (disposable: vscode.Disposable) => void;
   // By the time this ever reports true, the caller's own dispose() has
@@ -32,14 +29,28 @@ export interface LiveTreePipelineOptions {
   isDisposed: () => boolean;
 }
 
-// The startup sequence ViewPanel.start() runs: start the relay, wire the tree
-// webview to it and to source-opening/coverage-analysis, launch Chrome, then
-// wire empty-state diagnostics and connection resilience against the URL
-// actually reached. Kept as a standalone function (rather than a ViewPanel
-// method) so it stays unit-testable against a fake page/webview.
-export async function startLiveTreePipeline(options: LiveTreePipelineOptions): Promise<void> {
-  const { bridge, page, treeWebview, workspaceRoot, outputChannel, pushDisposable, isDisposed } =
-    options;
+// The opt-in "connect to live app" sequence ViewPanel.connectToLiveApp() runs
+// once the user asks for it (never automatically -- see ViewPanel.ts's own
+// comment on why Chrome shouldn't launch on every panel open): start the
+// relay, wire the tree webview to it, launch Chrome, then wire empty-state
+// diagnostics and connection resilience against the URL actually reached.
+// Source-opening/coverage-analysis/the static composition tree are wired
+// separately, by ViewPanel's constructor, since none of them need this --
+// they work from panel open, with no live connection at all. Kept as a
+// standalone function (rather than a ViewPanel method) so it stays unit-
+// testable against a fake page/webview.
+//
+// Resolves `true` once every stage actually completes (Chrome reached the
+// dev server, resilience/diagnostics wired), `false` if it bailed out early
+// for any reason -- a relay bind failure, page.start() failing (dev server
+// unreachable, bad Chrome path), or the panel being disposed mid-flow. Every
+// early-return branch already shows the user its own actionable toast/
+// webview message before returning `false`; the boolean itself exists so
+// ViewPanel.connectToLiveApp can tell "still trying to connect" apart from
+// "gave up" and let the user retry in the latter case, rather than this
+// pipeline's own failure toast being the only sign anything went wrong.
+export async function startLiveTreePipeline(options: LiveTreePipelineOptions): Promise<boolean> {
+  const { bridge, page, treeWebview, outputChannel, pushDisposable, isDisposed } = options;
 
   let relayPort: number;
   try {
@@ -67,19 +78,17 @@ export async function startLiveTreePipeline(options: LiveTreePipelineOptions): P
         });
     }
     bridge.dispose();
-    return;
+    return false;
   }
 
   if (isDisposed()) {
     // Panel was closed while the relay was still binding; nothing else has
     // been created yet, so there's only the bridge itself to tear down.
     bridge.dispose();
-    return;
+    return false;
   }
 
   pushDisposable(wireBridgeToWebview(bridge, treeWebview));
-  pushDisposable(wireSourceOpening(treeWebview, workspaceRoot));
-  pushDisposable(wireCoverageAnalysis(treeWebview, workspaceRoot));
 
   try {
     await page.start(relayPort);
@@ -102,13 +111,13 @@ export async function startLiveTreePipeline(options: LiveTreePipelineOptions): P
           }
         });
     }
-    return;
+    return false;
   }
 
   if (isDisposed()) {
     // Panel was closed while Chrome was launching; tear down the browser.
     void page.close();
-    return;
+    return false;
   }
 
   pushDisposable(
@@ -140,4 +149,6 @@ export async function startLiveTreePipeline(options: LiveTreePipelineOptions): P
       },
     }),
   );
+
+  return true;
 }
