@@ -14,19 +14,15 @@
 
 [ReactION](https://reactionjs.io/) visualizes your React app's component structure right inside VS Code, two ways: an instant **static** composition tree from your source code (no dev server, no browser, no setup), and an opt-in **live** mode that drives a real Chrome instance, injects the official React DevTools protocol, and streams live updates into an interactive graph — giving you render counts, wasted-render detection, and live DOM highlighting a standalone DevTools panel can't offer, because it doesn't live in your editor. ReactION is in <i>active development</i>; we welcome constructive feedback and contributions.
 
-## Screenshot
+## Demo
 
-<img src="https://github.com/ReactION-js/ReactION/blob/master/resources/reaction-static-sample.png?raw=true" alt="ReactION's static composition tree, showing the component graph built directly from source with no dev server running">
-<br>
+<img src="https://github.com/ReactION-js/ReactION/blob/master/resources/reaction-static-demo.gif?raw=true" alt="ReactION's static composition tree, built from source with no dev server running, with the inspector panel open showing a component's dependency metrics and props">
 
-_The static composition tree, built straight from your source — no dev server or browser required. Click any node to jump to its definition._
+_The static composition tree, built straight from your source — no dev server or browser required. Click any node to see its dependency metrics, props, and where it's rendered from — or jump straight to its definition._
 
-<img src="https://github.com/ReactION-js/ReactION/blob/master/src/ReactION-sample.png?raw=true" alt="ReactION's React Flow graph with the inspector panel open, showing a render-count heatmap from a profiling session">
-<br>
+<img src="https://github.com/ReactION-js/ReactION/blob/master/resources/reaction-live-demo.gif?raw=true" alt="ReactION's live component graph next to the running app in Chrome, showing per-component render-count badges, a node's re-render reason, and its live DOM highlight">
 
-_The live component graph mid-profiling-session: the number badges are per-component render counts (the heatmap), the selected "Panel" node shows why it re-rendered ("Props changed: children") in the inspector panel on the right, along with its live props and a jump-to-source link._
-
-A short demo GIF is on the way — for now, the screenshots above and the feature list below cover what ReactION does.
+_The live component graph next to the running app: the number badges are per-component render counts (the heatmap), and selecting a node shows why it re-rendered (here, "Hooks changed") alongside its live props/state/hooks — while highlighting its actual position in the running page._
 
 ## What ReactION does
 
