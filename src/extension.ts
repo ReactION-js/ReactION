@@ -70,7 +70,16 @@ export function activate(context: vscode.ExtensionContext): void {
       StaticAnalysisPanel.createOrShow(workspaceRoot);
     }),
     vscode.commands.registerCommand("ReactION.setup", async () => {
-      await runSetupWizard(workspaceRoot, outputChannel);
+      const launchNow = await runSetupWizard(workspaceRoot, outputChannel);
+      if (launchNow) {
+        // Open (or reveal) the live tab and connect straight away using the
+        // config just gathered above, WITHOUT going through
+        // connectToLiveApp's own wizard step -- that would ask the same
+        // dev-server/Chrome questions a second time immediately after the
+        // user just answered them here.
+        const panel = openTreePanel("live", context, workspaceRoot, outputChannel);
+        void panel.connectWithFreshConfig(workspaceRoot);
+      }
     }),
     vscode.commands.registerCommand("ReactION.showWalkthrough", () => {
       void vscode.commands.executeCommand("workbench.action.openWalkthrough", WALKTHROUGH_ID, false);

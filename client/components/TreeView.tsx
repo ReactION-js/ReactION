@@ -103,15 +103,6 @@ const nodeTypes = { component: FlowNode };
 // collapsedIds set.
 const INITIAL_VISIBLE_NODES = 10;
 
-// How long `data` must go without changing before the initial collapse
-// budget is computed and applied. The live app keeps mounting components for
-// a while after the panel first connects (the same reason
-// useInitialLoadReport.ts needs a settle window) -- computing the budget
-// against whatever tiny slice of the tree happens to exist at the very first
-// render badly undercounts, then never gets revisited, leaving most of the
-// eventual tree uncollapsed with nothing to expand.
-const INITIAL_COLLAPSE_SETTLE_MS = 500;
-
 // Renders the live component tree as a React Flow graph, laid out with dagre.
 // Nodes can be collapsed to hide a subtree, and the search box dims non-matches.
 function FlowGraph({ data, theme, mode, inspector, store, vscodeApi }: TreeChartProps) {
@@ -127,21 +118,13 @@ function FlowGraph({ data, theme, mode, inspector, store, vscodeApi }: TreeChart
   // built, not the synthetic group labels.
   const groupedRoots = useMemo(() => roots.map((root) => groupSiblingsByName(root)), [roots]);
 
-  // Bounds the very FIRST paint too, not just the one 500ms later (see the
-  // settle effect below): a live tree can already have plenty mounted by the
-  // time this component's first render happens (storeBridge.ts's tree only
-  // reaches here once React itself has committed something), so starting
-  // from an empty Set and waiting out the settle window would flash the
-  // exact "hundreds of nodes at once" view this budget exists to prevent,
-  // for however long that first burst of mounts takes. Static mode still
-  // starts fully expanded (see the settle effect's own comment on why).
-  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() =>
-    mode === "live" ? computeInitialCollapsedIds(groupedRoots, INITIAL_VISIBLE_NODES) : new Set(),
-  );
-  // Set the instant the user manually expands/collapses anything, so the
-  // deferred initial-budget effect below never clobbers a choice they've
-  // already made while still waiting for the tree to settle.
-  const hasUserToggledRef = useRef(false);
+  // Both modes start fully expanded -- see the one-time center-on-root
+  // effect further down for why that's safe to pair with "start at the
+  // root, readably zoomed" rather than a fit-everything view. `collapseAll`
+  // (below) still uses computeInitialCollapsedIds as an explicit, opt-in
+  // "give me a manageable overview" action for a live tree that's grown
+  // huge -- this is only about what the very first paint shows.
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set());
   const [searchTerm, setSearchTerm] = useState("");
   const [direction, setDirection] = useState<"TB" | "LR">("TB");
   // Derived, not its own state: inspector.state.elementId is already updated
@@ -156,7 +139,6 @@ function FlowGraph({ data, theme, mode, inspector, store, vscodeApi }: TreeChart
 
   const toggleCollapse = useCallback(
     (id: string) => {
-      hasUserToggledRef.current = true;
       setCollapsedIds((current) => {
         const next = new Set(current);
         if (next.has(id)) {
@@ -183,9 +165,9 @@ function FlowGraph({ data, theme, mode, inspector, store, vscodeApi }: TreeChart
   );
 
   // Forces a re-fit whenever it changes (see the effect below) -- bumped by
-  // expandAll/collapseAll and by the live-only initial-budget effect further
-  // down, i.e. exactly the actions that change how much of the graph is
-  // visible in one shot. Deliberately NOT bumped by a single node's own
+  // expandAll/collapseAll, i.e. exactly the actions that change how much of
+  // the graph is visible in one shot. Deliberately NOT bumped by a single
+  // node's own
   // toggleCollapse (constantly re-framing the whole graph while someone is
   // incrementally exploring it would be more disorienting than helpful) or
   // by the live tree's own organic growth (nodes changes on every mutation;
@@ -195,42 +177,14 @@ function FlowGraph({ data, theme, mode, inspector, store, vscodeApi }: TreeChart
   const { fitView, setCenter } = useReactFlow();
 
   const expandAll = useCallback(() => {
-    hasUserToggledRef.current = true;
     setCollapsedIds(new Set());
     setRefitToken((token) => token + 1);
   }, []);
 
   const collapseAll = useCallback(() => {
-    hasUserToggledRef.current = true;
     setCollapsedIds(computeInitialCollapsedIds(groupedRoots, INITIAL_VISIBLE_NODES));
     setRefitToken((token) => token + 1);
   }, [groupedRoots]);
-
-  // Applies the initial "~10 visible" default once `data` has gone quiet for
-  // INITIAL_COLLAPSE_SETTLE_MS -- see that constant's comment. Live mode
-  // only: a live tree can genuinely explode to thousands of framework-
-  // wrapped instances (see treeGrouping.ts's own history), so it needs a
-  // budget; the static composition tree doesn't have that failure mode
-  // (grouping already collapses repeated siblings, and it's capped at a
-  // sane total by staticComponentTree.ts's own MAX_NODES) and showing the
-  // whole thing by default is the more useful "overview" behavior for it.
-  // Resets the timer on every `data` change (a mutation while still
-  // settling pushes the deadline back out, exactly like
-  // useInitialLoadReport.ts's own settle timer), and is a no-op from the
-  // moment the user manually toggles anything, whether that's before or
-  // after this ever fires.
-  useEffect(() => {
-    if (mode !== "live" || hasUserToggledRef.current) {
-      return;
-    }
-    const timer = setTimeout(() => {
-      if (!hasUserToggledRef.current) {
-        setCollapsedIds(computeInitialCollapsedIds(groupedRoots, INITIAL_VISIBLE_NODES));
-        setRefitToken((token) => token + 1);
-      }
-    }, INITIAL_COLLAPSE_SETTLE_MS);
-    return () => clearTimeout(timer);
-  }, [mode, groupedRoots]);
 
   // The live tree is always exactly one root (unlike the static forest,
   // which can be several) -- these two hooks only ever do anything in live
@@ -242,7 +196,7 @@ function FlowGraph({ data, theme, mode, inspector, store, vscodeApi }: TreeChart
   const contextMap = useContextMap(store, inspector.inspectOnce);
   const everRendered = useEverRendered(store, liveRoot);
   const coverage = useCoverage(store, vscodeApi, everRendered.getEverRenderedNames);
-  const initialLoadReport = useInitialLoadReport(store, liveRoot);
+  const initialLoadReport = useInitialLoadReport(store, liveRoot, inspector.inspectOnce);
   const staticDetail = useStaticComponentDetail(vscodeApi);
   // The ring/panel logic below needs one combined "what's selected right
   // now" id regardless of which kind of selection it is -- a live element
@@ -317,9 +271,9 @@ function FlowGraph({ data, theme, mode, inspector, store, vscodeApi }: TreeChart
     return () => cancelAnimationFrame(frame);
   }, [nodes, setCenter]);
 
-  // Re-fits whenever refitToken is bumped (expandAll/collapseAll, or the
-  // live tree's own initial-budget collapse) -- the exact actions that
-  // change how much of the graph is visible in one shot, so the viewport
+  // Re-fits whenever refitToken is bumped (expandAll/collapseAll) -- the
+  // exact actions that change how much of the graph is visible in one
+  // shot, so the viewport
   // should track them rather than staying at whatever zoom level fit a
   // now-stale node count (see this bug's original report: the graph fit
   // itself to a much larger node set than what ended up visible, leaving a
@@ -400,7 +354,11 @@ function FlowGraph({ data, theme, mode, inspector, store, vscodeApi }: TreeChart
             </Tooltip>
             <ContextMapPanel theme={theme} controller={contextMap} />
             <CoveragePanel theme={theme} controller={coverage} onOpenSource={inspector.openSource} />
-            <InitialLoadReportPanel theme={theme} controller={initialLoadReport} />
+            <InitialLoadReportPanel
+              theme={theme}
+              controller={initialLoadReport}
+              onSelectInstance={inspector.selectElement}
+            />
           </>
         )}
         <SearchInput
