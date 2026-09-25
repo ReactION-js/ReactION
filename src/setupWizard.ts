@@ -47,8 +47,10 @@ function validateHostInput(value: string): string | undefined {
 // URL, make sure Chrome is locatable, save it all to reactION-config.json, and
 // offer to launch. Reused by the ReactION.setup command, the Launch view's
 // "Configure" button, and the start-failure toast's "Configure…" action.
-// Resolves true when a config was saved (so the caller can advance onboarding
-// progress), false when the user cancelled or the write failed.
+// Resolves true when the config was saved AND the user picked "Launch now"
+// specifically; false when the user cancelled, the write failed, or they
+// used the final step's "Edit config file" action without ever picking
+// "Launch now".
 export async function runSetupWizard(
   workspaceRoot: string,
   outputChannel: vscode.OutputChannel,
@@ -56,33 +58,40 @@ export async function runSetupWizard(
   const log = createModuleLogger(outputChannel, "setup");
   const config = loadConfig(workspaceRoot);
 
-  // Step 1 -- look for a dev server already listening, so the URL prompt can
-  // default to something that actually works instead of a stale guess.
-  const detected = await vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Notification,
-      title: "ReactION: looking for your running React dev server…",
-    },
-    () =>
-      detectDevServerUrl(config.localhost, log, {
-        fallbackHosts: COMMON_DEV_SERVER_HOSTS,
-        // Longer than the launch-path default: a dev server that compiles
-        // on-demand (e.g. Next.js) can be slow to answer its first request,
-        // and this path is interactive so the extra wait is acceptable.
-        probeTimeoutMs: 1500,
-      }),
-  );
+  // Step 1 -- one combined "start your dev server, then confirm its
+  // address" step. Looks for a dev server already listening first, so the
+  // URL prompt can default to something that actually works instead of a
+  // stale guess; when nothing answers, the prompt itself reminds the user
+  // to start their dev server and defaults to config.localhost
+  // (localhost:3000 out of the box, see config.ts) instead. Shown as a busy
+  // Quick Input in the same top-center spot the editable box below takes
+  // right after, with the same title, so it reads as one step that starts
+  // busy and then becomes editable, not two.
+  const detectingPick = vscode.window.createQuickPick();
+  detectingPick.title = "ReactION setup (1 of 2): Dev server";
+  detectingPick.placeholder = "Looking for your running React dev server…";
+  detectingPick.busy = true;
+  detectingPick.enabled = false;
+  detectingPick.ignoreFocusOut = true;
+  detectingPick.show();
+
+  const detected = await detectDevServerUrl(config.localhost, log, {
+    fallbackHosts: COMMON_DEV_SERVER_HOSTS,
+    // Longer than the launch-path default: a dev server that compiles
+    // on-demand (e.g. Next.js) can be slow to answer its first request,
+    // and this path is interactive so the extra wait is acceptable.
+    probeTimeoutMs: 1500,
+  }).finally(() => detectingPick.dispose());
 
   const foundRunningServer = detected.source !== "unreachable";
   const suggestedValue = foundRunningServer ? detected.url : toUrl(config.localhost);
 
-  // Step 2 -- confirm/override the dev-server URL.
   const prompt = foundRunningServer
     ? `Found a server running at ${detected.url}. Press Enter to use it, or type a different address.`
-    : "Couldn't auto-detect your dev server on the usual ports. If it's running, enter its exact address below — include the port shown in your terminal (for example http://localhost:3000).";
+    : "Start your dev server (e.g. npm run dev or npm start), then confirm its address above — include the port shown in your terminal, or press Enter to use the default.";
 
   const enteredUrl = await vscode.window.showInputBox({
-    title: "ReactION setup (1 of 2): Dev server URL",
+    title: "ReactION setup (1 of 2): Dev server",
     prompt,
     value: suggestedValue,
     valueSelection: [0, suggestedValue.length],
@@ -96,7 +105,7 @@ export async function runSetupWizard(
     return false;
   }
 
-  // Step 3 -- make sure we can find Chrome. Only prompt when the configured
+  // Step 2 -- make sure we can find Chrome. Only prompt when the configured
   // binary is missing (empty on Linux by default, or moved/uninstalled), so
   // users whose Chrome is in the standard place never see this step.
   let executablePath = config.executablePath;
@@ -115,7 +124,7 @@ export async function runSetupWizard(
           : "No file exists at that path. Double-check the location of your Chrome/Chromium binary.",
     });
     // Only overwrite when the user actually provided a path; cancelling this
-    // optional step still saves the URL from step 2.
+    // optional step still saves the URL from step 1.
     if (enteredPath !== undefined && enteredPath.trim() !== "") {
       executablePath = enteredPath.trim();
     }
@@ -133,20 +142,63 @@ export async function runSetupWizard(
   }
   log(`Saved config: localhost=${updated.localhost}, executablePath=${updated.executablePath}`);
 
-  // Step 4 -- offer to launch straight away ("then it loads, then it opens").
-  const choice = await vscode.window.showInformationMessage(
-    `ReactION is configured for ${toUrl(updated.localhost)}.`,
-    "Launch now",
-    "Edit config file",
-  );
-  if (choice === "Launch now") {
-    void vscode.commands.executeCommand("ReactION.openTree");
-  } else if (choice === "Edit config file") {
-    const doc = await vscode.workspace.openTextDocument(configFilePath(workspaceRoot));
-    void vscode.window.showTextDocument(doc);
-  }
+  // Step 3 -- offer to launch straight away ("then it loads, then it opens").
+  // createQuickPick (not the showQuickPick convenience wrapper) because
+  // "Edit config file" is a side action, not a final choice: picking it
+  // opens the file but deliberately leaves this picker open, so the user
+  // can go tweak something and still come back to "Launch now" without
+  // restarting the whole wizard. Only "Launch now" (via picker.hide()) or
+  // dismissing (Escape) ends it, and both funnel through the single
+  // onDidHide below -- the only place that resolves/disposes, so there's
+  // no re-entrancy to guard against. Each item's explanation is folded
+  // into its own label with a " - " separator, rather than QuickPickItem's
+  // separate `description` field (which reads as a dim, secondary
+  // annotation, not part of the choice itself).
+  type LaunchChoice = vscode.QuickPickItem & { id: "launch" | "edit" };
+  const launchNow = await new Promise<boolean>((resolve) => {
+    const picker = vscode.window.createQuickPick<LaunchChoice>();
+    picker.title = "ReactION setup: ready to launch";
+    picker.placeholder = `Configured for ${toUrl(updated.localhost)}.`;
+    picker.ignoreFocusOut = true;
+    picker.items = [
+      { id: "launch", label: "Launch now - opens a live browser session and starts analyzing." },
+      {
+        id: "edit",
+        label: "Edit config file - opens reactION-config.json so you can change settings by hand.",
+      },
+    ];
+    let selectedLaunch = false;
+    picker.onDidAccept(() => {
+      const selected = picker.selectedItems[0]?.id;
+      if (selected === "launch") {
+        selectedLaunch = true;
+        picker.hide();
+      } else if (selected === "edit") {
+        void vscode.workspace.openTextDocument(configFilePath(workspaceRoot)).then((doc) => {
+          void vscode.window.showTextDocument(doc);
+        });
+        // Deliberately no hide() here -- see this step's own comment.
+      }
+    });
+    picker.onDidHide(() => {
+      picker.dispose();
+      resolve(selectedLaunch);
+    });
+    picker.show();
+  });
 
-  return true;
+  // A pure "gather config" helper: reports the user's final choice back to
+  // the caller instead of acting on it directly. This wizard is reused by
+  // three entry points -- ViewPanel.connectToLiveApp (already mid-connect
+  // on an open live panel), the standalone ReactION.setup command, and the
+  // start-failure toast's "Configure…" action -- and each needs to decide
+  // for itself what "the user picked Launch now" should do from wherever
+  // IT was called from. Executing a launch command unconditionally here
+  // would cause the whole wizard to run a second time whenever this
+  // function is reached from a caller that hasn't already guarded against
+  // re-entry (see ViewPanel.ts's connectWithFreshConfig for how the
+  // standalone entry points launch without re-prompting).
+  return launchNow;
 }
 
 function fileExists(candidate: string): boolean {
