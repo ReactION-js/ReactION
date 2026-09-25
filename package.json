@@ -32,7 +32,7 @@
     "viewsWelcome": [
       {
         "view": "startExtension",
-        "contents": "Visualize your React app's component tree — right inside VS Code.\n\n$(star-full) Recommended — instantly see your project's component structure from static analysis. No dev server, no browser, no setup:\n[$(play) Launch ReactION Static](command:ReactION.openTree)\n\nWant real render counts, a wasted-render heatmap, and live DOM highlighting? Connect to your running app (short setup):\n[$(rocket) Launch ReactION Live Rendering](command:ReactION.openTreeLive)\n\nNeed help?\n[$(book) Help & Troubleshooting](command:ReactION.showWalkthrough)"
+        "contents": "Visualize your React app's component tree — right inside VS Code.\n\n$(star-full) Recommended — instantly see your project's component structure from static analysis. No dev server, no browser, no setup:\n[$(play) Launch ReactION Static](command:ReactION.openTree)\n\n​        ──────────────        ​\n\nWant real render counts, a wasted-render heatmap, and live DOM highlighting? Connect to your running app (short setup):\n[$(rocket) Launch ReactION Live Rendering](command:ReactION.openTreeLive)\n\n​        ──────────────        ​\n\nNeed help?\n[$(book) Help & Troubleshooting](command:ReactION.showWalkthrough)"
       }
     ],
     "viewsContainers": {

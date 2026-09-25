@@ -10,42 +10,49 @@
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/ReactION-js/ReactION/pulls)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/ReactION-js/ReactION/LICENSE)
 
-<h4 align="center">Visualize your React app's live component tree — right inside VS Code.</h4>
+<h4 align="center">Visualize your React app's component tree — right inside VS Code.</h4>
 
-[ReactION](https://reactionjs.io/) turns your React app's live component tree into an interactive graph, right inside VS Code. It drives a real Chrome instance behind the scenes, injects the official React DevTools protocol, and streams live updates into a webview that renders them as an interactive graph — giving you an always-up-to-date visual map of your app plus insights a standalone DevTools panel can't offer, because it doesn't live in your editor. ReactION is in <i>active development</i>; we welcome constructive feedback and contributions. See `REARCHITECTURE-PLAN.md` in this repo for the full technical plan and phase-by-phase history behind the current architecture.
+[ReactION](https://reactionjs.io/) visualizes your React app's component structure right inside VS Code, two ways: an instant **static** composition tree from your source code (no dev server, no browser, no setup), and an opt-in **live** mode that drives a real Chrome instance, injects the official React DevTools protocol, and streams live updates into an interactive graph — giving you render counts, wasted-render detection, and live DOM highlighting a standalone DevTools panel can't offer, because it doesn't live in your editor. ReactION is in <i>active development</i>; we welcome constructive feedback and contributions.
 
-## Screenshot
+## Demo
 
-<img src="https://github.com/ReactION-js/ReactION/blob/master/src/ReactION-sample.png?raw=true" alt="ReactION's React Flow graph with the inspector panel open, showing a render-count heatmap from a profiling session">
-<br>
+<img src="https://github.com/ReactION-js/ReactION/blob/master/resources/reaction-static-demo.gif?raw=true" alt="ReactION's static composition tree, built from source with no dev server running, with the inspector panel open showing a component's dependency metrics and props">
 
-_The component graph mid-profiling-session: the number badges are per-component render counts (the heatmap), the selected "Panel" node shows why it re-rendered ("Props changed: children") in the inspector panel on the right, along with its live props and a jump-to-source link._
+_The static composition tree, built straight from your source — no dev server or browser required. Click any node to see its dependency metrics, props, and where it's rendered from — or jump straight to its definition._
 
-A short demo GIF is on the way — for now, the screenshot above and the feature list below cover what ReactION does.
+<img src="https://github.com/ReactION-js/ReactION/blob/master/resources/reaction-live-demo.gif?raw=true" alt="ReactION's live component graph next to the running app in Chrome, showing per-component render-count badges, a node's re-render reason, and its live DOM highlight">
+
+_The live component graph next to the running app: the number badges are per-component render counts (the heatmap), and selecting a node shows why it re-rendered (here, "Hooks changed") alongside its live props/state/hooks — while highlighting its actual position in the running page._
 
 ## What ReactION does
 
-1. **Works with any React app — no code changes required.** ReactION drives a real (optionally headless) Chrome instance via [Puppeteer](https://pptr.dev/) and injects the official React DevTools protocol backend before your app's own scripts run. Because it's a real browser hitting a real URL, it's bundler-agnostic (CRA, Vite, Next, and others); the underlying DevTools protocol targets React 16 through 19, and this repo's own fixture tests exercise React 19 (the sample app) and an isolated React 16.9 + react-router v5 app (the combination originally reported as broken in [#72](https://github.com/ReactION-js/ReactION/issues/72)).
-2. **Live, interactive component graph.** The webview builds a genuine React DevTools `Store` from the live protocol stream and renders it as a pan/zoom/collapsible graph (built on [React Flow](https://reactflow.dev/), laid out with dagre), color-coded by component type (function, class, memo, forwardRef, context, and more). Updates stream in as your app renders — there's no polling, and no "re-render on save" delay.
-3. **Click to inspect.** Select any node to see its live props, state, and hooks in a side panel, sourced from the same `inspectElement` protocol the official React DevTools use.
-4. **Jump to source.** Click "Open in editor" on a selected node to open the exact file and line it's defined at, resolved from the source location React's DevTools hook records for that element (see Limitations below for when this can't resolve).
-5. **Profile re-renders.** Start a profiling session to get a render-count heatmap over the graph, plus a per-component "why did this render" reason (props/state/hooks changed) and a "wasted render" flag when a component re-ran without its inputs actually changing.
-6. **Map your context.** Build an on-demand provider → consumers map for React Context, so you can see who's actually reading from a given provider without tracing imports by hand.
-7. **Diagnostics you can actually read.** A dedicated "ReactION" Output channel logs the Chrome launch, the DevTools relay, and webview activity, and the graph shows a clear message when no React app is detected at the configured URL instead of staying blank.
-8. **Resilient to restarts.** ReactION auto-detects your dev server (probing common fallback ports if the configured one isn't answering yet) and automatically re-navigates and reconnects the graph if the dev server restarts mid-session. If the underlying Chrome window itself closes or crashes, ReactION shows a warning rather than silently going blank — close and reopen the panel to relaunch it.
+1. **Static composition tree — no setup required.** Click "Launch ReactION Static" and instantly see your project's component structure straight from source, with no dev server, browser, or configuration needed. Click any node to jump to its definition.
+2. **Static analysis diagnostics.** Alongside the tree, ReactION surfaces unused-component detection, dead-prop detection, and prop-drilling chains (a prop passed through several components before it's actually used) — all computed from your source, not a running app.
+3. **Guided setup for live mode.** Opting into live rendering walks you through a short setup wizard: it auto-detects a dev server already running on the common ports, defaults to `localhost:3000` if it can't find one, and only asks about your Chrome location if it can't find that either.
+4. **Works with any React app — no code changes required.** Live mode drives a real (optionally headless) Chrome instance via [Puppeteer](https://pptr.dev/) and injects the official React DevTools protocol backend before your app's own scripts run. Because it's a real browser hitting a real URL, it's bundler-agnostic (CRA, Vite, Next, and others); the underlying DevTools protocol targets React 16 through 19, and this repo's own fixture tests exercise React 19 (the sample app) and an isolated React 16.9 + react-router v5 app (the combination originally reported as broken in [#72](https://github.com/ReactION-js/ReactION/issues/72)).
+5. **Live, interactive component graph.** The webview builds a genuine React DevTools `Store` from the live protocol stream and renders it as a pan/zoom/collapsible graph (built on [React Flow](https://reactflow.dev/), laid out with dagre), color-coded by component type (function, class, memo, forwardRef, context, and more). Updates stream in as your app renders — there's no polling, and no "re-render on save" delay.
+6. **Click to inspect.** Select any node to see its live props, state, and hooks in a side panel, sourced from the same `inspectElement` protocol the official React DevTools use.
+7. **Jump to source.** Click "Open in editor" on a selected node to open the exact file and line it's defined at, resolved from the source location React's DevTools hook records for that element (see Limitations below for when this can't resolve).
+8. **Profile re-renders.** Start a profiling session to get a render-count heatmap over the graph, plus a per-component "why did this render" reason (props/state/hooks changed) and a "wasted render" flag when a component re-ran without its inputs actually changing.
+9. **Initial Load Report.** A one-shot, automatic capture of everything that rendered while your app first loaded, grouped by component with instance/render/wasted counts — click a row to highlight that component live in the browser, and a minified/mangled name gets a `file:line` fallback label when its source is available.
+10. **Map your context.** Build an on-demand provider → consumers map for React Context, so you can see who's actually reading from a given provider without tracing imports by hand.
+11. **Diagnostics you can actually read.** A dedicated "ReactION" Output channel logs the Chrome launch, the DevTools relay, and webview activity, and the graph shows a clear message when no React app is detected at the configured URL instead of staying blank.
+12. **Resilient to restarts.** ReactION auto-detects your dev server (probing common fallback ports if the configured one isn't answering yet) and automatically re-navigates and reconnects the graph if the dev server restarts mid-session. If the underlying Chrome window itself closes or crashes, ReactION shows a warning rather than silently going blank — close and reopen the panel to relaunch it.
 
 ### Limitations
 
-- ReactION is built around **development-mode** React apps. If the graph stays empty, a production build is one likely cause (production builds can strip information the DevTools hook relies on) — ReactION surfaces this as an explicit message rather than staying blank with no explanation.
+- ReactION's live mode is built around **development-mode** React apps. If the graph stays empty, a production build is one likely cause (production builds can strip information the DevTools hook relies on) — ReactION surfaces this as an explicit message rather than staying blank with no explanation.
 - Even when components do show up, "Open in editor" will show an informational message instead of opening a file whenever the build is minified enough that its source location can't be resolved back to a file in your workspace.
 - The context map's provider/consumer matching is a **heuristic** based on `displayName`: two different `Context` objects that happen to share a name (or both leave it unset) can't be told apart from Store data alone.
 - Class-component legacy context (`this.context` / `contextType`) isn't included in the context map — only `useContext` consumers are.
-- There's no state-change timeline / time-travel UI yet (see Roadmap below).
+- There's no state-change timeline / time-travel UI yet.
 
 ## Prerequisite
 
-- Make sure you have [Google Chrome](https://www.google.com/chrome/) installed on your computer. ReactION currently runs as a VS Code extension.
-- You'll need a running React application in development mode. Feel free to fork and clone our sample app [here!](https://github.com/ReactION-js/sample-project-react)
+ReactION currently runs as a VS Code extension. The static composition tree needs nothing beyond your source code — the items below are only needed if you want to opt into **live** rendering:
+
+- [Google Chrome](https://www.google.com/chrome/) installed on your computer.
+- A running React application in development mode. Feel free to fork and clone our sample app [here!](https://github.com/ReactION-js/sample-project-react)
 
 ## How to Use
 
@@ -54,11 +61,11 @@ A short demo GIF is on the way — for now, the screenshot above and the feature
 1. Clone the repo and run `npm install`
 2. Run `npm run compile` (extension) and `npm run build:webview` (webview bundle)
 3. Open VS Code Extension mode by pressing `F5` or `ctr+5`
-4. When a new VS Code window pops up, open the React code file that you want to run the extension on
-5. `npm start` your React file and run your application in `localhost:3000` (default)
-6. Follow the **Get Started with ReactION** walkthrough that opens on first run (reopen anytime with `ReactION: Getting Started`) — it walks you through configuring your dev-server URL and launching the graph
-7. Or click the ReactION logo in the activity bar and use the step-by-step **Launch** view; `ReactION: Configure Dev Server` auto-detects your running app and sets the URL for you
-8. Enjoy the live component graph!
+4. When a new VS Code window pops up, open the project you want to run the extension on
+5. Click the ReactION logo in the activity bar and use the step-by-step **Launch** view, or follow the **Get Started with ReactION** walkthrough that opens on first run (reopen anytime with `ReactION: Getting Started`)
+6. Click **Launch ReactION Static** for the instant composition tree — no server needed
+7. Want live render counts, a wasted-render heatmap, and live DOM highlighting too? Start your dev server, then click **Launch ReactION Live Rendering** instead; the setup wizard auto-detects it, has you confirm its address, and locates Chrome
+8. Enjoy the component graph!
 
 #### [Download From VS Code Marketplace]
 
@@ -66,13 +73,14 @@ You can download the extension directly from the [Marketplace](https://marketpla
 
 ## Configuring ReactION's Default Settings
 
-You can change the following default settings in the Configuration file:
+You can change the following default settings in the Configuration file (the setup wizard writes most of these for you, but you can also edit the file directly):
 
-- React graph theme
-- Change the server port that ReactION listens to
-- Change whether or not to have an external Chrome instance
+- `localhost` — which URL your dev server runs on, e.g. `localhost:3000`
+- `executablePath` — path to your Chrome/Chromium binary
+- `headless_browser` — whether Chrome runs headless or as a visible window
+- `reactTheme` — the graph's color theme, `"light"` or `"dark"`
 
-You can configure ReactION's default settings through the ReactION-config.json file as such:
+You can configure ReactION's default settings through the reactION-config.json file, created in your workspace root the first time you run the setup wizard, as such:
 
 ```json
 {
@@ -83,6 +91,8 @@ You can configure ReactION's default settings through the ReactION-config.json f
   "reactTheme": "dark"
 }
 ```
+
+(`system` records the detected platform and isn't something you need to change by hand.)
 
 ## Built With
 
@@ -97,13 +107,6 @@ You can configure ReactION's default settings through the ReactION-config.json f
 - [React](https://reactjs.org/) - Webview UI
 - [styled-components](https://styled-components.com/) - Webview styling
 - [Mocha](https://mochajs.org/) / [`@vscode/test-cli`](https://www.npmjs.com/package/@vscode/test-cli) - Testing
-
-## Roadmap
-
-- [ ] **State-change timeline / time-travel UI.** Profiling data (the heatmap and render reasons above) is already captured live per commit; there's no UI yet to scrub backward through commit history.
-- [ ] **Static analysis:** unused-component detection, dead-prop detection, and prop-drilling suggestions. Not yet started (Phase 5 of the rearchitecture plan).
-
-See `REARCHITECTURE-PLAN.md` for the full phase-by-phase plan, including what's already shipped, the protocol-level gotchas behind each feature, and known follow-ups.
 
 ## Contributing
 
