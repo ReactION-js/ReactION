@@ -6,6 +6,13 @@ import Tooltip from "./Tooltip";
 export interface InitialLoadReportPanelProps {
   theme: "light" | "dark";
   controller: InitialLoadReportController;
+  // Selects (and, per ElementInspector.select()'s own behavior, highlights
+  // live in the running app) one instance of a row's group -- reuses
+  // whichever instance happened to be recorded first (see
+  // RerenderedGroup.instanceIds), since they all share the group's
+  // displayName and this is "show me roughly where this is", not "show me
+  // this exact instance".
+  onSelectInstance: (id: number) => void;
 }
 
 const Wrapper = styled.div`
@@ -66,15 +73,32 @@ const SectionLabel = styled.div`
   letter-spacing: 0.03em;
 `;
 
-const ComponentRow = styled.div`
+const ComponentRow = styled.button`
+  display: block;
+  width: 100%;
   padding: 4px 12px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
   & + & {
     border-top: 1px solid rgba(128, 128, 128, 0.15);
+  }
+  &:hover {
+    background-color: rgba(128, 128, 128, 0.12);
   }
 `;
 
 const ComponentName = styled.div`
   font-weight: 500;
+`;
+
+const SourceLabel = styled.div`
+  opacity: 0.65;
+  font-size: 10.5px;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
 `;
 
 const RenderDetail = styled.div`
@@ -93,12 +117,23 @@ const EmptyNotice = styled.div`
   font-style: italic;
 `;
 
+const ClickHint = styled.div`
+  padding: 0 12px 4px;
+  opacity: 0.6;
+  font-size: 10.5px;
+  font-style: italic;
+`;
+
 // Toolbar entry for useInitialLoadReport's automatic, one-shot capture: this
 // component only owns whether the already-computed report is shown or
 // hidden, not the capture itself (which starts on connect with no user
 // action, unlike ContextMapPanel/CoveragePanel's explicit user-triggered
 // scans).
-export default function InitialLoadReportPanel({ theme, controller }: InitialLoadReportPanelProps) {
+export default function InitialLoadReportPanel({
+  theme,
+  controller,
+  onSelectInstance,
+}: InitialLoadReportPanelProps) {
   const { report, isCapturing } = controller;
   const [open, setOpen] = useState(false);
 
@@ -129,9 +164,15 @@ export default function InitialLoadReportPanel({ theme, controller }: InitialLoa
           ) : (
             <>
               <SectionLabel>Rendered more than once</SectionLabel>
+              <ClickHint>Click a component below to see where it is in the browser.</ClickHint>
               {report.rerendered.map((group) => (
-                <ComponentRow key={group.displayName}>
+                <ComponentRow
+                  key={group.displayName}
+                  onClick={() => onSelectInstance(group.instanceIds[0])}
+                  title="Click to highlight in the running app"
+                >
                   <ComponentName>{group.displayName}</ComponentName>
+                  {group.sourceLabel && <SourceLabel>{group.sourceLabel}</SourceLabel>}
                   <RenderDetail>
                     {group.instanceCount} instance{group.instanceCount === 1 ? "" : "s"} ·{" "}
                     {group.totalRenders} renders ·{" "}

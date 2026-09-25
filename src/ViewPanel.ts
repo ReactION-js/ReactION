@@ -142,6 +142,8 @@ export default class ViewPanel {
       },
     );
 
+    treePanel.iconPath = vscode.Uri.joinPath(extensionUri, "resources", "color.png");
+
     const panel = new ViewPanel(mode, treePanel, extensionUri, config, workspaceRoot, outputChannel);
     if (mode === "static") {
       ViewPanel.currentStaticPanel = panel;
@@ -157,12 +159,12 @@ export default class ViewPanel {
   // exact same flow right after opening the live tab -- public so
   // extension.ts can call it directly on an already-open panel. Guides the
   // user through runSetupWizard (confirm/detect the dev server URL, confirm
-  // Chrome's location -- the exact same wizard "ReactION.setup" and the
-  // start-failure toast's "Configure…" action already use) every time, not
-  // just on first use or on failure, since "is a dev server actually
-  // running right now" is worth re-checking on every connect attempt. Only
-  // proceeds to actually launch Chrome if the wizard completes (a config
-  // gets saved); a cancelled wizard leaves the panel showing its
+  // Chrome's location) every time, not just on first use or on failure,
+  // since "is a dev server actually running right now" is worth
+  // re-checking on every connect attempt. `launchNow` is true only when the
+  // wizard's final step was answered with "Launch now" specifically --
+  // false covers a cancelled wizard AND one that completed but ended on
+  // "Edit config file" instead, both of which leave the panel showing its
   // not-yet-connected state, untouched. Same for a wizard that completes but
   // then fails to actually connect (dev server unreachable, bad Chrome path,
   // relay bind failure) -- startLiveTreePipeline resolves `false` rather
@@ -174,24 +176,53 @@ export default class ViewPanel {
   // whether from the webview's own button or the "Launch Live Rendering"
   // command hitting this same already-open panel, would silently no-op
   // forever against a guard that could only ever have been cleared here.
+  //
+  // Deliberately does NOT execute any command in response to "Launch now"
+  // (that decision belongs to runSetupWizard's OTHER callers, which aren't
+  // already mid-connect on a live panel like this one is) -- see
+  // connectWithFreshConfig below for the standalone entry points that do
+  // need to act on it.
   public async connectToLiveApp(workspaceRoot: string): Promise<void> {
     if (this.mode !== "live" || this.liveConnectionRequested || this.disposed) {
       return;
     }
     this.liveConnectionRequested = true;
 
-    const saved = await runSetupWizard(workspaceRoot, this.outputChannel);
+    const launchNow = await runSetupWizard(workspaceRoot, this.outputChannel);
     if (this.disposed) {
       return;
     }
-    if (!saved) {
+    if (!launchNow) {
       this.liveConnectionRequested = false; // let the user try again
       return;
     }
 
-    // Fresh config: the wizard may just have changed localhost/
-    // executablePath, and the config this panel was constructed with (used
-    // only to render the webview's initial theme) is now stale.
+    await this.startConnection(workspaceRoot);
+  }
+
+  // For callers that already ran runSetupWizard themselves and got back
+  // "Launch now" -- the standalone ReactION.setup command and the
+  // start-failure toast's "Configure…" action, both of which reuse the
+  // wizard outside of connectToLiveApp's own flow above. Skips the wizard
+  // entirely rather than routing through connectToLiveApp, which would
+  // otherwise run it a SECOND time back-to-back (the config was just
+  // gathered a moment ago). Shares the exact same guard as
+  // connectToLiveApp so it's still a no-op against an already-connecting
+  // or already-connected panel.
+  public async connectWithFreshConfig(workspaceRoot: string): Promise<void> {
+    if (this.mode !== "live" || this.liveConnectionRequested || this.disposed) {
+      return;
+    }
+    this.liveConnectionRequested = true;
+    await this.startConnection(workspaceRoot);
+  }
+
+  // Shared tail end of both connect paths above: load whatever config is
+  // on disk right now (fresh, since the wizard may just have changed
+  // localhost/executablePath -- the config this panel was constructed with
+  // was only ever used to render the webview's initial theme, and is stale
+  // by this point) and actually launch Chrome/attach the live pipeline.
+  private async startConnection(workspaceRoot: string): Promise<void> {
     const config = loadConfig(workspaceRoot);
     this.page = new Puppeteer(config, createModuleLogger(this.outputChannel, "puppeteer"));
     this.bridge = new DevtoolsBridge(createModuleLogger(this.outputChannel, "devtools-bridge"));

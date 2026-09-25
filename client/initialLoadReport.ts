@@ -16,6 +16,29 @@ export interface RerenderedGroup {
   // (props/state/context genuinely changing, e.g. a library computing a
   // transition on mount) shows 0 here even if totalRenders is high.
   wastedRenders: number;
+  // Live fiber ids of every instance folded into this group, so the panel
+  // can select/highlight one of them (see useInitialLoadReport.ts) without
+  // a second pass over the Store. Order matches discovery order, not
+  // anything meaningful beyond that.
+  instanceIds: number[];
+  // A "file:line" fallback label for displayName, filled in asynchronously
+  // (see useInitialLoadReport.ts's enrichMinifiedNames) only when
+  // displayName looks minified/mangled and a source location for one of
+  // this group's instances could be found. undefined until then, and stays
+  // undefined when no source location is available at all (e.g. a fully
+  // minified production build with no source map).
+  sourceLabel?: string;
+}
+
+// React requires a component's displayName to start with an uppercase
+// letter -- a lowercase-initial JSX tag is parsed as an HTML element, not a
+// component -- so a displayName that doesn't follow that convention (e.g.
+// "wm", "yw") is almost certainly a bundler-mangled identifier that survived
+// into production, not the component's real name. "Anonymous" (DevTools'
+// own placeholder for a nameless function component) already starts
+// uppercase and is deliberately left alone here.
+export function looksMinifiedName(name: string): boolean {
+  return !/^[A-Z]/.test(name);
 }
 
 export interface InitialLoadReport {
@@ -55,12 +78,14 @@ export function buildInitialLoadReport(
       existing.instanceCount += 1;
       existing.totalRenders += renderCount;
       existing.wastedRenders += wastedCount;
+      existing.instanceIds.push(fiberId);
     } else {
       groups.set(element.displayName, {
         displayName: element.displayName,
         instanceCount: 1,
         totalRenders: renderCount,
         wastedRenders: wastedCount,
+        instanceIds: [fiberId],
       });
     }
   });
