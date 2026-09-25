@@ -2,17 +2,19 @@
   <br>
     <img src="https://github.com/jsliapark/ReactION/blob/staging/resources/Text_2.png?raw=true" alt="logo" width="400">
   <br>
-  React Component Visualizer for VS Code
+  React Component Visualizer for VS Code & Cursor
   <br>
   <br>
 </h1>
 
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/ReactION-js/ReactION/pulls)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/ReactION-js/ReactION/LICENSE)
+[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/ReactION-js.ReactION.svg?label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=ReactION-js.ReactION)
+[![Open VSX](https://img.shields.io/open-vsx/v/ReactION-JS/ReactION.svg?label=Open%20VSX)](https://open-vsx.org/extension/ReactION-JS/ReactION)
 
-<h4 align="center">Visualize your React app's component tree — right inside VS Code.</h4>
+<h4 align="center">Visualize your React app's component tree — right inside VS Code or Cursor.</h4>
 
-[ReactION](https://reactionjs.io/) visualizes your React app's component structure right inside VS Code, two ways: an instant **static** composition tree from your source code (no dev server, no browser, no setup), and an opt-in **live** mode that drives a real Chrome instance, injects the official React DevTools protocol, and streams live updates into an interactive graph — giving you render counts, wasted-render detection, and live DOM highlighting a standalone DevTools panel can't offer, because it doesn't live in your editor. ReactION is in <i>active development</i>; we welcome constructive feedback and contributions.
+[ReactION](https://reactionjs.io/) visualizes your React app's component structure right inside VS Code and Cursor, two ways: an instant **static** composition tree from your source code (no dev server, no browser, no setup), and an opt-in **live** mode that drives a real Chrome instance, injects the official React DevTools protocol, and streams live updates into an interactive graph — giving you render counts, wasted-render detection, and live DOM highlighting a standalone DevTools panel can't offer, because it doesn't live in your editor. ReactION is in <i>active development</i>; we welcome constructive feedback and contributions.
 
 ## Demo
 
@@ -49,7 +51,7 @@ _The live component graph next to the running app: the number badges are per-com
 
 ## Prerequisite
 
-ReactION currently runs as a VS Code extension. The static composition tree needs nothing beyond your source code — the items below are only needed if you want to opt into **live** rendering:
+ReactION currently runs as a VS Code / Cursor extension. The static composition tree needs nothing beyond your source code — the items below are only needed if you want to opt into **live** rendering:
 
 - [Google Chrome](https://www.google.com/chrome/) installed on your computer.
 - A running React application in development mode. Feel free to fork and clone our sample app [here!](https://github.com/ReactION-js/sample-project-react)
@@ -67,9 +69,9 @@ ReactION currently runs as a VS Code extension. The static composition tree need
 7. Want live render counts, a wasted-render heatmap, and live DOM highlighting too? Start your dev server, then click **Launch ReactION Live Rendering** instead; the setup wizard auto-detects it, has you confirm its address, and locates Chrome
 8. Enjoy the component graph!
 
-#### [Download From VS Code Marketplace]
+#### [Download From VS Code Marketplace or Open VSX]
 
-You can download the extension directly from the [Marketplace](https://marketplace.visualstudio.com/items?itemName=ReactION-js.ReactION).
+In either VS Code or Cursor, open the Extensions view (`Cmd+Shift+X` on macOS, `Ctrl+Shift+X` on Windows/Linux) and search for **ReactION** — or install it directly from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=ReactION-js.ReactION) or [Open VSX](https://open-vsx.org/extension/ReactION-JS/ReactION) (the registry Cursor and other VS Code-compatible editors pull from).
 
 ## Configuring ReactION's Default Settings
 
