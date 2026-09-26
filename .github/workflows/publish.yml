@@ -1,9 +1,8 @@
 name: Publish Extension
 
+# Manual only: run from the Actions tab ("Run workflow") to publish.
+# Pushing a tag does not publish.
 on:
-  push:
-    tags:
-      - "v*"
   workflow_dispatch:
 
 permissions:
